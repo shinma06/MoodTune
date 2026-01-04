@@ -1,7 +1,18 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Cloud, CloudRain, Sun, CloudSnow, Wind, LucideIcon } from "lucide-react"
+import {
+  Cloud,
+  CloudRain,
+  Sun,
+  CloudSnow,
+  Wind,
+  CloudDrizzle,
+  CloudLightning,
+  CloudFog,
+  Tornado,
+  LucideIcon,
+} from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 
@@ -36,23 +47,23 @@ interface WeatherData {
     description: string
 }
 
-// 天候の種類に応じたアイコンのマッピング
+// 天候の種類に応じたアイコンのマッピング（各パターンに個別のアイコンを割り当て）
 const getWeatherIcon = (weatherMain: string): LucideIcon => {
     const iconMap: Record<string, LucideIcon> = {
-        Clear: Sun,
-        Clouds: Cloud,
-        Rain: CloudRain,
-        Drizzle: CloudRain,
-        Thunderstorm: CloudRain,
-        Snow: CloudSnow,
-        Mist: Cloud,
-        Fog: Cloud,
-        Haze: Cloud,
-        Dust: Wind,
-        Sand: Wind,
-        Ash: Wind,
-        Squall: Wind,
-        Tornado: Wind,
+        Clear: Sun,              // 晴れ
+        Clouds: Cloud,           // 曇り
+        Rain: CloudRain,         // 雨
+        Drizzle: CloudDrizzle,    // 霧雨
+        Thunderstorm: CloudLightning, // 雷雨
+        Snow: CloudSnow,         // 雪
+        Mist: CloudFog,          // 霧
+        Fog: CloudFog,           // 濃霧
+        Haze: CloudFog,          // もや
+        Dust: Wind,              // 砂塵
+        Sand: Wind,              // 砂
+        Ash: CloudFog,           // 灰（霧アイコンを使用）
+        Squall: Wind,            // スコール
+        Tornado: Tornado,        // 竜巻
     }
     return iconMap[weatherMain] || Sun
 }
