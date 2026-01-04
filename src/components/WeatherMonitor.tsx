@@ -15,6 +15,7 @@ import {
 } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
+import { useWeather } from "@/contexts/WeatherContext"
 
 // OpenWeatherMap APIレスポンスの型定義
 interface WeatherApiResponse {
@@ -79,6 +80,7 @@ export default function WeatherMonitor() {
         status: "loading",
         message: "位置情報を取得中...",
     })
+    const { setWeatherType } = useWeather()
 
     // 時計の更新（クライアントサイドでのみ実行）
     useEffect(() => {
@@ -106,13 +108,15 @@ export default function WeatherMonitor() {
 
                 const data: WeatherApiResponse = await response.json()
 
+                const weatherMain = data.weather[0]?.main || "Clear"
                 const weatherData: WeatherData = {
-                    icon: getWeatherIcon(data.weather[0]?.main || "Clear"),
+                    icon: getWeatherIcon(weatherMain),
                     temp: `${Math.round(data.main.temp)}°C`,
                     city: data.name,
                     description: data.weather[0]?.description || "",
                 }
 
+                setWeatherType(weatherMain) // Contextに天気データを設定
                 setWeatherState({ status: "success", data: weatherData })
             } catch (error) {
                 setWeatherState({
@@ -193,12 +197,14 @@ export default function WeatherMonitor() {
                             return response.json()
                         })
                         .then((data: WeatherApiResponse) => {
+                            const weatherMain = data.weather[0]?.main || "Clear"
                             const weatherData: WeatherData = {
-                                icon: getWeatherIcon(data.weather[0]?.main || "Clear"),
+                                icon: getWeatherIcon(weatherMain),
                                 temp: `${Math.round(data.main.temp)}°C`,
                                 city: data.name,
                                 description: data.weather[0]?.description || "",
                             }
+                            setWeatherType(weatherMain) // Contextに天気データを設定
                             setWeatherState({ status: "success", data: weatherData })
                         })
                         .catch((error) => {

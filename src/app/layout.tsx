@@ -2,6 +2,7 @@ import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Geist, Cormorant_Garamond } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
+import { WeatherProvider } from "@/contexts/WeatherContext"
 import "./globals.css"
 
 const _geist = Geist({ subsets: ["latin"] })
@@ -49,8 +50,10 @@ export default function RootLayout({
   return (
     <html lang="ja" suppressHydrationWarning>
       <body className={`font-sans antialiased ${_cormorant.variable}`}>
-        {children}
-        <Analytics />
+        <WeatherProvider>
+          {children}
+          <Analytics />
+        </WeatherProvider>
       </body>
     </html>
   )

@@ -4,6 +4,8 @@ import type React from "react"
 
 import { useState, useRef, useEffect, useCallback } from "react"
 import WeatherMonitor from "./WeatherMonitor"
+import { useWeather } from "@/contexts/WeatherContext"
+import { getWeatherBackground, getTimeOfDay, type WeatherType } from "@/lib/weather-background"
 
 type Playlist = {
     id: string
@@ -66,8 +68,23 @@ export default function PlaylistExplorer() {
     const [startRotation, setStartRotation] = useState(0)
     const [totalRotation, setTotalRotation] = useState(0) // 累積回転角度を追跡
     const vinylRef = useRef<HTMLDivElement>(null)
+    const { weatherType } = useWeather()
+    const [currentHour, setCurrentHour] = useState(new Date().getHours())
 
     const currentPlaylist = playlists[currentIndex]
+
+    // 時間の更新（1分ごと）
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentHour(new Date().getHours())
+        }, 60000) // 1分ごとに更新
+        return () => clearInterval(timer)
+    }, [])
+
+    // 背景色の計算
+    const timeOfDay = getTimeOfDay(currentHour)
+    const weather = (weatherType || "Clear") as WeatherType
+    const background = getWeatherBackground(weather, timeOfDay)
 
     // 角度を-180から180の範囲に正規化
     const normalizeAngle = (angle: number): number => {
@@ -198,7 +215,12 @@ export default function PlaylistExplorer() {
     }, [isDragging, startRotation, startX, startY, handleTouchEnd])
 
     return (
-        <div className="min-h-screen bg-background flex flex-col items-center justify-between p-6 pb-8 overflow-hidden touch-none">
+        <div
+            className="min-h-screen flex flex-col items-center justify-between p-6 pb-8 overflow-hidden touch-none transition-all duration-1000 ease-in-out"
+            style={{
+                background: `linear-gradient(to bottom, ${background.from}, ${background.via || background.from}, ${background.to})`,
+            }}
+        >
             {/* Weather Section */}
             <WeatherMonitor />
 
