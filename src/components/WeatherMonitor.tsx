@@ -1,78 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import {
-  Cloud,
-  CloudRain,
-  Sun,
-  CloudSnow,
-  Wind,
-  CloudDrizzle,
-  CloudLightning,
-  CloudFog,
-  Tornado,
-  LucideIcon,
-} from "lucide-react"
+import { useState, useEffect, useCallback } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { useWeather } from "@/contexts/WeatherContext"
-
-// OpenWeatherMap APIレスポンスの型定義
-interface WeatherApiResponse {
-    main: {
-        temp: number
-        feels_like: number
-        temp_min: number
-        temp_max: number
-        pressure: number
-        humidity: number
-    }
-    name: string
-    weather: Array<{
-        id: number
-        main: string
-        description: string
-        icon: string
-    }>
-    coord: {
-        lat: number
-        lon: number
-    }
-}
-
-// 天気データの型定義
-interface WeatherData {
-    icon: LucideIcon
-    temp: string
-    city: string
-    description: string
-}
-
-// 天候の種類に応じたアイコンのマッピング（各パターンに個別のアイコンを割り当て）
-const getWeatherIcon = (weatherMain: string): LucideIcon => {
-    const iconMap: Record<string, LucideIcon> = {
-        Clear: Sun,              // 晴れ
-        Clouds: Cloud,           // 曇り
-        Rain: CloudRain,         // 雨
-        Drizzle: CloudDrizzle,    // 霧雨
-        Thunderstorm: CloudLightning, // 雷雨
-        Snow: CloudSnow,         // 雪
-        Mist: CloudFog,          // 霧
-        Fog: CloudFog,           // 濃霧
-        Haze: CloudFog,          // もや
-        Dust: Wind,              // 砂塵
-        Sand: Wind,              // 砂
-        Ash: CloudFog,           // 灰（霧アイコンを使用）
-        Squall: Wind,            // スコール
-        Tornado: Tornado,        // 竜巻
-    }
-    return iconMap[weatherMain] || Sun
-}
-
-type WeatherState =
-    | { status: "loading"; message: string }
-    | { status: "error"; message: string }
-    | { status: "success"; data: WeatherData }
+import type { WeatherState } from "@/types/weather"
+import { formatDateTime, getGeolocationErrorMessage, GEOLOCATION_OPTIONS } from "@/lib/weather-utils"
+import { fetchWeatherData } from "@/lib/weather-api"
 
 export default function WeatherMonitor() {
     const [currentTime, setCurrentTime] = useState<Date | null>(null)
@@ -93,39 +27,23 @@ export default function WeatherMonitor() {
         return () => clearInterval(timer)
     }, [])
 
+    // 天気データの取得と処理
+    const handleWeatherFetch = useCallback(async (lat: number, lon: number) => {
+        try {
+            setWeatherState({ status: "loading", message: "天気を確認中..." })
+            const { weatherData, weatherMain } = await fetchWeatherData(lat, lon)
+            setWeatherType(weatherMain) // Contextに天気データを設定
+            setWeatherState({ status: "success", data: weatherData })
+        } catch (error) {
+            setWeatherState({
+                status: "error",
+                message: error instanceof Error ? error.message : "エラーが発生しました",
+            })
+        }
+    }, [setWeatherType])
+
     // 天気データの取得
     useEffect(() => {
-        const fetchWeather = async (lat: number, lon: number) => {
-            try {
-                setWeatherState({ status: "loading", message: "天気を確認中..." })
-
-                const response = await fetch(`/api/weather?lat=${lat}&lon=${lon}`)
-
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}))
-                    throw new Error(errorData.error || "天気情報の取得に失敗しました")
-                }
-
-                const data: WeatherApiResponse = await response.json()
-
-                const weatherMain = data.weather[0]?.main || "Clear"
-                const weatherData: WeatherData = {
-                    icon: getWeatherIcon(weatherMain),
-                    temp: `${Math.round(data.main.temp)}°C`,
-                    city: data.name,
-                    description: data.weather[0]?.description || "",
-                }
-
-                setWeatherType(weatherMain) // Contextに天気データを設定
-                setWeatherState({ status: "success", data: weatherData })
-            } catch (error) {
-                setWeatherState({
-                    status: "error",
-                    message: error instanceof Error ? error.message : "エラーが発生しました",
-                })
-            }
-        }
-
         // 位置情報の取得
         if (!navigator.geolocation) {
             setWeatherState({
@@ -138,45 +56,18 @@ export default function WeatherMonitor() {
         navigator.geolocation.getCurrentPosition(
             (position) => {
                 const { latitude, longitude } = position.coords
-                fetchWeather(latitude, longitude)
+                handleWeatherFetch(latitude, longitude)
             },
             (error) => {
-                let errorMessage = "位置情報の取得に失敗しました"
-                switch (error.code) {
-                    case error.PERMISSION_DENIED:
-                        errorMessage = "位置情報の許可が必要です"
-                        break
-                    case error.POSITION_UNAVAILABLE:
-                        errorMessage = "位置情報が利用できません"
-                        break
-                    case error.TIMEOUT:
-                        errorMessage = "位置情報の取得がタイムアウトしました"
-                        break
-                }
-                setWeatherState({ status: "error", message: errorMessage })
+                setWeatherState({
+                    status: "error",
+                    message: getGeolocationErrorMessage(error),
+                })
             },
-            {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0,
-            }
+            GEOLOCATION_OPTIONS
         )
-    }, [])
+    }, [handleWeatherFetch])
 
-    const formatDateTime = (date: Date) => {
-        const year = date.getFullYear().toString().slice(-2)
-        const month = (date.getMonth() + 1).toString().padStart(2, "0")
-        const day = date.getDate().toString().padStart(2, "0")
-        const hours = date.getHours().toString().padStart(2, "0")
-        const minutes = date.getMinutes().toString().padStart(2, "0")
-        const weekdays = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
-        const weekday = weekdays[date.getDay()]
-
-        return {
-            dateString: `${year}/${month}/${day}/${weekday}`,
-            timeString: `${hours}:${minutes}`,
-        }
-    }
 
     const dateTime = currentTime ? formatDateTime(currentTime) : { dateString: "--/--/--/---", timeString: "--:--" }
     const { dateString, timeString } = dateTime
@@ -188,52 +79,15 @@ export default function WeatherMonitor() {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     const { latitude, longitude } = position.coords
-                    fetch(`/api/weather?lat=${latitude}&lon=${longitude}`)
-                        .then(async (response) => {
-                            if (!response.ok) {
-                                const errorData = await response.json().catch(() => ({}))
-                                throw new Error(errorData.error || "天気情報の取得に失敗しました")
-                            }
-                            return response.json()
-                        })
-                        .then((data: WeatherApiResponse) => {
-                            const weatherMain = data.weather[0]?.main || "Clear"
-                            const weatherData: WeatherData = {
-                                icon: getWeatherIcon(weatherMain),
-                                temp: `${Math.round(data.main.temp)}°C`,
-                                city: data.name,
-                                description: data.weather[0]?.description || "",
-                            }
-                            setWeatherType(weatherMain) // Contextに天気データを設定
-                            setWeatherState({ status: "success", data: weatherData })
-                        })
-                        .catch((error) => {
-                            setWeatherState({
-                                status: "error",
-                                message: error instanceof Error ? error.message : "エラーが発生しました",
-                            })
-                        })
+                    handleWeatherFetch(latitude, longitude)
                 },
                 (error) => {
-                    let errorMessage = "位置情報の取得に失敗しました"
-                    switch (error.code) {
-                        case error.PERMISSION_DENIED:
-                            errorMessage = "位置情報の許可が必要です"
-                            break
-                        case error.POSITION_UNAVAILABLE:
-                            errorMessage = "位置情報が利用できません"
-                            break
-                        case error.TIMEOUT:
-                            errorMessage = "位置情報の取得がタイムアウトしました"
-                            break
-                    }
-                    setWeatherState({ status: "error", message: errorMessage })
+                    setWeatherState({
+                        status: "error",
+                        message: getGeolocationErrorMessage(error),
+                    })
                 },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 10000,
-                    maximumAge: 0,
-                }
+                GEOLOCATION_OPTIONS
             )
         }
     }

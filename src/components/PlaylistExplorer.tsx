@@ -86,17 +86,6 @@ export default function PlaylistExplorer() {
     const weather = (weatherType || "Clear") as WeatherType
     const background = getWeatherBackground(weather, timeOfDay)
 
-    // 角度を-180から180の範囲に正規化
-    const normalizeAngle = (angle: number): number => {
-        let normalized = angle % 360
-        if (normalized > 180) {
-            normalized -= 360
-        } else if (normalized < -180) {
-            normalized += 360
-        }
-        return normalized
-    }
-
     // 2つの角度間の最短角度差を計算（-180から180の範囲）
     const getAngleDifference = (angle1: number, angle2: number): number => {
         let diff = angle2 - angle1
