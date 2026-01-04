@@ -22,6 +22,7 @@ export async function fetchWeatherData(lat: number, lon: number): Promise<{
       temp: `${Math.round(data.main.temp)}°C`,
       city: data.name,
       description: data.weather[0]?.description || "",
+      weatherMain,
     },
     weatherMain,
   }

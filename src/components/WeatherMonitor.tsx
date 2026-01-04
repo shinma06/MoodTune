@@ -5,7 +5,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { useWeather } from "@/contexts/WeatherContext"
 import type { WeatherState } from "@/types/weather"
-import { formatDateTime, getGeolocationErrorMessage, GEOLOCATION_OPTIONS } from "@/lib/weather-utils"
+import { formatDateTime, getGeolocationErrorMessage, GEOLOCATION_OPTIONS, getWeatherIcon, getWeatherThemeColor } from "@/lib/weather-utils"
+import { getTimeOfDay, type WeatherType } from "@/lib/weather-background"
 import { fetchWeatherData } from "@/lib/weather-api"
 
 export default function WeatherMonitor() {
@@ -72,6 +73,16 @@ export default function WeatherMonitor() {
     const dateTime = currentTime ? formatDateTime(currentTime) : { dateString: "--/--/--/---", timeString: "--:--" }
     const { dateString, timeString } = dateTime
 
+    // 時間帯の計算とアイコンの取得
+    const currentHour = currentTime?.getHours() ?? new Date().getHours()
+    const timeOfDay = getTimeOfDay(currentHour)
+    const WeatherIcon = weatherState.status === "success" 
+        ? getWeatherIcon(weatherState.data.weatherMain, timeOfDay)
+        : null
+    const iconColor = weatherState.status === "success"
+        ? getWeatherThemeColor(weatherState.data.weatherMain as WeatherType, timeOfDay)
+        : undefined
+
     const handleRetry = () => {
         setWeatherState({ status: "loading", message: "位置情報を取得中..." })
         // 位置情報の再取得
@@ -122,7 +133,7 @@ export default function WeatherMonitor() {
                         </div>
                     )}
 
-                    {weatherState.status === "success" && (
+                    {weatherState.status === "success" && WeatherIcon && (
                         <>
                             <div className="text-right">
                                 <p className="text-2xl font-serif text-foreground">{weatherState.data.temp}</p>
@@ -131,7 +142,7 @@ export default function WeatherMonitor() {
                                     <p className="text-[10px] text-muted-foreground/60 font-light">{weatherState.data.description}</p>
                                 )}
                             </div>
-                            <weatherState.data.icon className="w-10 h-10 text-accent" strokeWidth={1.5} />
+                            <WeatherIcon className="w-10 h-10" style={{ color: iconColor }} strokeWidth={1.5} />
                         </>
                     )}
                 </div>

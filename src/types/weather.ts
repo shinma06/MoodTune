@@ -29,6 +29,7 @@ export interface WeatherData {
   temp: string
   city: string
   description: string
+  weatherMain: string // 天気タイプ（アイコンを動的に取得するために必要）
 }
 
 // 天気状態の型定義

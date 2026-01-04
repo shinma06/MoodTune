@@ -2,6 +2,7 @@ import {
   Cloud,
   CloudRain,
   Sun,
+  Moon,
   CloudSnow,
   Wind,
   CloudDrizzle,
@@ -10,9 +11,18 @@ import {
   Tornado,
   type LucideIcon,
 } from "lucide-react"
+import type { TimeOfDay, WeatherType } from "./weather-background"
 
 // 天候の種類に応じたアイコンのマッピング（各パターンに個別のアイコンを割り当て）
-export function getWeatherIcon(weatherMain: string): LucideIcon {
+export function getWeatherIcon(
+  weatherMain: string,
+  timeOfDay?: TimeOfDay
+): LucideIcon {
+  // Clearかつ夜の場合は月を表示
+  if (weatherMain === "Clear" && timeOfDay === "night") {
+    return Moon
+  }
+
   const iconMap: Record<string, LucideIcon> = {
     Clear: Sun, // 晴れ
     Clouds: Cloud, // 曇り
@@ -67,5 +77,34 @@ export const GEOLOCATION_OPTIONS: PositionOptions = {
   enableHighAccuracy: true,
   timeout: 10000,
   maximumAge: 0,
+}
+
+// 天気タイプごとのテーマカラー
+export function getWeatherThemeColor(
+  weatherType: WeatherType,
+  timeOfDay?: TimeOfDay
+): string {
+  // Clearかつ夜の場合は月の色（シルバー/薄い青）
+  if (weatherType === "Clear" && timeOfDay === "night") {
+    return "#C0C0FF" // 薄い青（月）
+  }
+
+  const themeColors: Record<WeatherType, string> = {
+    Clear: "#FFD700", // 金色（太陽）
+    Clouds: "#778899", // スレートグレー
+    Rain: "#4682B4", // スチールブルー
+    Drizzle: "#87CEEB", // スカイブルー
+    Thunderstorm: "#1C1C1C", // ほぼ黒
+    Snow: "#F0F8FF", // アリスブルー
+    Mist: "#D3D3D3", // ライトグレー
+    Fog: "#C0C0C0", // シルバー
+    Haze: "#E0E0E0", // ライトグレー
+    Dust: "#CD853F", // ペルー
+    Sand: "#F5DEB3", // 小麦色
+    Ash: "#696969", // ディムグレー
+    Squall: "#5F9EA0", // カデットブルー
+    Tornado: "#2F4F4F", // ダークスレートグレー
+  }
+  return themeColors[weatherType] || "#FFD700"
 }
 
