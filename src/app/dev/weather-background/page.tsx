@@ -61,9 +61,13 @@ export default function WeatherBackgroundDevPage() {
   const background = getWeatherBackground(weatherType, timeOfDay)
 
   // グラデーションスタイルの生成
-  const gradientStyle = background.via
-    ? `linear-gradient(to bottom, ${background.from}, ${background.via}, ${background.to})`
-    : `linear-gradient(to bottom, ${background.from}, ${background.to})`
+  const colors = [
+    background.top,
+    background.from,
+    background.via,
+    background.to
+  ].filter(Boolean)
+  const gradientStyle = `linear-gradient(to bottom, ${colors.join(', ')})`
 
   return (
     <div className="min-h-screen p-8">
@@ -168,6 +172,16 @@ export default function WeatherBackgroundDevPage() {
               <div className="space-y-2">
                 <Label>背景色の値</Label>
                 <div className="space-y-2 p-4 bg-muted rounded-lg font-mono text-sm">
+                  {background.top && (
+                    <div className="flex items-center gap-2">
+                      <span className="w-16 text-muted-foreground">top:</span>
+                      <span>{background.top}</span>
+                      <div
+                        className="w-8 h-8 rounded border border-border"
+                        style={{ backgroundColor: background.top }}
+                      />
+                    </div>
+                  )}
                   <div className="flex items-center gap-2">
                     <span className="w-16 text-muted-foreground">from:</span>
                     <span>{background.from}</span>

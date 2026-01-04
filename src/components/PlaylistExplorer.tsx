@@ -207,7 +207,12 @@ export default function PlaylistExplorer() {
         <div
             className="min-h-screen flex flex-col items-center justify-between p-6 pb-8 overflow-hidden touch-none transition-all duration-1000 ease-in-out"
             style={{
-                background: `linear-gradient(to bottom, ${background.from}, ${background.via || background.from}, ${background.to})`,
+                background: `linear-gradient(to bottom, ${[
+                    background.top,
+                    background.from,
+                    background.via,
+                    background.to
+                ].filter(Boolean).join(', ')})`,
             }}
         >
             {/* Weather Section */}

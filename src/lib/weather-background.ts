@@ -16,10 +16,14 @@ export type WeatherType =
   | "Tornado"
 
 export interface BackgroundGradient {
+  top?: string // 最上部の固定色（UI視認性確保用）
   from: string
   via?: string
   to: string
 }
+
+// 固定の上部色（全パターンでUIとアイコンの視認性を確保）
+export const BACKGROUND_TOP_COLOR = "#FAFAFA"
 
 // 時間帯の判定
 export function getTimeOfDay(hour: number): TimeOfDay {
@@ -121,6 +125,12 @@ export function getWeatherBackground(
     },
   }
 
-  return backgrounds[weather]?.[timeOfDay] || backgrounds.Clear[timeOfDay]
+  const baseGradient = backgrounds[weather]?.[timeOfDay] || backgrounds.Clear[timeOfDay]
+  
+  // 全てのグラデーションに固定のtop色を追加（UI視認性確保）
+  return {
+    top: BACKGROUND_TOP_COLOR,
+    ...baseGradient
+  }
 }
 
