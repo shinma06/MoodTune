@@ -1,5 +1,5 @@
-import PlaylistExplorer from "@/components/playlist-explorer"
+import PlaylistExplorer from "@/components/PlaylistExplorer"
 
 export default function Page() {
-  return <PlaylistExplorer />
+    return <PlaylistExplorer />
 }
