@@ -5,9 +5,10 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { useWeather } from "@/contexts/WeatherContext"
 import type { WeatherState } from "@/types/weather"
-import { formatDateTime, getGeolocationErrorMessage, GEOLOCATION_OPTIONS, getWeatherIcon, getWeatherThemeColor } from "@/lib/weather-utils"
+import { formatDateTime, getWeatherIcon, getWeatherThemeColor } from "@/lib/weather-utils"
 import { getTimeOfDay, type WeatherType } from "@/lib/weather-background"
 import { fetchWeatherData } from "@/lib/weather-api"
+import { useGeolocation } from "@/hooks/useGeolocation"
 
 export default function WeatherMonitor() {
     const [currentTime, setCurrentTime] = useState<Date | null>(null)
@@ -53,31 +54,24 @@ export default function WeatherMonitor() {
         }
     }, [setWeatherType, setActualWeatherType])
 
-    // 天気データの取得
-    useEffect(() => {
-        // 位置情報の取得
-        if (!navigator.geolocation) {
+    // 位置情報取得
+    const { requestGeolocation } = useGeolocation({
+        onSuccess: (position) => {
+            const { latitude, longitude } = position.coords
+            handleWeatherFetch(latitude, longitude)
+        },
+        onError: (error) => {
             setWeatherState({
                 status: "error",
-                message: "位置情報サービスが利用できません",
+                message: error,
             })
-            return
-        }
+        },
+    })
 
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const { latitude, longitude } = position.coords
-                handleWeatherFetch(latitude, longitude)
-            },
-            (error) => {
-                setWeatherState({
-                    status: "error",
-                    message: getGeolocationErrorMessage(error),
-                })
-            },
-            GEOLOCATION_OPTIONS
-        )
-    }, [handleWeatherFetch])
+    // 初回の位置情報取得
+    useEffect(() => {
+        requestGeolocation()
+    }, [requestGeolocation])
 
 
     const dateTime = currentTime ? formatDateTime(currentTime) : { dateString: "--/--/--/---", timeString: "--:--" }
@@ -105,22 +99,7 @@ export default function WeatherMonitor() {
 
     const handleRetry = () => {
         setWeatherState({ status: "loading", message: "位置情報を取得中..." })
-        // 位置情報の再取得
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const { latitude, longitude } = position.coords
-                    handleWeatherFetch(latitude, longitude)
-                },
-                (error) => {
-                    setWeatherState({
-                        status: "error",
-                        message: getGeolocationErrorMessage(error),
-                    })
-                },
-                GEOLOCATION_OPTIONS
-            )
-        }
+        requestGeolocation()
     }
 
     return (

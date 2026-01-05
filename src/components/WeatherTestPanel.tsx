@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useWeather } from "@/contexts/WeatherContext"
 import { getWeatherIcon, getWeatherThemeColor } from "@/lib/weather-utils"
 import type { WeatherType, TimeOfDay } from "@/lib/weather-background"
+import { WEATHER_TYPES, TIME_OF_DAY_OPTIONS } from "@/lib/constants"
 import {
   Card,
   CardContent,
@@ -14,30 +15,6 @@ import {
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { X, Settings } from "lucide-react"
-
-const weatherTypes: WeatherType[] = [
-  "Clear",
-  "Clouds",
-  "Rain",
-  "Drizzle",
-  "Thunderstorm",
-  "Snow",
-  "Mist",
-  "Fog",
-  "Haze",
-  "Dust",
-  "Sand",
-  "Ash",
-  "Squall",
-  "Tornado",
-]
-
-const timeOfDayOptions: { value: TimeOfDay; label: string }[] = [
-  { value: "dawn", label: "朝 (6-9時)" },
-  { value: "day", label: "昼 (9-17時)" },
-  { value: "dusk", label: "夕方 (17-19時)" },
-  { value: "night", label: "夜 (19-6時)" },
-]
 
 export default function WeatherTestPanel() {
   const {
@@ -133,7 +110,7 @@ export default function WeatherTestPanel() {
             <div className="space-y-2">
               <Label className="text-sm">天気</Label>
               <div className="grid grid-cols-3 gap-2">
-                {weatherTypes.map((type) => {
+                {WEATHER_TYPES.map((type) => {
                   const Icon = getWeatherIcon(type)
                   const color = getWeatherThemeColor(type)
                   const isSelected = testWeatherType === type
@@ -159,7 +136,7 @@ export default function WeatherTestPanel() {
             <div className="space-y-2">
               <Label className="text-sm">時間帯</Label>
               <div className="grid grid-cols-4 gap-2">
-                {timeOfDayOptions.map((option) => {
+                {TIME_OF_DAY_OPTIONS.map((option) => {
                   const isSelected = localTimeOfDay === option.value
                   return (
                     <button
