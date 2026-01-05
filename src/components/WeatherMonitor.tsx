@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { useWeather } from "@/contexts/WeatherContext"
@@ -15,7 +15,13 @@ export default function WeatherMonitor() {
         status: "loading",
         message: "位置情報を取得中...",
     })
-    const { setWeatherType } = useWeather()
+    const { setWeatherType, setActualWeatherType, weatherType, testTimeOfDay, isTestMode } = useWeather()
+    
+    // isTestModeの現在の値を保持（useCallbackの依存配列を避けるため）
+    const isTestModeRef = useRef(isTestMode)
+    useEffect(() => {
+        isTestModeRef.current = isTestMode
+    }, [isTestMode])
 
     // 時計の更新（クライアントサイドでのみ実行）
     useEffect(() => {
@@ -33,7 +39,11 @@ export default function WeatherMonitor() {
         try {
             setWeatherState({ status: "loading", message: "天気を確認中..." })
             const { weatherData, weatherMain } = await fetchWeatherData(lat, lon)
-            setWeatherType(weatherMain) // Contextに天気データを設定
+            setActualWeatherType(weatherMain) // 実際の天気を保存
+            // テストモードでない場合のみweatherTypeを更新
+            if (!isTestModeRef.current) {
+                setWeatherType(weatherMain)
+            }
             setWeatherState({ status: "success", data: weatherData })
         } catch (error) {
             setWeatherState({
@@ -41,7 +51,7 @@ export default function WeatherMonitor() {
                 message: error instanceof Error ? error.message : "エラーが発生しました",
             })
         }
-    }, [setWeatherType])
+    }, [setWeatherType, setActualWeatherType])
 
     // 天気データの取得
     useEffect(() => {
@@ -75,12 +85,22 @@ export default function WeatherMonitor() {
 
     // 時間帯の計算とアイコンの取得
     const currentHour = currentTime?.getHours() ?? new Date().getHours()
-    const timeOfDay = getTimeOfDay(currentHour)
-    const WeatherIcon = weatherState.status === "success" 
-        ? getWeatherIcon(weatherState.data.weatherMain, timeOfDay)
+    const calculatedTimeOfDay = getTimeOfDay(currentHour)
+    // テストモード時は手動設定の時間帯を使用、そうでない場合は実際の時間から計算
+    const timeOfDay = isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay
+    
+    // テストモード時はContextのweatherTypeを使用、そうでない場合はAPIから取得したデータを使用
+    const displayWeatherType = isTestMode && weatherType
+        ? (weatherType as WeatherType)
+        : weatherState.status === "success"
+        ? (weatherState.data.weatherMain as WeatherType)
         : null
-    const iconColor = weatherState.status === "success"
-        ? getWeatherThemeColor(weatherState.data.weatherMain as WeatherType, timeOfDay)
+    
+    const WeatherIcon = displayWeatherType
+        ? getWeatherIcon(displayWeatherType, timeOfDay)
+        : null
+    const iconColor = displayWeatherType
+        ? getWeatherThemeColor(displayWeatherType, timeOfDay)
         : undefined
 
     const handleRetry = () => {

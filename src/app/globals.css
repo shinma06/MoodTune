@@ -123,3 +123,273 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* 天気アニメーション */
+/* 雨のアニメーション */
+.rain-container {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.rain-drop {
+  position: absolute;
+  width: 2px;
+  height: 20px;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1));
+  animation: rain-fall linear infinite;
+  top: -20px;
+}
+
+.rain-drop.squall-rain {
+  height: 25px;
+  width: 3px;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.15));
+}
+
+@keyframes rain-fall {
+  to {
+    transform: translateY(100vh);
+  }
+}
+
+/* 雪のアニメーション */
+.snow-container {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.snowflake {
+  position: absolute;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1.5rem;
+  animation: snow-fall linear infinite;
+  top: -20px;
+  user-select: none;
+}
+
+@keyframes snow-fall {
+  to {
+    transform: translateY(100vh) rotate(360deg);
+  }
+}
+
+/* 雲のアニメーション */
+.clouds-container {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  top: 0;
+}
+
+.cloud {
+  position: absolute;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 8rem;
+  animation: cloud-drift linear infinite;
+  top: 10%;
+  user-select: none;
+}
+
+@keyframes cloud-drift {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100vw);
+  }
+}
+
+/* 霧のアニメーション */
+.fog-container {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.fog-layer {
+  position: absolute;
+  width: 120%;
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  animation: fog-drift linear infinite;
+  top: 0;
+}
+
+@keyframes fog-drift {
+  0% {
+    transform: translateX(-20%);
+  }
+  100% {
+    transform: translateX(20%);
+  }
+}
+
+/* 画面の水滴効果 */
+.water-drops {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.water-drop {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  animation: water-drop-appear 10s linear infinite;
+  opacity: 0;
+}
+
+@keyframes water-drop-appear {
+  0%, 90% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  5% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  10% {
+    opacity: 0.8;
+    transform: scale(1.2);
+  }
+  15%, 100% {
+    opacity: 0;
+    transform: scale(0);
+  }
+}
+
+/* 砂塵のアニメーション */
+.dust-container {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.dust-particle {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: rgba(205, 133, 63, 0.4);
+  border-radius: 50%;
+  animation: dust-drift linear infinite;
+  top: -3px;
+}
+
+@keyframes dust-drift {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) translateX(20px);
+    opacity: 0;
+  }
+}
+
+/* 竜巻のアニメーション */
+.tornado-container {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tornado-spiral {
+  width: 200px;
+  height: 100vh;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(0, 0, 0, 0.1),
+    transparent
+  );
+  animation: tornado-spin 3s linear infinite;
+  position: relative;
+}
+
+.tornado-spiral::before,
+.tornado-spiral::after {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(0, 0, 0, 0.08),
+    transparent
+  );
+  animation: tornado-spin 2s linear infinite reverse;
+}
+
+@keyframes tornado-spin {
+  0% {
+    transform: rotate(0deg) scaleX(1);
+  }
+  50% {
+    transform: rotate(180deg) scaleX(1.2);
+  }
+  100% {
+    transform: rotate(360deg) scaleX(1);
+  }
+}
+
+/* スコールの風のアニメーション */
+.wind-lines {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.wind-line {
+  position: absolute;
+  width: 2px;
+  height: 30px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  animation: wind-blow 1s linear infinite;
+  transform: rotate(45deg);
+}
+
+@keyframes wind-blow {
+  0% {
+    transform: translateX(-50px) translateY(-50px) rotate(45deg);
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateX(50px) translateY(50px) rotate(45deg);
+    opacity: 0;
+  }
+}
+

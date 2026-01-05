@@ -4,6 +4,8 @@ import type React from "react"
 
 import { useState, useRef, useEffect, useCallback } from "react"
 import WeatherMonitor from "./WeatherMonitor"
+import WeatherAnimation from "./WeatherAnimation"
+import WeatherTestPanel from "./WeatherTestPanel"
 import { useWeather } from "@/contexts/WeatherContext"
 import { getWeatherBackground, getTimeOfDay, type WeatherType } from "@/lib/weather-background"
 
@@ -68,7 +70,7 @@ export default function PlaylistExplorer() {
     const [startRotation, setStartRotation] = useState(0)
     const [totalRotation, setTotalRotation] = useState(0) // 累積回転角度を追跡
     const vinylRef = useRef<HTMLDivElement>(null)
-    const { weatherType } = useWeather()
+    const { weatherType, testTimeOfDay, isTestMode } = useWeather()
     const [currentHour, setCurrentHour] = useState(new Date().getHours())
 
     const currentPlaylist = playlists[currentIndex]
@@ -82,7 +84,9 @@ export default function PlaylistExplorer() {
     }, [])
 
     // 背景色の計算
-    const timeOfDay = getTimeOfDay(currentHour)
+    // テストモード時は手動設定の時間帯を使用、そうでない場合は実際の時間から計算
+    const calculatedTimeOfDay = getTimeOfDay(currentHour)
+    const timeOfDay = isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay
     const weather = (weatherType || "Clear") as WeatherType
     const background = getWeatherBackground(weather, timeOfDay)
 
@@ -215,6 +219,12 @@ export default function PlaylistExplorer() {
                 ].filter(Boolean).join(', ')})`,
             }}
         >
+            {/* Weather Animation */}
+            <WeatherAnimation weatherType={weatherType as WeatherType} />
+
+            {/* Weather Test Panel */}
+            <WeatherTestPanel />
+
             {/* Weather Section */}
             <WeatherMonitor />
 
