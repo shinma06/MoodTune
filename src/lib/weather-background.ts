@@ -16,14 +16,75 @@ export type WeatherType =
   | "Tornado"
 
 export interface BackgroundGradient {
-  top?: string // 最上部の固定色（UI視認性確保用）
+  top?: string // 最上部の色（常に白ベースでUI視認性を担保）
   from: string
-  via?: string
+  via?: string // 中間色1
+  via2?: string // 中間色2（滑らかなグラデーション用）
+  via3?: string // 中間色3（より滑らかなグラデーション用）
   to: string
+  to2?: string // 最終色（5色以上のグラデーション用）
 }
 
-// 固定の上部色（全パターンでUIとアイコンの視認性を確保）
-export const BACKGROUND_TOP_COLOR = "#FAFAFA"
+// 上部色の定義
+export const BACKGROUND_TOP_COLOR_BRIGHT = "#FAFAFA" // 明るい背景用の白ベース
+
+/**
+ * 天気と時間帯に応じた適切なtop色を取得
+ * 暗い雰囲気の場合は、天気の雰囲気に合わせた暗い色を使用し、上部UIのテキストを白ベースにする
+ */
+export function getTopColor(weather: WeatherType, timeOfDay: TimeOfDay): string {
+  // 非常に暗い天気（Thunderstorm, Tornado）は暗いtop色を使用
+  const isVeryDarkWeather = weather === "Thunderstorm" || weather === "Tornado"
+  if (isVeryDarkWeather) {
+    if (timeOfDay === "night") {
+      return "#0A0A0A" // ほぼ黒
+    }
+    return "#1C1C1C" // 暗いグレー
+  }
+
+  // 夜の時間帯は天気に応じた暗い色を使用
+  if (timeOfDay === "night") {
+    if (weather === "Clear") {
+      return "#2A2A4A" // 暗い青
+    }
+    if (weather === "Rain" || weather === "Drizzle" || weather === "Squall") {
+      return "#1A1A2A" // 暗い青グレー
+    }
+    if (weather === "Clouds" || weather === "Mist" || weather === "Fog" || weather === "Haze") {
+      return "#1C1C1C" // 暗いグレー
+    }
+    if (weather === "Snow") {
+      return "#2A2A2A" // 暗いグレー（雪の雰囲気）
+    }
+    if (weather === "Dust" || weather === "Sand") {
+      return "#2A1F1A" // 暗い茶色
+    }
+    if (weather === "Ash") {
+      return "#1A1A1A" // 暗いグレー
+    }
+    return "#1C1C1C" // デフォルトの暗いグレー
+  }
+
+  // 夕方の暗い天気も暗いtop色
+  if (timeOfDay === "dusk") {
+    const isDarkWeatherAtDusk = weather === "Rain" || weather === "Fog"
+    if (isDarkWeatherAtDusk) {
+      return "#2F2F2F" // 暗いグレー
+    }
+  }
+
+  // その他の場合は明るい白ベース
+  return BACKGROUND_TOP_COLOR_BRIGHT
+}
+
+/**
+ * 背景が暗いかどうかを判定（上部UIのテキスト色を決定するため）
+ */
+export function isDarkBackground(weather: WeatherType, timeOfDay: TimeOfDay): boolean {
+  const topColor = getTopColor(weather, timeOfDay)
+  // top色が暗い（#FAFAFAより暗い）場合は、背景が暗いと判定
+  return topColor !== BACKGROUND_TOP_COLOR_BRIGHT
+}
 
 // 時間帯の判定
 export function getTimeOfDay(hour: number): TimeOfDay {
@@ -43,93 +104,93 @@ export function getWeatherBackground(
       dawn: { from: "#FFE5B4", via: "#FFB347", to: "#FFA500" }, // 朝焼け
       day: { from: "#87CEEB", via: "#87CEFA", to: "#B0E0E6" }, // 青空
       dusk: { from: "#FF6347", via: "#FF4500", to: "#FF8C00" }, // 夕焼け
-      night: { from: "#191970", via: "#000080", to: "#000033" }, // 夜空
+      night: { from: "#3A3A5C", via: "#2A2A4A", via2: "#1A1A3A", to: "#191970", to2: "#000033" }, // 夜空（暗い青の雰囲気を維持）
     },
     Clouds: {
       dawn: { from: "#D3D3D3", via: "#C0C0C0", to: "#A9A9A9" },
       day: { from: "#B0C4DE", via: "#778899", to: "#708090" },
       dusk: { from: "#696969", via: "#808080", to: "#778899" },
-      night: { from: "#2F2F2F", via: "#1C1C1C", to: "#000000" },
+      night: { from: "#2F2F2F", via: "#252525", via2: "#1A1A1A", to: "#0F0F0F", to2: "#000000" }, // 暗いグレーの雰囲気を維持
     },
     Rain: {
       dawn: { from: "#778899", via: "#708090", to: "#696969" },
       day: { from: "#4682B4", via: "#5F9EA0", to: "#708090" },
-      dusk: { from: "#556B2F", via: "#6B8E23", to: "#808080" },
-      night: { from: "#1C1C1C", via: "#2F2F2F", to: "#000000" },
+      dusk: { from: "#3A3A3A", via: "#2F2F2F", via2: "#252525", to: "#1A1A1A", to2: "#000000" }, // 夕方の雨（暗いグレーの雰囲気）
+      night: { from: "#2A2A3A", via: "#1F1F2F", via2: "#151525", to: "#0F0F1A", to2: "#000000" }, // 夜の雨（暗い青グレーの雰囲気）
     },
     Drizzle: {
       dawn: { from: "#B0C4DE", via: "#C0C0C0", to: "#A9A9A9" },
       day: { from: "#87CEEB", via: "#B0C4DE", to: "#778899" },
       dusk: { from: "#778899", via: "#696969", to: "#708090" },
-      night: { from: "#2F2F2F", via: "#1C1C1C", to: "#000000" },
+      night: { from: "#2A2A3A", via: "#1F1F2F", via2: "#151525", to: "#0F0F1A", to2: "#000000" }, // 夜の霧雨（暗い青グレーの雰囲気）
     },
     Thunderstorm: {
-      dawn: { from: "#4B4B4B", via: "#2F2F2F", to: "#1C1C1C" },
-      day: { from: "#2F4F4F", via: "#1C1C1C", to: "#000000" },
-      dusk: { from: "#1C1C1C", via: "#000000", to: "#2F2F2F" },
-      night: { from: "#000000", via: "#1C1C1C", to: "#2F2F2F" },
+      dawn: { from: "#1A1A1A", via: "#151515", via2: "#0F0F0F", to: "#0A0A0A", to2: "#000000" }, // 雷雨の暗い雰囲気
+      day: { from: "#1C1C1C", via: "#151515", via2: "#0F0F0F", to: "#0A0A0A", to2: "#000000" }, // 雷雨の暗い雰囲気
+      dusk: { from: "#1A1A1A", via: "#151515", via2: "#0F0F0F", to: "#0A0A0A", to2: "#000000" }, // 雷雨の暗い雰囲気
+      night: { from: "#0A0A0A", via: "#080808", via2: "#050505", to: "#030303", to2: "#000000" }, // 夜の雷雨（非常に暗い）
     },
     Snow: {
       dawn: { from: "#E6E6FA", via: "#D3D3D3", to: "#C0C0C0" },
       day: { from: "#F0F8FF", via: "#E0E0E0", to: "#D3D3D3" },
       dusk: { from: "#D3D3D3", via: "#C0C0C0", to: "#A9A9A9" },
-      night: { from: "#2F2F2F", via: "#1C1C1C", to: "#000000" },
+      night: { from: "#2F2F2F", via: "#252525", via2: "#1A1A1A", to: "#0F0F0F", to2: "#000000" }, // 夜の雪（暗いグレーの雰囲気）
     },
     Mist: {
       dawn: { from: "#D3D3D3", via: "#C0C0C0", to: "#A9A9A9" },
       day: { from: "#E0E0E0", via: "#D3D3D3", to: "#C0C0C0" },
       dusk: { from: "#A9A9A9", via: "#808080", to: "#696969" },
-      night: { from: "#2F2F2F", via: "#1C1C1C", to: "#000000" },
+      night: { from: "#2F2F2F", via: "#252525", via2: "#1A1A1A", to: "#0F0F0F", to2: "#000000" }, // 夜の霧（暗いグレーの雰囲気）
     },
     Fog: {
       dawn: { from: "#C0C0C0", via: "#A9A9A9", to: "#808080" },
       day: { from: "#D3D3D3", via: "#C0C0C0", to: "#A9A9A9" },
-      dusk: { from: "#808080", via: "#696969", to: "#708090" },
-      night: { from: "#1C1C1C", via: "#000000", to: "#2F2F2F" },
+      dusk: { from: "#3A3A3A", via: "#2F2F2F", via2: "#252525", to: "#1A1A1A", to2: "#000000" }, // 夕方の霧（暗いグレーの雰囲気）
+      night: { from: "#2F2F2F", via: "#252525", via2: "#1A1A1A", to: "#0F0F0F", to2: "#000000" }, // 夜の霧（暗いグレーの雰囲気）
     },
     Haze: {
       dawn: { from: "#D3D3D3", via: "#C0C0C0", to: "#A9A9A9" },
       day: { from: "#E0E0E0", via: "#D3D3D3", to: "#C0C0C0" },
       dusk: { from: "#A9A9A9", via: "#808080", to: "#696969" },
-      night: { from: "#2F2F2F", via: "#1C1C1C", to: "#000000" },
+      night: { from: "#2F2F2F", via: "#252525", via2: "#1A1A1A", to: "#0F0F0F", to2: "#000000" }, // 夜のもや（暗いグレーの雰囲気）
     },
     Dust: {
       dawn: { from: "#DEB887", via: "#CD853F", to: "#A0522D" },
       day: { from: "#F4A460", via: "#DEB887", to: "#CD853F" },
       dusk: { from: "#CD853F", via: "#A0522D", to: "#8B4513" },
-      night: { from: "#2F2F2F", via: "#1C1C1C", to: "#000000" },
+      night: { from: "#3A2F2A", via: "#2F2520", via2: "#1F1A15", to: "#0F0A0A", to2: "#000000" }, // 夜の砂塵（暗い茶色の雰囲気）
     },
     Sand: {
       dawn: { from: "#F5DEB3", via: "#DEB887", to: "#CD853F" },
       day: { from: "#FFE4B5", via: "#F5DEB3", to: "#DEB887" },
       dusk: { from: "#DEB887", via: "#CD853F", to: "#A0522D" },
-      night: { from: "#2F2F2F", via: "#1C1C1C", to: "#000000" },
+      night: { from: "#3A2F2A", via: "#2F2520", via2: "#1F1A15", to: "#0F0A0A", to2: "#000000" }, // 夜の砂（暗い茶色の雰囲気）
     },
     Ash: {
       dawn: { from: "#696969", via: "#808080", to: "#A9A9A9" },
       day: { from: "#778899", via: "#696969", to: "#808080" },
       dusk: { from: "#556B2F", via: "#696969", to: "#708090" },
-      night: { from: "#1C1C1C", via: "#000000", to: "#2F2F2F" },
+      night: { from: "#2A2A2A", via: "#1F1F1F", via2: "#151515", to: "#0A0A0A", to2: "#000000" }, // 夜の灰（暗いグレーの雰囲気）
     },
     Squall: {
       dawn: { from: "#4682B4", via: "#5F9EA0", to: "#708090" },
       day: { from: "#5F9EA0", via: "#4682B4", to: "#778899" },
       dusk: { from: "#556B2F", via: "#696969", to: "#708090" },
-      night: { from: "#1C1C1C", via: "#2F2F2F", to: "#000000" },
+      night: { from: "#2A2A3A", via: "#1F1F2F", via2: "#151525", to: "#0F0F1A", to2: "#000000" }, // 夜のスコール（暗い青グレーの雰囲気）
     },
     Tornado: {
-      dawn: { from: "#4B4B4B", via: "#2F2F2F", to: "#1C1C1C" },
-      day: { from: "#2F4F4F", via: "#1C1C1C", to: "#000000" },
-      dusk: { from: "#1C1C1C", via: "#000000", to: "#2F2F2F" },
-      night: { from: "#000000", via: "#1C1C1C", to: "#2F2F2F" },
+      dawn: { from: "#1A1A1A", via: "#151515", via2: "#0F0F0F", to: "#0A0A0A", to2: "#000000" }, // 竜巻の暗い雰囲気
+      day: { from: "#1C1C1C", via: "#151515", via2: "#0F0F0F", to: "#0A0A0A", to2: "#000000" }, // 竜巻の暗い雰囲気
+      dusk: { from: "#1A1A1A", via: "#151515", via2: "#0F0F0F", to: "#0A0A0A", to2: "#000000" }, // 竜巻の暗い雰囲気
+      night: { from: "#0A0A0A", via: "#080808", via2: "#050505", to: "#030303", to2: "#000000" }, // 夜の竜巻（非常に暗い）
     },
   }
 
   const baseGradient = backgrounds[weather]?.[timeOfDay] || backgrounds.Clear[timeOfDay]
   
-  // 全てのグラデーションに固定のtop色を追加（UI視認性確保）
+  // 天気と時間帯に応じた適切なtop色を設定
   return {
-    top: BACKGROUND_TOP_COLOR,
+    top: getTopColor(weather, timeOfDay),
     ...baseGradient
   }
 }
