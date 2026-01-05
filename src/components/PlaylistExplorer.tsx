@@ -5,7 +5,7 @@ import WeatherMonitor from "./WeatherMonitor"
 import WeatherAnimation from "./WeatherAnimation"
 import WeatherTestPanel from "./WeatherTestPanel"
 import { useWeather } from "@/contexts/WeatherContext"
-import { getWeatherBackground, getTimeOfDay, type WeatherType } from "@/lib/weather-background"
+import { getWeatherBackground, getTimeOfDay, type WeatherType, isDarkBackground } from "@/lib/weather-background"
 import { formatGradientBackground } from "@/lib/weather-background-utils"
 import { PLAYLISTS } from "@/lib/playlists"
 import { useVinylRotation } from "@/hooks/useVinylRotation"
@@ -30,6 +30,9 @@ export default function PlaylistExplorer() {
     const timeOfDay = isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay
     const weather = (weatherType || "Clear") as WeatherType
     const background = getWeatherBackground(weather, timeOfDay)
+    
+    // 背景が暗いかどうかを判定
+    const isDark = isDarkBackground(weather, timeOfDay)
 
     // レコード盤の回転管理
     const {
@@ -69,7 +72,7 @@ export default function PlaylistExplorer() {
 
             {/* Vinyl Record Section */}
             <div className="flex-1 flex items-center justify-center w-full max-w-md relative">
-                <p className="absolute top-0 left-1/2 -translate-x-1/2 text-center text-[10px] text-muted-foreground/70 font-light whitespace-nowrap">
+                <p className={`absolute top-0 left-1/2 -translate-x-1/2 text-center text-[10px] font-light whitespace-nowrap ${isDark ? "text-white/80" : "text-muted-foreground/70"}`}>
                     左右にスピンして他のプレイリストへ
                 </p>
 
