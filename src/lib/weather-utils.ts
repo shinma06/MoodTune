@@ -108,3 +108,34 @@ export function getWeatherThemeColor(
   return themeColors[weatherType] || "#FFD700"
 }
 
+/**
+ * 暗い背景用の天気テーマカラー（視認性を確保しつつ雰囲気を維持）
+ */
+export function getWeatherThemeColorForDark(
+  weatherType: WeatherType,
+  timeOfDay?: TimeOfDay
+): string {
+  // Clearかつ夜の場合は月の色（明るめの青）
+  if (weatherType === "Clear" && timeOfDay === "night") {
+    return "#B0B0FF" // 明るい青（月）
+  }
+
+  const darkThemeColors: Record<WeatherType, string> = {
+    Clear: "#FFE55C", // 明るい金色（太陽の雰囲気を維持）
+    Clouds: "#A0B0C0", // 明るいスレートグレー
+    Rain: "#6BA3D4", // 明るいスチールブルー（雨の雰囲気）
+    Drizzle: "#A0D4F0", // 明るいスカイブルー
+    Thunderstorm: "#FFD700", // 金色（雷の閃光をイメージ）
+    Snow: "#E0F0FF", // 明るいアリスブルー（雪の雰囲気）
+    Mist: "#E8E8E8", // 明るいライトグレー
+    Fog: "#D8D8D8", // 明るいシルバー
+    Haze: "#F0F0F0", // 明るいライトグレー
+    Dust: "#E0A050", // 明るいペルー（砂塵の雰囲気）
+    Sand: "#FFE8B0", // 明るい小麦色
+    Ash: "#909090", // 明るいディムグレー
+    Squall: "#7FB8C0", // 明るいカデットブルー（スコールの雰囲気）
+    Tornado: "#708090", // 明るいスレートグレー（竜巻の雰囲気）
+  }
+  return darkThemeColors[weatherType] || "#FFE55C"
+}
+
