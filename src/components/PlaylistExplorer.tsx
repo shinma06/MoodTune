@@ -6,6 +6,7 @@ import WeatherAnimation from "./WeatherAnimation"
 import WeatherTestPanel from "./WeatherTestPanel"
 import { useWeather } from "@/contexts/WeatherContext"
 import { getWeatherBackground, getTimeOfDay, type WeatherType, isDarkBackground } from "@/lib/weather-background"
+import { normalizeWeatherType } from "@/lib/weather-utils"
 import { formatGradientBackground } from "@/lib/weather-background-utils"
 import { PLAYLISTS } from "@/lib/playlists"
 import { useVinylRotation } from "@/hooks/useVinylRotation"
@@ -28,7 +29,7 @@ export default function PlaylistExplorer() {
     // 背景色の計算
     const calculatedTimeOfDay = getTimeOfDay(currentHour)
     const timeOfDay = isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay
-    const weather = (weatherType || "Clear") as WeatherType
+    const weather = normalizeWeatherType(weatherType || "Clear")
     const background = getWeatherBackground(weather, timeOfDay)
     
     // 背景が暗いかどうかを判定
@@ -66,7 +67,7 @@ export default function PlaylistExplorer() {
             }}
         >
             {/* Weather Animation */}
-            <WeatherAnimation weatherType={weatherType as WeatherType} />
+            <WeatherAnimation weatherType={weatherType ? normalizeWeatherType(weatherType) : null} />
 
             {/* Weather Test Panel */}
             <WeatherTestPanel />

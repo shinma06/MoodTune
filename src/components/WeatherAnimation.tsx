@@ -3,6 +3,7 @@
 import { useWeather } from "@/contexts/WeatherContext"
 import { getTimeOfDay } from "@/lib/weather-background"
 import type { WeatherType } from "@/lib/weather-background"
+import { normalizeWeatherType } from "@/lib/weather-utils"
 import { useEffect, useState } from "react"
 
 interface WeatherAnimationProps {
@@ -25,7 +26,7 @@ export default function WeatherAnimation({ weatherType: propWeatherType }: Weath
   }, [])
 
   const timeOfDay = getTimeOfDay(currentHour)
-  const weather = (weatherType || "Clear") as WeatherType
+  const weather = weatherType ? normalizeWeatherType(weatherType) : "Clear"
 
   // 雷雨のフラッシュ効果
   useEffect(() => {

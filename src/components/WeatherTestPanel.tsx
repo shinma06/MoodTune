@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useWeather } from "@/contexts/WeatherContext"
-import { getWeatherIcon, getWeatherThemeColor } from "@/lib/weather-utils"
+import { getWeatherIcon, getWeatherThemeColor, normalizeWeatherType } from "@/lib/weather-utils"
 import type { WeatherType, TimeOfDay } from "@/lib/weather-background"
 import { WEATHER_TYPES, TIME_OF_DAY_OPTIONS, WEATHER_TYPE_LABELS } from "@/lib/constants"
 import {
@@ -29,7 +29,7 @@ export default function WeatherTestPanel() {
   } = useWeather()
   const [isOpen, setIsOpen] = useState(false)
   const [testWeatherType, setTestWeatherType] = useState<WeatherType>(
-    (weatherType as WeatherType) || "Clear"
+    weatherType ? normalizeWeatherType(weatherType) : "Clear"
   )
   const [localTimeOfDay, setLocalTimeOfDay] = useState<TimeOfDay>(
     testTimeOfDay || "day"
@@ -60,7 +60,7 @@ export default function WeatherTestPanel() {
     setIsTestMode(false)
     // ローカル状態も実際の天気に戻す
     if (actualWeatherType) {
-      setTestWeatherType(actualWeatherType as WeatherType)
+      setTestWeatherType(normalizeWeatherType(actualWeatherType))
     } else {
       setTestWeatherType("Clear")
     }
@@ -70,7 +70,7 @@ export default function WeatherTestPanel() {
   // テストモード時は時間帯を手動設定、そうでない場合は実際の時間を使用
   const currentWeatherType = isTestMode
     ? testWeatherType
-    : (weatherType as WeatherType) || "Clear"
+    : weatherType ? normalizeWeatherType(weatherType) : "Clear"
 
   return (
     <>

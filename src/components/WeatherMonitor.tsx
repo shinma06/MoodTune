@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { useWeather } from "@/contexts/WeatherContext"
 import type { WeatherState } from "@/types/weather"
-import { formatDateTime, getWeatherIcon, getWeatherThemeColor, getWeatherThemeColorForDark } from "@/lib/weather-utils"
+import { formatDateTime, getWeatherIcon, getWeatherThemeColor, getWeatherThemeColorForDark, normalizeWeatherType } from "@/lib/weather-utils"
 import { getTimeOfDay, type WeatherType, isDarkBackground } from "@/lib/weather-background"
 import { fetchWeatherData } from "@/lib/weather-api"
 import { useGeolocation } from "@/hooks/useGeolocation"
@@ -85,9 +85,9 @@ export default function WeatherMonitor() {
     
     // テストモード時はContextのweatherTypeを使用、そうでない場合はAPIから取得したデータを使用
     const displayWeatherType = isTestMode && weatherType
-        ? (weatherType as WeatherType)
+        ? normalizeWeatherType(weatherType)
         : weatherState.status === "success"
-        ? (weatherState.data.weatherMain as WeatherType)
+        ? normalizeWeatherType(weatherState.data.weatherMain)
         : null
     
     const WeatherIcon = displayWeatherType

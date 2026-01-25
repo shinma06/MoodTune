@@ -10,6 +10,20 @@ import {
   type LucideIcon,
 } from "lucide-react"
 import type { TimeOfDay, WeatherType } from "./weather-background"
+import { WEATHER_TYPES } from "./constants"
+
+/**
+ * APIから取得した天気タイプを正規化（サポートされている天気タイプに変換）
+ * 存在しない天気タイプの場合は"Clear"にフォールバック
+ */
+export function normalizeWeatherType(weatherMain: string): WeatherType {
+  // サポートされている天気タイプかチェック
+  if (WEATHER_TYPES.includes(weatherMain as WeatherType)) {
+    return weatherMain as WeatherType
+  }
+  // 存在しない場合はClearにフォールバック
+  return "Clear"
+}
 
 // 天候の種類に応じたアイコンのマッピング（各パターンに個別のアイコンを割り当て）
 export function getWeatherIcon(
