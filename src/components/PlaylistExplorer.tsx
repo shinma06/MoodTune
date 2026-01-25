@@ -82,6 +82,9 @@ export default function PlaylistExplorer() {
                 </p>
 
                 <div className="relative w-72 h-72">
+                    {/* 固定された影（回転しない） */}
+                    <div className="absolute inset-0 rounded-full shadow-2xl pointer-events-none" />
+                    
                     <div
                         ref={vinylRef}
                         className="relative w-full h-full cursor-grab active:cursor-grabbing select-none"
@@ -96,7 +99,7 @@ export default function PlaylistExplorer() {
                         onMouseUp={handleMouseUp}
                     >
                         {/* Vinyl Disc */}
-                        <div className="absolute inset-0 rounded-full overflow-hidden shadow-2xl">
+                        <div className="absolute inset-0 rounded-full overflow-hidden">
                             <div className={`absolute inset-0 bg-gradient-to-br ${currentPlaylist.vinylColor} opacity-90`} />
                             {[...Array(20)].map((_, i) => (
                                 <div
