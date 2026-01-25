@@ -13,6 +13,19 @@ export const WEATHER_TYPES: WeatherType[] = [
   "Haze",
 ]
 
+// 天気タイプの日本語表記
+export const WEATHER_TYPE_LABELS: Record<WeatherType, string> = {
+  Clear: "晴れ",
+  Clouds: "曇り",
+  Rain: "雨",
+  Drizzle: "霧雨",
+  Thunderstorm: "雷雨",
+  Snow: "雪",
+  Mist: "霧",
+  Fog: "濃霧",
+  Haze: "もや",
+}
+
 // 時間帯オプション
 export const TIME_OF_DAY_OPTIONS: { value: TimeOfDay; label: string }[] = [
   { value: "dawn", label: "朝 (6-9時)" },

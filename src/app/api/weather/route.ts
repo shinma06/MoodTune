@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         error: "サーバーエラーが発生しました",
-        details: error instanceof Error ? error.message : "Unknown error",
+        details: error instanceof Error ? error.message : "不明なエラー",
       },
       { status: 500 }
     )

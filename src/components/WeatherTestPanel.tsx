@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useWeather } from "@/contexts/WeatherContext"
 import { getWeatherIcon, getWeatherThemeColor } from "@/lib/weather-utils"
 import type { WeatherType, TimeOfDay } from "@/lib/weather-background"
-import { WEATHER_TYPES, TIME_OF_DAY_OPTIONS } from "@/lib/constants"
+import { WEATHER_TYPES, TIME_OF_DAY_OPTIONS, WEATHER_TYPE_LABELS } from "@/lib/constants"
 import {
   Card,
   CardContent,
@@ -125,7 +125,7 @@ export default function WeatherTestPanel() {
                       onClick={() => handleWeatherTypeChange(type)}
                     >
                       <Icon className="w-5 h-5" style={{ color }} />
-                      <span className="text-xs">{type}</span>
+                      <span className="text-xs">{WEATHER_TYPE_LABELS[type]}</span>
                     </button>
                   )
                 })}
@@ -175,10 +175,10 @@ export default function WeatherTestPanel() {
             {isTestMode && (
               <div className="pt-2 border-t text-xs text-muted-foreground space-y-1">
                 <div>
-                  テストモード: <span className="font-mono">{currentWeatherType}</span>
+                  テストモード: <span className="font-mono">{currentWeatherType ? WEATHER_TYPE_LABELS[currentWeatherType] : "-"}</span>
                 </div>
                 <div>
-                  時間帯: <span className="font-mono">{testTimeOfDay || localTimeOfDay}</span>
+                  時間帯: <span className="font-mono">{testTimeOfDay || localTimeOfDay ? TIME_OF_DAY_OPTIONS.find(opt => opt.value === (testTimeOfDay || localTimeOfDay))?.label : "-"}</span>
                 </div>
               </div>
             )}
