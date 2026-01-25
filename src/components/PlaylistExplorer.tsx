@@ -60,7 +60,7 @@ export default function PlaylistExplorer() {
 
     return (
         <div
-            className="min-h-screen flex flex-col items-center justify-between p-6 pb-8 overflow-hidden touch-none transition-all duration-1000 ease-in-out"
+            className="min-h-screen flex flex-col items-center justify-between p-6 pb-8 overflow-hidden touch-none transition-all duration-1000 ease-in-out relative z-10"
             style={{
                 background: formatGradientBackground(background),
             }}

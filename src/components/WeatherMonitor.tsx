@@ -117,7 +117,7 @@ export default function WeatherMonitor() {
     }
 
     return (
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-md relative z-10">
             <div className="flex items-center justify-between gap-4">
                 {/* 左: 日時（控えめに） */}
                 <div className="text-left">
