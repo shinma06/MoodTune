@@ -76,7 +76,7 @@ export default function PlaylistExplorer() {
             <WeatherMonitor />
 
             {/* Vinyl Record Section */}
-            <div className="flex-1 flex items-center justify-center w-full max-w-md relative">
+            <div className="flex-1 flex items-center justify-center w-full max-w-md relative z-10">
                 <p className={`absolute top-0 left-1/2 -translate-x-1/2 text-center text-[10px] font-light whitespace-nowrap ${isDark ? "text-white/80" : "text-muted-foreground/70"}`}>
                     左右にスピンして他のプレイリストへ
                 </p>
@@ -142,7 +142,7 @@ export default function PlaylistExplorer() {
             </div>
 
             {/* Playlist Info Section */}
-            <div className="w-full max-w-md space-y-6 pb-4">
+            <div className="w-full max-w-md space-y-6 pb-4 relative z-10">
                 <div className="text-center space-y-3">
                     <p className={`text-xs uppercase tracking-widest font-light ${genreColorClass}`}>{currentPlaylist.genre}</p>
                     <h2 className={`text-2xl font-serif leading-tight text-balance ${titleColorClass}`}>{currentPlaylist.title}</h2>
