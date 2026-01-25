@@ -33,6 +33,10 @@ export default function PlaylistExplorer() {
     
     // 背景が暗いかどうかを判定
     const isDark = isDarkBackground(weather, timeOfDay)
+    
+    // 背景が暗い場合のテキスト色クラス
+    const genreColorClass = isDark ? "text-white/80" : "text-muted-foreground"
+    const titleColorClass = isDark ? "text-white" : "text-foreground"
 
     // レコード盤の回転管理
     const {
@@ -139,8 +143,8 @@ export default function PlaylistExplorer() {
             {/* Playlist Info Section */}
             <div className="w-full max-w-md space-y-6 pb-4">
                 <div className="text-center space-y-3">
-                    <p className="text-xs uppercase tracking-widest text-muted-foreground font-light">{currentPlaylist.genre}</p>
-                    <h2 className="text-2xl font-serif text-foreground leading-tight text-balance">{currentPlaylist.title}</h2>
+                    <p className={`text-xs uppercase tracking-widest font-light ${genreColorClass}`}>{currentPlaylist.genre}</p>
+                    <h2 className={`text-2xl font-serif leading-tight text-balance ${titleColorClass}`}>{currentPlaylist.title}</h2>
                 </div>
 
                 <div className="flex items-center justify-center">
