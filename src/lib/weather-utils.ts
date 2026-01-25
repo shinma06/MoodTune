@@ -4,11 +4,9 @@ import {
   Sun,
   Moon,
   CloudSnow,
-  Wind,
   CloudDrizzle,
   CloudLightning,
   CloudFog,
-  Tornado,
   type LucideIcon,
 } from "lucide-react"
 import type { TimeOfDay, WeatherType } from "./weather-background"
@@ -33,11 +31,6 @@ export function getWeatherIcon(
     Mist: CloudFog, // 霧
     Fog: CloudFog, // 濃霧
     Haze: CloudFog, // もや
-    Dust: Wind, // 砂塵
-    Sand: Wind, // 砂
-    Ash: CloudFog, // 灰（霧アイコンを使用）
-    Squall: Wind, // スコール
-    Tornado: Tornado, // 竜巻
   }
   return iconMap[weatherMain] || Sun
 }
@@ -99,11 +92,6 @@ export function getWeatherThemeColor(
     Mist: "#D3D3D3", // ライトグレー
     Fog: "#C0C0C0", // シルバー
     Haze: "#E0E0E0", // ライトグレー
-    Dust: "#CD853F", // ペルー
-    Sand: "#F5DEB3", // 小麦色
-    Ash: "#696969", // ディムグレー
-    Squall: "#5F9EA0", // カデットブルー
-    Tornado: "#2F4F4F", // ダークスレートグレー
   }
   return themeColors[weatherType] || "#FFD700"
 }
@@ -130,11 +118,6 @@ export function getWeatherThemeColorForDark(
     Mist: "#E8E8E8", // 明るいライトグレー
     Fog: "#D8D8D8", // 明るいシルバー
     Haze: "#F0F0F0", // 明るいライトグレー
-    Dust: "#E0A050", // 明るいペルー（砂塵の雰囲気）
-    Sand: "#FFE8B0", // 明るい小麦色
-    Ash: "#909090", // 明るいディムグレー
-    Squall: "#7FB8C0", // 明るいカデットブルー（スコールの雰囲気）
-    Tornado: "#708090", // 明るいスレートグレー（竜巻の雰囲気）
   }
   return darkThemeColors[weatherType] || "#FFE55C"
 }

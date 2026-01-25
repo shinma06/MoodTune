@@ -1,6 +1,6 @@
 import type { WeatherType, TimeOfDay } from "./weather-background"
 
-// 天気タイプの全リスト
+// 天気タイプの全リスト（日本の主要な気象に絞る）
 export const WEATHER_TYPES: WeatherType[] = [
   "Clear",
   "Clouds",
@@ -11,11 +11,6 @@ export const WEATHER_TYPES: WeatherType[] = [
   "Mist",
   "Fog",
   "Haze",
-  "Dust",
-  "Sand",
-  "Ash",
-  "Squall",
-  "Tornado",
 ]
 
 // 時間帯オプション

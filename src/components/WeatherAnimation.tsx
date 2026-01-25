@@ -141,62 +141,6 @@ export default function WeatherAnimation({ weatherType: propWeatherType }: Weath
         </div>
       )}
 
-      {/* 砂塵のアニメーション */}
-      {(weather === "Dust" || weather === "Sand") && (
-        <div className="dust-container">
-          {Array.from({ length: 20 }).map((_, i) => (
-            <div
-              key={i}
-              className="dust-particle"
-              style={{
-                left: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 5}s`,
-                animationDuration: `${4 + Math.random() * 3}s`,
-              }}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* 竜巻のアニメーション */}
-      {weather === "Tornado" && (
-        <div className="tornado-container">
-          <div className="tornado-spiral" />
-        </div>
-      )}
-
-      {/* スコールのアニメーション（強い風と雨） */}
-      {weather === "Squall" && (
-        <>
-          <div className="rain-container">
-            {Array.from({ length: 60 }).map((_, i) => (
-              <div
-                key={i}
-                className="rain-drop squall-rain"
-                style={{
-                  left: `${Math.random() * 100}%`,
-                  animationDelay: `${Math.random() * 2}s`,
-                  animationDuration: `${0.3 + Math.random() * 0.3}s`,
-                  transform: `rotate(${Math.random() * 20 - 10}deg)`,
-                }}
-              />
-            ))}
-          </div>
-          <div className="wind-lines">
-            {Array.from({ length: 15 }).map((_, i) => (
-              <div
-                key={i}
-                className="wind-line"
-                style={{
-                  left: `${Math.random() * 100}%`,
-                  top: `${Math.random() * 100}%`,
-                  animationDelay: `${Math.random() * 2}s`,
-                }}
-              />
-            ))}
-          </div>
-        </>
-      )}
     </div>
   )
 }
