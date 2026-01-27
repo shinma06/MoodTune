@@ -1,5 +1,35 @@
 import type { WeatherType, TimeOfDay } from "./weather-background"
 
+// 利用可能な音楽ジャンル一覧（日本でよく使われる表記）
+export const AVAILABLE_GENRES = [
+  "J-POP",
+  "J-Rock",
+  "J-HipHop", // 日本のヒップホップ
+  "Hip Hop", // 海外のヒップホップ
+  "Lo-fi Hip Hop",
+  "City Pop",
+  "R&B",
+  "J-R&B",
+  "Anime Song",
+  "Vocaloid",
+  "Idol Pop",
+  "K-POP (Boy Group)",
+  "K-POP (Girl Group)",
+  "EDM",
+  "House",
+  "Techno",
+  "Acoustic",
+  "Jazz",
+  "Piano",
+  "Chill Out",
+  "City Jazz",
+] as const
+
+export type Genre = (typeof AVAILABLE_GENRES)[number]
+
+// ユーザーが選択できる最大ジャンル数
+export const MAX_SELECTED_GENRES = 8
+
 // 天気タイプの全リスト（日本の主要な気象に絞る）
 export const WEATHER_TYPES: WeatherType[] = [
   "Clear",
