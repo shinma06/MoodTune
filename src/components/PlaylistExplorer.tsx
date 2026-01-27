@@ -4,17 +4,28 @@ import { useState, useEffect } from "react"
 import WeatherMonitor from "./WeatherMonitor"
 import WeatherAnimation from "./WeatherAnimation"
 import WeatherTestPanel from "./WeatherTestPanel"
+import GenreSelector, { useSelectedGenres } from "./GenreSelector"
 import { useWeather } from "@/contexts/WeatherContext"
 import { getWeatherBackground, getTimeOfDay, type WeatherType, isDarkBackground } from "@/lib/weather-background"
 import { normalizeWeatherType } from "@/lib/weather-utils"
 import { formatGradientBackground } from "@/lib/weather-background-utils"
 import { PLAYLISTS } from "@/lib/playlists"
 import { useVinylRotation } from "@/hooks/useVinylRotation"
+import { Music } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import type { Genre } from "@/lib/constants"
 
 export default function PlaylistExplorer() {
     const [currentIndex, setCurrentIndex] = useState(0)
     const { weatherType, testTimeOfDay, isTestMode } = useWeather()
     const [currentHour, setCurrentHour] = useState(new Date().getHours())
+    const [showSettings, setShowSettings] = useState(false)
+    const selectedGenres = useSelectedGenres()
+    
+    // ジャンル変更時のコールバック
+    const handleGenresChange = (genres: Genre[]) => {
+        // 必要に応じて他のロジックを追加
+    }
 
     const currentPlaylist = PLAYLISTS[currentIndex]
 
@@ -71,6 +82,28 @@ export default function PlaylistExplorer() {
 
             {/* Weather Test Panel */}
             <WeatherTestPanel />
+
+            {/* Settings Toggle Button */}
+            <div className="fixed top-4 right-4 z-50">
+                <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setShowSettings(!showSettings)}
+                    className={`
+                        w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm border-border/50
+                        ${showSettings ? "bg-primary text-primary-foreground" : ""}
+                    `}
+                >
+                    <Music className="w-5 h-5" />
+                </Button>
+            </div>
+
+            {/* Settings Panel with Genre Selector */}
+            {showSettings && (
+                <div className="fixed top-16 right-4 z-50 w-80 max-w-[calc(100vw-2rem)]">
+                    <GenreSelector onGenresChange={handleGenresChange} />
+                </div>
+            )}
 
             {/* Weather Section */}
             <WeatherMonitor />
