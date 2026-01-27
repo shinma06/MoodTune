@@ -1,24 +1,21 @@
 "use client"
 
 import { useLocalStorage } from "@/hooks/useLocalStorage"
-import { AVAILABLE_GENRES, MAX_SELECTED_GENRES, type Genre } from "@/lib/constants"
+import {
+  AVAILABLE_GENRES,
+  MAX_SELECTED_GENRES,
+  GENRE_STORAGE_KEY,
+  DEFAULT_SELECTED_GENRES,
+  type Genre,
+} from "@/lib/constants"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Check, Music } from "lucide-react"
 
-const STORAGE_KEY = "selected-genres"
-
-// デフォルトで選択されているジャンル
-const DEFAULT_GENRES: Genre[] = ["J-POP", "City Pop", "Lo-fi Hip Hop", "Jazz"]
-
-interface GenreSelectorProps {
-  onGenresChange?: (genres: Genre[]) => void
-}
-
-export default function GenreSelector({ onGenresChange }: GenreSelectorProps) {
+export default function GenreSelector() {
   const [selectedGenres, setSelectedGenres] = useLocalStorage<Genre[]>(
-    STORAGE_KEY,
-    DEFAULT_GENRES
+    GENRE_STORAGE_KEY,
+    DEFAULT_SELECTED_GENRES
   )
 
   const toggleGenre = (genre: Genre) => {
@@ -26,7 +23,10 @@ export default function GenreSelector({ onGenresChange }: GenreSelectorProps) {
       let newGenres: Genre[]
       
       if (prev.includes(genre)) {
-        // 選択解除
+        // 選択解除（少なくとも1つは選択されている必要がある）
+        if (prev.length === 1) {
+          return prev // 1つしか選択されていない場合は解除できない
+        }
         newGenres = prev.filter((g) => g !== genre)
       } else {
         // 選択（最大数チェック）
@@ -36,8 +36,6 @@ export default function GenreSelector({ onGenresChange }: GenreSelectorProps) {
         newGenres = [...prev, genre]
       }
       
-      // 親コンポーネントに変更を通知
-      onGenresChange?.(newGenres)
       return newGenres
     })
   }
@@ -60,7 +58,8 @@ export default function GenreSelector({ onGenresChange }: GenreSelectorProps) {
         <div className="flex flex-wrap gap-2">
           {AVAILABLE_GENRES.map((genre) => {
             const selected = isSelected(genre)
-            const disabled = !selected && isMaxReached
+            const isOnlyOneSelected = selectedGenres.length === 1 && selected
+            const disabled = (!selected && isMaxReached) || isOnlyOneSelected
             
             return (
               <Button
@@ -94,8 +93,13 @@ export default function GenreSelector({ onGenresChange }: GenreSelectorProps) {
   )
 }
 
-// 選択されたジャンルを取得するためのエクスポート
-export function useSelectedGenres() {
-  const [selectedGenres] = useLocalStorage<Genre[]>(STORAGE_KEY, DEFAULT_GENRES)
+/**
+ * Hook to get selected genres from localStorage
+ */
+export function useSelectedGenres(): Genre[] {
+  const [selectedGenres] = useLocalStorage<Genre[]>(
+    GENRE_STORAGE_KEY,
+    DEFAULT_SELECTED_GENRES
+  )
   return selectedGenres
 }

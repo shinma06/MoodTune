@@ -30,6 +30,12 @@ export type Genre = (typeof AVAILABLE_GENRES)[number]
 // ユーザーが選択できる最大ジャンル数
 export const MAX_SELECTED_GENRES = 8
 
+// ジャンル選択のlocalStorageキー
+export const GENRE_STORAGE_KEY = "selected-genres"
+
+// デフォルトで選択されているジャンル（初回アクセス時）
+export const DEFAULT_SELECTED_GENRES: Genre[] = ["J-POP"]
+
 // 天気タイプの全リスト（日本の主要な気象に絞る）
 export const WEATHER_TYPES: WeatherType[] = [
   "Clear",

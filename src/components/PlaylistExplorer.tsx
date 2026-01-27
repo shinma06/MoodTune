@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import WeatherMonitor from "./WeatherMonitor"
 import WeatherAnimation from "./WeatherAnimation"
 import WeatherTestPanel from "./WeatherTestPanel"
@@ -13,115 +13,226 @@ import { PLAYLISTS } from "@/lib/playlists"
 import { useVinylRotation } from "@/hooks/useVinylRotation"
 import { Music } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import type { Genre } from "@/lib/constants"
 import { generateDashboard, type DashboardItem } from "@/app/actions/generateDashboard"
 import type { TimeOfDay } from "@/lib/weather-background"
+import type { Genre } from "@/lib/constants"
 
 interface PlaylistExplorerProps {
   playlists?: DashboardItem[]
 }
 
-// デフォルトのvinylColorとaccentColorを生成する関数
-function getDefaultColors(index: number) {
-  const colors = [
-    { vinylColor: "from-amber-900 to-amber-950", accentColor: "#d97706" },
-    { vinylColor: "from-slate-700 to-slate-900", accentColor: "#64748b" },
-    { vinylColor: "from-emerald-800 to-emerald-950", accentColor: "#059669" },
-    { vinylColor: "from-purple-900 to-purple-950", accentColor: "#7c3aed" },
-    { vinylColor: "from-orange-800 to-orange-950", accentColor: "#ea580c" },
-  ]
-  return colors[index % colors.length]
+// Vinyl color palette
+const VINYL_COLORS = [
+  { vinylColor: "from-amber-900 to-amber-950", accentColor: "#d97706" },
+  { vinylColor: "from-slate-700 to-slate-900", accentColor: "#64748b" },
+  { vinylColor: "from-emerald-800 to-emerald-950", accentColor: "#059669" },
+  { vinylColor: "from-purple-900 to-purple-950", accentColor: "#7c3aed" },
+  { vinylColor: "from-orange-800 to-orange-950", accentColor: "#ea580c" },
+] as const
+
+// Default playlist for empty state
+const EMPTY_PLAYLIST: DashboardItem = {
+  id: "empty",
+  genre: "---",
+  title: "プレイリストがありません",
+  query: "",
+  imageUrl: "",
 }
 
-export default function PlaylistExplorer({ playlists: initialPlaylists }: PlaylistExplorerProps = {}) {
-    const [currentIndex, setCurrentIndex] = useState(0)
-    const { weatherType, testTimeOfDay, isTestMode } = useWeather()
-    const [currentHour, setCurrentHour] = useState(new Date().getHours())
-    const [showSettings, setShowSettings] = useState(false)
-    const selectedGenres = useSelectedGenres()
-    const [playlists, setPlaylists] = useState<DashboardItem[] | null>(initialPlaylists || null)
-    const [isLoading, setIsLoading] = useState(false)
-    
-    // ジャンル変更時のコールバック
-    const handleGenresChange = async (genres: Genre[]) => {
-        if (genres.length === 0) return
-        
-        setIsLoading(true)
-        try {
-            const weather = normalizeWeatherType(weatherType || "Clear") as WeatherType
-            const calculatedTimeOfDay = getTimeOfDay(currentHour)
-            const time = (isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay) as TimeOfDay
-            
-            const generatedPlaylists = await generateDashboard(weather, time, genres)
-            setPlaylists(generatedPlaylists)
-            setCurrentIndex(0) // リセット
-        } catch (error) {
-            console.error("Failed to generate dashboard:", error)
-        } finally {
-            setIsLoading(false)
-        }
+/**
+ * Get vinyl colors by index
+ */
+function getVinylColors(index: number) {
+  return VINYL_COLORS[index % VINYL_COLORS.length]
+}
+
+/**
+ * Check if genre arrays have changed (order-independent)
+ */
+function hasGenresChanged(prev: string[], current: string[]): boolean {
+  if (prev.length !== current.length) return true
+  const sortedPrev = [...prev].sort()
+  const sortedCurrent = [...current].sort()
+  return sortedPrev.some((g, i) => g !== sortedCurrent[i])
+}
+
+/**
+ * Calculate diff between genre arrays
+ */
+function getGenresDiff(prev: string[], current: string[]) {
+  const prevSet = new Set(prev)
+  const currentSet = new Set(current)
+  
+  return {
+    added: current.filter(g => !prevSet.has(g)),
+    removed: prev.filter(g => !currentSet.has(g)),
+    unchanged: current.filter(g => prevSet.has(g)),
+  }
+}
+
+/**
+ * Get image URL with fallback
+ */
+function getImageUrl(url: string | undefined | null): string {
+  if (!url || url.trim() === "") {
+    return "/placeholder.svg"
+  }
+  return url
+}
+
+/**
+ * Convert static playlists to DashboardItem format
+ */
+function convertStaticPlaylists(): DashboardItem[] {
+  return PLAYLISTS.map((p) => ({
+    id: p.id,
+    genre: p.genre,
+    title: p.title,
+    query: "",
+    imageUrl: p.coverUrl,
+  }))
+}
+
+export default function PlaylistExplorer({ playlists: initialPlaylists }: PlaylistExplorerProps) {
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const { weatherType, testTimeOfDay, isTestMode } = useWeather()
+  const [currentHour, setCurrentHour] = useState(new Date().getHours())
+  const [showSettings, setShowSettings] = useState(false)
+  const selectedGenres = useSelectedGenres()
+  const [playlists, setPlaylists] = useState<DashboardItem[] | null>(initialPlaylists ?? null)
+  const [isLoading, setIsLoading] = useState(false)
+  
+  // Track genres when panel opens
+  const genresOnOpenRef = useRef<string[]>([])
+  
+  // Memoized display playlists with fallback
+  const displayPlaylists = useMemo(() => {
+    if (playlists && playlists.length > 0) {
+      return playlists
     }
-
-    // 使用するプレイリストデータ（動的データがあればそれを使用、なければ静的データ）
-    const displayPlaylists = playlists || PLAYLISTS.map((p, i) => ({
-        id: p.id,
-        genre: p.genre,
-        title: p.title,
-        query: "",
-        imageUrl: p.coverUrl,
-    }))
+    const staticPlaylists = convertStaticPlaylists()
+    return staticPlaylists.length > 0 ? staticPlaylists : [EMPTY_PLAYLIST]
+  }, [playlists])
+  
+  // Safe current index (always within bounds)
+  const safeCurrentIndex = useMemo(() => {
+    if (displayPlaylists.length === 0) return 0
+    return Math.min(currentIndex, displayPlaylists.length - 1)
+  }, [currentIndex, displayPlaylists.length])
+  
+  // Current playlist (always defined)
+  const currentPlaylist = displayPlaylists[safeCurrentIndex] ?? EMPTY_PLAYLIST
+  const vinylColors = getVinylColors(safeCurrentIndex)
+  
+  // Update playlists with diff (only fetch new genres)
+  const updatePlaylistsWithDiff = useCallback(async (
+    currentGenres: string[],
+    diff: { added: string[], removed: string[], unchanged: string[] }
+  ) => {
+    if (currentGenres.length === 0) return
     
-    const currentPlaylist = displayPlaylists[currentIndex]
-    const defaultColors = getDefaultColors(currentIndex)
-
-    // 時間の更新（1分ごと）
-    useEffect(() => {
-        const timer = setInterval(() => {
-            setCurrentHour(new Date().getHours())
-        }, 60000)
-        return () => clearInterval(timer)
-    }, [])
-
-    // 背景色の計算
-    const calculatedTimeOfDay = getTimeOfDay(currentHour)
-    const timeOfDay = isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay
-    const weather = normalizeWeatherType(weatherType || "Clear")
-    const background = getWeatherBackground(weather, timeOfDay)
-    
-    // 背景が暗いかどうかを判定
-    const isDark = isDarkBackground(weather, timeOfDay)
-    
-    // 背景が暗い場合のテキスト色クラス
-    const genreColorClass = isDark ? "text-white/80" : "text-muted-foreground"
-    const titleColorClass = isDark ? "text-white" : "text-foreground"
-
-    // レコード盤の回転管理
-    const {
-        rotation,
-        isDragging,
-        vinylRef,
-        handleMouseDown,
-        handleMouseUp,
-        handleTouchStart,
-        handleTouchMove,
-        handleTouchEnd,
-    } = useVinylRotation({
-        onRotationComplete: (direction) => {
-            if (direction === "next") {
-                setCurrentIndex((prev) => (prev + 1) % displayPlaylists.length)
-            } else {
-                setCurrentIndex((prev) => (prev - 1 + displayPlaylists.length) % displayPlaylists.length)
-            }
-        },
-    })
-
-    // 画像URLの取得（空文字の場合はプレースホルダー）
-    const getImageUrl = (url: string | undefined | null): string => {
-        if (!url || url.trim() === "") {
-            return "/placeholder.svg"
-        }
-        return url
+    setIsLoading(true)
+    try {
+      const weather = normalizeWeatherType(weatherType ?? "Clear") as WeatherType
+      const calculatedTimeOfDay = getTimeOfDay(currentHour)
+      const time = (isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay) as TimeOfDay
+      
+      // Build map of existing playlists
+      const existingMap = new Map<string, DashboardItem>()
+      if (playlists) {
+        playlists.forEach(p => existingMap.set(p.genre, p))
+      }
+      
+      // Keep unchanged playlists
+      const unchangedPlaylists = diff.unchanged
+        .map(genre => existingMap.get(genre))
+        .filter((p): p is DashboardItem => p !== undefined)
+      
+      // Generate only new genres
+      let newPlaylists: DashboardItem[] = []
+      if (diff.added.length > 0) {
+        newPlaylists = await generateDashboard(
+          weather,
+          time,
+          diff.added as Genre[]
+        )
+      }
+      
+      // Merge and maintain order
+      const allMap = new Map<string, DashboardItem>()
+      unchangedPlaylists.forEach(p => allMap.set(p.genre, p))
+      newPlaylists.forEach(p => allMap.set(p.genre, p))
+      
+      const finalPlaylists = currentGenres
+        .map(genre => allMap.get(genre))
+        .filter((p): p is DashboardItem => p !== undefined)
+      
+      setPlaylists(finalPlaylists)
+      setCurrentIndex(0)
+    } catch (error) {
+      console.error("Failed to generate dashboard:", error)
+    } finally {
+      setIsLoading(false)
     }
+  }, [weatherType, currentHour, isTestMode, testTimeOfDay, playlists])
+  
+  // Handle settings panel toggle
+  const handleToggleSettings = useCallback(() => {
+    if (!showSettings) {
+      // Opening: record current genres
+      genresOnOpenRef.current = [...selectedGenres]
+      setShowSettings(true)
+    } else {
+      // Closing: check for changes and update if needed
+      setShowSettings(false)
+      if (hasGenresChanged(genresOnOpenRef.current, selectedGenres)) {
+        const diff = getGenresDiff(genresOnOpenRef.current, selectedGenres)
+        updatePlaylistsWithDiff(selectedGenres, diff)
+      }
+    }
+  }, [showSettings, selectedGenres, updatePlaylistsWithDiff])
+
+  // Update current hour every minute
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentHour(new Date().getHours())
+    }, 60000)
+    return () => clearInterval(timer)
+  }, [])
+
+  // Calculate background
+  const calculatedTimeOfDay = getTimeOfDay(currentHour)
+  const timeOfDay = isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay
+  const weather = normalizeWeatherType(weatherType ?? "Clear")
+  const background = getWeatherBackground(weather, timeOfDay)
+  
+  // Check if background is dark for text color
+  const isDark = isDarkBackground(weather, timeOfDay)
+  const genreColorClass = isDark ? "text-white/80" : "text-muted-foreground"
+  const titleColorClass = isDark ? "text-white" : "text-foreground"
+
+  // Vinyl rotation management
+  const {
+    rotation,
+    isDragging,
+    vinylRef,
+    handleMouseDown,
+    handleMouseUp,
+    handleTouchStart,
+    handleTouchMove,
+    handleTouchEnd,
+  } = useVinylRotation({
+    onRotationComplete: (direction) => {
+      const length = displayPlaylists.length
+      if (length === 0) return
+      
+      if (direction === "next") {
+        setCurrentIndex((prev) => (prev + 1) % length)
+      } else {
+        setCurrentIndex((prev) => (prev - 1 + length) % length)
+      }
+    },
+  })
 
     return (
         <div
@@ -141,7 +252,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                 <Button
                     variant="outline"
                     size="icon"
-                    onClick={() => setShowSettings(!showSettings)}
+                    onClick={handleToggleSettings}
                     className={`
                         w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm border-border/50
                         ${showSettings ? "bg-primary text-primary-foreground" : ""}
@@ -154,7 +265,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
             {/* Settings Panel with Genre Selector */}
             {showSettings && (
                 <div className="fixed top-16 right-4 z-50 w-80 max-w-[calc(100vw-2rem)]">
-                    <GenreSelector onGenresChange={handleGenresChange} />
+                    <GenreSelector />
                 </div>
             )}
 
@@ -186,7 +297,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                     >
                         {/* Vinyl Disc */}
                         <div className="absolute inset-0 rounded-full overflow-hidden">
-                            <div className={`absolute inset-0 bg-gradient-to-br ${defaultColors.vinylColor} opacity-90`} />
+                            <div className={`absolute inset-0 bg-gradient-to-br ${vinylColors.vinylColor} opacity-90`} />
                             {[...Array(20)].map((_, i) => (
                                 <div
                                     key={i}
@@ -219,18 +330,13 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                     {/* Indicator dots */}
                     <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 flex gap-1.5">
                         {displayPlaylists.map((_, i) => {
-                            const colors = getDefaultColors(i)
+                            const colors = getVinylColors(i)
+                            const isActive = i === safeCurrentIndex
                             return (
                                 <div
                                     key={i}
-                                    className={`w-1.5 h-1.5 rounded-full transition-all ${i === currentIndex ? "w-6" : "bg-border"}`}
-                                    style={
-                                        i === currentIndex
-                                            ? {
-                                                backgroundColor: colors.accentColor,
-                                            }
-                                            : {}
-                                    }
+                                    className={`w-1.5 h-1.5 rounded-full transition-all ${isActive ? "w-6" : "bg-border"}`}
+                                    style={isActive ? { backgroundColor: colors.accentColor } : {}}
                                 />
                             )
                         })}

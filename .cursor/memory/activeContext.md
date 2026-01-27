@@ -2,32 +2,38 @@
 
 ## 現在のセッションの焦点
 
-Spotify API連携とモックモード対応の実装完了
+ジャンル選択機能の同期改善とプロジェクト全体のリファクタリング
 
 ## 最近の変更履歴
 
-- Spotify認証の実装:
-  - `src/auth.ts`: NextAuth v5 + Spotify Provider の設定
-  - `src/lib/spotify-server.ts`: Spotify API クライアント初期化の共通化
-  - `src/types/next-auth.d.ts`: Session/JWT型の拡張（accessToken, refreshToken, expiresAt）
-  - `src/app/api/auth/[...nextauth]/route.ts`: 認証APIルート
-- モックモード対応のダッシュボード生成:
-  - `src/app/actions/generateDashboard.ts`: Server Actionでプレイリスト生成
-  - AI SDK v5 (Vercel AI SDK) + OpenAI でタイトル・検索クエリを生成
-  - モックモード時はLorem Picsumでダミー画像を返す
-- ページとコンポーネントの更新:
-  - `src/app/page.tsx`: ログインバイパス、初期データ生成の共通化
-  - `src/components/PlaylistExplorer.tsx`: 動的データ対応、ローディング状態のUI追加
-- リファクタリング:
-  - `src/lib/constants.ts`: TIME_OF_DAY_LABELS を追加
-  - `src/lib/weather-utils.ts`: normalizeWeatherType が null/undefined を受け入れるよう改善
-  - 重複コードの排除（weatherLabel/timeLabelマッピング、初期データ生成ロジック）
+- ジャンル選択とプレイリスト生成の同期改善:
+  - `src/hooks/useLocalStorage.ts`: カスタムイベントで同一ページ内のlocalStorage変更を通知
+  - `src/components/PlaylistExplorer.tsx`: パネルを閉じた際に差分更新を実行
+  - 変更のないジャンルはデータを再利用（API呼び出し削減）
+- undefinedエラーの修正:
+  - `displayPlaylists`が空の場合のフォールバック追加
+  - `safeCurrentIndex`で常に有効な範囲内のインデックスを保証
+  - `EMPTY_PLAYLIST`定数で空状態のプレースホルダーを提供
+- プロジェクト全体のリファクタリング:
+  - `src/lib/constants.ts`: `GENRE_STORAGE_KEY`, `DEFAULT_SELECTED_GENRES`を追加
+  - `src/components/GenreSelector.tsx`: 共通定数を使用
+  - `src/app/page.tsx`: 共通定数を使用
+  - ユーティリティ関数の整理（`getVinylColors`, `getImageUrl`, `hasGenresChanged`, `getGenresDiff`）
+  - `useMemo`による最適化
 
 ## 現在の開発状態
 
 - Spotify認証フローが実装済み
 - モックモード（NEXT_PUBLIC_USE_MOCK_SPOTIFY=true）で開発可能
 - AI生成によるプレイリスト提案機能が動作
+- ジャンル選択のパネル閉時に差分更新が動作
+
+## ジャンル選択の動作フロー
+
+1. 設定ボタンクリック → パネル開く → 現在のジャンルを記録
+2. ジャンル選択/解除 → localStorageが更新 → 他コンポーネントに通知
+3. 設定ボタンクリック → パネル閉じる → ジャンル差分を計算
+4. 変更があればプレイリスト再生成（追加されたジャンルのみAPI呼び出し）
 
 ## 必要な環境変数
 

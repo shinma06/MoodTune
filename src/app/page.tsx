@@ -5,16 +5,13 @@ import { Music } from "lucide-react"
 import { generateDashboard, type DashboardItem } from "@/app/actions/generateDashboard"
 import { getTimeOfDay } from "@/lib/weather-background"
 import { normalizeWeatherType } from "@/lib/weather-utils"
+import { DEFAULT_SELECTED_GENRES } from "@/lib/constants"
 import type { WeatherType, TimeOfDay } from "@/lib/weather-background"
-import type { Genre } from "@/lib/constants"
 
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK_SPOTIFY === "true"
 
-// デフォルトのジャンル
-const DEFAULT_GENRES: Genre[] = ["J-POP", "City Pop", "Lo-fi Hip Hop", "Jazz"]
-
 /**
- * 初期プレイリストデータを生成する共通関数
+ * Generate initial playlist data
  */
 async function getInitialPlaylists(): Promise<DashboardItem[]> {
   const currentHour = new Date().getHours()
@@ -22,7 +19,7 @@ async function getInitialPlaylists(): Promise<DashboardItem[]> {
   const weather = normalizeWeatherType(null) as WeatherType
 
   try {
-    return await generateDashboard(weather, timeOfDay, DEFAULT_GENRES)
+    return await generateDashboard(weather, timeOfDay, DEFAULT_SELECTED_GENRES)
   } catch (error) {
     console.error("Failed to generate initial dashboard:", error)
     return []
