@@ -79,7 +79,7 @@ export default function WeatherTestPanel() {
         <Button
           variant="outline"
           size="icon"
-          className="fixed top-4 right-4 z-50 bg-background/80 backdrop-blur-sm"
+          className="fixed bottom-4 left-4 z-50 bg-background/80 backdrop-blur-sm"
           onClick={() => setIsOpen(true)}
         >
           <Settings className="h-4 w-4" />
@@ -88,7 +88,7 @@ export default function WeatherTestPanel() {
 
       {/* テストパネル */}
       {isOpen && (
-        <Card className="fixed top-4 right-4 z-50 w-80 bg-background/95 backdrop-blur-sm shadow-lg">
+        <Card className="fixed bottom-4 left-4 z-50 w-80 bg-background/95 backdrop-blur-sm shadow-lg">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">天気テストパネル</CardTitle>
