@@ -64,3 +64,10 @@ export const TIME_OF_DAY_OPTIONS: { value: TimeOfDay; label: string }[] = [
   { value: "night", label: "夜 (19-6時)" },
 ]
 
+// 時間帯の日本語表記
+export const TIME_OF_DAY_LABELS: Record<TimeOfDay, string> = {
+  dawn: "朝",
+  day: "昼",
+  dusk: "夕方",
+  night: "夜",
+}

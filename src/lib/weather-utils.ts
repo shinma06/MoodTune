@@ -16,7 +16,11 @@ import { WEATHER_TYPES } from "./constants"
  * APIから取得した天気タイプを正規化（サポートされている天気タイプに変換）
  * 存在しない天気タイプの場合は"Clear"にフォールバック
  */
-export function normalizeWeatherType(weatherMain: string): WeatherType {
+export function normalizeWeatherType(weatherMain: string | null | undefined): WeatherType {
+  // null/undefinedの場合はClearにフォールバック
+  if (!weatherMain) {
+    return "Clear"
+  }
   // サポートされている天気タイプかチェック
   if (WEATHER_TYPES.includes(weatherMain as WeatherType)) {
     return weatherMain as WeatherType

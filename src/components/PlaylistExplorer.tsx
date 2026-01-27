@@ -14,20 +14,65 @@ import { useVinylRotation } from "@/hooks/useVinylRotation"
 import { Music } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { Genre } from "@/lib/constants"
+import { generateDashboard, type DashboardItem } from "@/app/actions/generateDashboard"
+import type { TimeOfDay } from "@/lib/weather-background"
 
-export default function PlaylistExplorer() {
+interface PlaylistExplorerProps {
+  playlists?: DashboardItem[]
+}
+
+// デフォルトのvinylColorとaccentColorを生成する関数
+function getDefaultColors(index: number) {
+  const colors = [
+    { vinylColor: "from-amber-900 to-amber-950", accentColor: "#d97706" },
+    { vinylColor: "from-slate-700 to-slate-900", accentColor: "#64748b" },
+    { vinylColor: "from-emerald-800 to-emerald-950", accentColor: "#059669" },
+    { vinylColor: "from-purple-900 to-purple-950", accentColor: "#7c3aed" },
+    { vinylColor: "from-orange-800 to-orange-950", accentColor: "#ea580c" },
+  ]
+  return colors[index % colors.length]
+}
+
+export default function PlaylistExplorer({ playlists: initialPlaylists }: PlaylistExplorerProps = {}) {
     const [currentIndex, setCurrentIndex] = useState(0)
     const { weatherType, testTimeOfDay, isTestMode } = useWeather()
     const [currentHour, setCurrentHour] = useState(new Date().getHours())
     const [showSettings, setShowSettings] = useState(false)
     const selectedGenres = useSelectedGenres()
+    const [playlists, setPlaylists] = useState<DashboardItem[] | null>(initialPlaylists || null)
+    const [isLoading, setIsLoading] = useState(false)
     
     // ジャンル変更時のコールバック
-    const handleGenresChange = (genres: Genre[]) => {
-        // 必要に応じて他のロジックを追加
+    const handleGenresChange = async (genres: Genre[]) => {
+        if (genres.length === 0) return
+        
+        setIsLoading(true)
+        try {
+            const weather = normalizeWeatherType(weatherType || "Clear") as WeatherType
+            const calculatedTimeOfDay = getTimeOfDay(currentHour)
+            const time = (isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay) as TimeOfDay
+            
+            const generatedPlaylists = await generateDashboard(weather, time, genres)
+            setPlaylists(generatedPlaylists)
+            setCurrentIndex(0) // リセット
+        } catch (error) {
+            console.error("Failed to generate dashboard:", error)
+        } finally {
+            setIsLoading(false)
+        }
     }
 
-    const currentPlaylist = PLAYLISTS[currentIndex]
+    // 使用するプレイリストデータ（動的データがあればそれを使用、なければ静的データ）
+    const displayPlaylists = playlists || PLAYLISTS.map((p, i) => ({
+        id: p.id,
+        genre: p.genre,
+        title: p.title,
+        query: "",
+        imageUrl: p.coverUrl,
+    }))
+    
+    const currentPlaylist = displayPlaylists[currentIndex]
+    const defaultColors = getDefaultColors(currentIndex)
 
     // 時間の更新（1分ごと）
     useEffect(() => {
@@ -63,12 +108,20 @@ export default function PlaylistExplorer() {
     } = useVinylRotation({
         onRotationComplete: (direction) => {
             if (direction === "next") {
-                setCurrentIndex((prev) => (prev + 1) % PLAYLISTS.length)
+                setCurrentIndex((prev) => (prev + 1) % displayPlaylists.length)
             } else {
-                setCurrentIndex((prev) => (prev - 1 + PLAYLISTS.length) % PLAYLISTS.length)
+                setCurrentIndex((prev) => (prev - 1 + displayPlaylists.length) % displayPlaylists.length)
             }
         },
     })
+
+    // 画像URLの取得（空文字の場合はプレースホルダー）
+    const getImageUrl = (url: string | undefined | null): string => {
+        if (!url || url.trim() === "") {
+            return "/placeholder.svg"
+        }
+        return url
+    }
 
     return (
         <div
@@ -133,7 +186,7 @@ export default function PlaylistExplorer() {
                     >
                         {/* Vinyl Disc */}
                         <div className="absolute inset-0 rounded-full overflow-hidden">
-                            <div className={`absolute inset-0 bg-gradient-to-br ${currentPlaylist.vinylColor} opacity-90`} />
+                            <div className={`absolute inset-0 bg-gradient-to-br ${defaultColors.vinylColor} opacity-90`} />
                             {[...Array(20)].map((_, i) => (
                                 <div
                                     key={i}
@@ -146,9 +199,14 @@ export default function PlaylistExplorer() {
                             <div className="absolute inset-0 flex items-center justify-center">
                                 <div className="w-24 h-24 rounded-full bg-card shadow-xl flex items-center justify-center overflow-hidden">
                                     <img
-                                        src={currentPlaylist.coverUrl || "/placeholder.svg"}
+                                        src={getImageUrl(currentPlaylist.imageUrl)}
                                         alt={currentPlaylist.title}
                                         className="w-20 h-20 rounded-full object-cover"
+                                        onError={(e) => {
+                                            // 画像読み込みエラー時のフォールバック
+                                            const target = e.target as HTMLImageElement
+                                            target.src = "/placeholder.svg"
+                                        }}
                                     />
                                 </div>
                             </div>
@@ -160,19 +218,22 @@ export default function PlaylistExplorer() {
 
                     {/* Indicator dots */}
                     <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 flex gap-1.5">
-                        {PLAYLISTS.map((_, i) => (
-                            <div
-                                key={i}
-                                className={`w-1.5 h-1.5 rounded-full transition-all ${i === currentIndex ? "w-6" : "bg-border"}`}
-                                style={
-                                    i === currentIndex
-                                        ? {
-                                            backgroundColor: currentPlaylist.accentColor,
-                                        }
-                                        : {}
-                                }
-                            />
-                        ))}
+                        {displayPlaylists.map((_, i) => {
+                            const colors = getDefaultColors(i)
+                            return (
+                                <div
+                                    key={i}
+                                    className={`w-1.5 h-1.5 rounded-full transition-all ${i === currentIndex ? "w-6" : "bg-border"}`}
+                                    style={
+                                        i === currentIndex
+                                            ? {
+                                                backgroundColor: colors.accentColor,
+                                            }
+                                            : {}
+                                    }
+                                />
+                            )
+                        })}
                     </div>
                 </div>
             </div>
@@ -180,16 +241,31 @@ export default function PlaylistExplorer() {
             {/* Playlist Info Section */}
             <div className="w-full max-w-md space-y-6 pb-4 relative z-10">
                 <div className="text-center space-y-3">
-                    <p className={`text-xs uppercase tracking-widest font-light ${genreColorClass}`}>{currentPlaylist.genre}</p>
-                    <h2 className={`text-2xl font-serif leading-tight text-balance ${titleColorClass}`}>{currentPlaylist.title}</h2>
+                    <p className={`text-xs uppercase tracking-widest font-light ${genreColorClass}`}>
+                        {isLoading ? "読み込み中..." : currentPlaylist.genre}
+                    </p>
+                    <h2 className={`text-2xl font-serif leading-tight text-balance ${titleColorClass}`}>
+                        {isLoading ? "プレイリストを生成中" : currentPlaylist.title}
+                    </h2>
                 </div>
 
                 <div className="flex items-center justify-center">
-                    <img
-                        src={currentPlaylist.coverUrl || "/placeholder.svg"}
-                        alt={currentPlaylist.title}
-                        className="w-32 h-32 rounded-lg shadow-lg object-cover"
-                    />
+                    {isLoading ? (
+                        <div className="w-32 h-32 rounded-lg bg-muted/50 animate-pulse flex items-center justify-center">
+                            <Music className={`w-8 h-8 ${isDark ? "text-white/30" : "text-muted-foreground/30"}`} />
+                        </div>
+                    ) : (
+                        <img
+                            src={getImageUrl(currentPlaylist.imageUrl)}
+                            alt={currentPlaylist.title}
+                            className="w-32 h-32 rounded-lg shadow-lg object-cover"
+                            onError={(e) => {
+                                // 画像読み込みエラー時のフォールバック
+                                const target = e.target as HTMLImageElement
+                                target.src = "/placeholder.svg"
+                            }}
+                        />
+                    )}
                 </div>
             </div>
         </div>

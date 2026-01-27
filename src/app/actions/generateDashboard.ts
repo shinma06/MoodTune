@@ -1,0 +1,151 @@
+"use server"
+
+import { generateText } from "ai"
+import { openai } from "@ai-sdk/openai"
+import { getSpotifyClient } from "@/lib/spotify-server"
+import { WEATHER_TYPE_LABELS, TIME_OF_DAY_LABELS, type Genre } from "@/lib/constants"
+import type { WeatherType, TimeOfDay } from "@/lib/weather-background"
+
+export interface DashboardItem {
+  id: string
+  genre: string
+  title: string
+  query: string
+  imageUrl: string
+}
+
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK_SPOTIFY === "true"
+
+/**
+ * ジャンル名に基づいてモック画像URLを生成
+ */
+function getMockImageUrl(genre: string): string {
+  // ジャンル名をハッシュ化して一貫性のある画像を返す
+  const genreHash = genre
+    .split("")
+    .reduce((acc, char) => acc + char.charCodeAt(0), 0)
+  
+  // Lorem Picsumを使用（サイズとシードで一貫性を保つ）
+  return `https://picsum.photos/seed/${genreHash}/400/400`
+}
+
+/**
+ * フォールバック用のプレイリスト情報を生成
+ */
+function createFallbackPlaylistInfo(
+  genres: Genre[],
+  weatherLabel: string,
+  timeLabel: string
+): Array<{ genre: string; title: string; query: string }> {
+  return genres.map((genre) => ({
+    genre,
+    title: `${weatherLabel}の${timeLabel}に聴く${genre}`,
+    query: `${genre} ${weatherLabel} ${timeLabel}`,
+  }))
+}
+
+/**
+ * Spotify APIから画像を取得（通常モード）
+ */
+async function getSpotifyImage(
+  spotifyClient: NonNullable<Awaited<ReturnType<typeof getSpotifyClient>>>,
+  query: string
+): Promise<string | null> {
+  try {
+    const response = await spotifyClient.searchTracks(query, { limit: 1 })
+    const track = response.body.tracks?.items?.[0]
+    return track?.album?.images?.[0]?.url || null
+  } catch (error) {
+    console.error("Failed to search Spotify tracks:", error)
+    return null
+  }
+}
+
+/**
+ * AIを使用してジャンルごとのタイトルと検索クエリを生成
+ */
+async function generatePlaylistInfo(
+  weather: WeatherType,
+  time: TimeOfDay,
+  genres: Genre[]
+): Promise<Array<{ genre: string; title: string; query: string }>> {
+  const weatherLabel = WEATHER_TYPE_LABELS[weather]
+  const timeLabel = TIME_OF_DAY_LABELS[time]
+
+  const prompt = `あなたは音楽プレイリストのキュレーターです。以下の条件に基づいて、各ジャンルに対するプレイリストのタイトルとSpotify検索クエリを生成してください。
+
+条件:
+- 天気: ${weatherLabel}
+- 時間帯: ${timeLabel}
+- ジャンル: ${genres.join(", ")}
+
+各ジャンルに対して、以下のJSON形式で出力してください:
+{
+  "genre": "ジャンル名",
+  "title": "プレイリストのタイトル（日本語、30文字以内）",
+  "query": "Spotify検索クエリ（英語、アーティスト名や楽曲名を含む）"
+}
+
+出力はJSON配列形式で、各ジャンルごとに1つのオブジェクトを含めてください。`
+
+  try {
+    const { text } = await generateText({
+      model: openai("gpt-4o-mini"),
+      prompt,
+    })
+
+    // JSONをパース
+    const jsonMatch = text.match(/\[[\s\S]*\]/)
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0])
+      return Array.isArray(parsed) ? parsed : [parsed]
+    }
+
+    // パースに失敗した場合はフォールバック
+    return createFallbackPlaylistInfo(genres, weatherLabel, timeLabel)
+  } catch (error) {
+    console.error("Failed to generate playlist info:", error)
+    return createFallbackPlaylistInfo(genres, weatherLabel, timeLabel)
+  }
+}
+
+/**
+ * ダッシュボードデータを生成
+ */
+export async function generateDashboard(
+  weather: WeatherType,
+  time: TimeOfDay,
+  selectedGenres: Genre[]
+): Promise<DashboardItem[]> {
+  // 1. AI生成（常に実行）
+  const playlistInfos = await generatePlaylistInfo(weather, time, selectedGenres)
+
+  // 2. Spotifyクライアントの取得（モックモードでない場合）
+  const spotifyClient = USE_MOCK ? null : await getSpotifyClient()
+
+  // 3. 画像取得
+  const dashboardItems: DashboardItem[] = await Promise.all(
+    playlistInfos.map(async (info, index) => {
+      let imageUrl = ""
+
+      if (USE_MOCK || !spotifyClient) {
+        // モックモードまたはクライアント取得失敗時
+        imageUrl = getMockImageUrl(info.genre)
+      } else {
+        // 通常モード
+        const spotifyImage = await getSpotifyImage(spotifyClient, info.query)
+        imageUrl = spotifyImage || getMockImageUrl(info.genre) // フォールバック
+      }
+
+      return {
+        id: `playlist-${index + 1}`,
+        genre: info.genre,
+        title: info.title,
+        query: info.query,
+        imageUrl,
+      }
+    })
+  )
+
+  return dashboardItems
+}
