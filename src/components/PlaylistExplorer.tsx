@@ -289,8 +289,8 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
             {/* Weather Test Panel */}
             <WeatherTestPanel />
 
-            {/* Settings Toggle Button */}
-            <div className="fixed top-4 right-4 z-50">
+            {/* Settings Toggle Button（ジャンル選択・右下で天気と被らない） */}
+            <div className="fixed bottom-4 right-4 z-50">
                 <Button
                     variant="outline"
                     size="icon"
@@ -304,9 +304,9 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                 </Button>
             </div>
 
-            {/* Settings Panel with Genre Selector */}
+            {/* Settings Panel with Genre Selector（ボタンの上に表示） */}
             {showSettings && (
-                <div className="fixed top-16 right-4 z-50 w-80 max-w-[calc(100vw-2rem)]">
+                <div className="fixed bottom-16 right-4 z-50 w-80 max-w-[calc(100vw-2rem)]">
                     <GenreSelector />
                 </div>
             )}
