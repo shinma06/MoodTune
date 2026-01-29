@@ -10,7 +10,7 @@ import { getWeatherBackground, getTimeOfDay, type WeatherType, isDarkBackground 
 import { normalizeWeatherType } from "@/lib/weather-utils"
 import { formatGradientBackground } from "@/lib/weather-background-utils"
 import { useVinylRotation } from "@/hooks/useVinylRotation"
-import { getGenreThemeColors } from "@/lib/constants"
+import { getGenreThemeColors, REALISTIC_VINYL_THEME } from "@/lib/constants"
 import { Music } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { generateDashboard, type DashboardItem } from "@/app/actions/generateDashboard"
@@ -90,7 +90,16 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
   }, [currentIndex, displayPlaylists.length])
   
   const currentPlaylist = displayPlaylists[safeCurrentIndex] ?? EMPTY_PLAYLIST
-  const vinylColors = getGenreThemeColors(currentPlaylist.genre)
+  /** 初期同期のみ：サーバーから J-POP 1件だけのとき、選択ジャンルの先頭が J-POP でなければ現実のレコード色 */
+  const isShowingStaleJPop =
+    isLoading &&
+    playlists?.length === 1 &&
+    currentPlaylist.genre === "J-POP" &&
+    selectedGenres.length > 0 &&
+    selectedGenres[0] !== "J-POP"
+  const vinylColors = isShowingStaleJPop
+    ? REALISTIC_VINYL_THEME
+    : getGenreThemeColors(currentPlaylist.genre)
   
   /** 現在の天気・時間帯・ジャンルでプレイリストを全件再生成 */
   const refreshPlaylists = useCallback(async () => {
@@ -291,19 +300,17 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
             <WeatherTestPanel />
 
             {/* Settings Toggle Button（ジャンル選択・右下で天気と被らない） */}
-            <div className="fixed bottom-4 right-4 z-50">
-                <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={handleToggleSettings}
-                    className={`
-                        w-10 h-10 rounded-full bg-background/80 backdrop-blur-sm border-border/50
-                        ${showSettings ? "bg-primary text-primary-foreground" : ""}
-                    `}
-                >
-                    <Music className="w-5 h-5" />
-                </Button>
-            </div>
+            <Button
+                variant="outline"
+                size="icon"
+                onClick={handleToggleSettings}
+                className={`
+                    fixed bottom-4 right-4 z-50 bg-background/80 backdrop-blur-sm
+                    ${showSettings ? "bg-primary text-primary-foreground" : ""}
+                `}
+            >
+                <Music className="h-4 w-4" />
+            </Button>
 
             {/* Settings Panel with Genre Selector（ボタンの上に表示） */}
             {showSettings && (
@@ -377,10 +384,10 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                         </div>
                     </div>
 
-                    {/* Indicator dots（ジャンルごとのテーマカラー） */}
+                    {/* Indicator dots（ジャンルごとのテーマカラー。現実のレコード色表示時はアクティブをそれに合わせる） */}
                     <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 flex gap-1.5">
                         {displayPlaylists.map((item, i) => {
-                            const colors = getGenreThemeColors(item.genre)
+                            const colors = isShowingStaleJPop ? REALISTIC_VINYL_THEME : getGenreThemeColors(item.genre)
                             const isActive = i === safeCurrentIndex
                             return (
                                 <div
