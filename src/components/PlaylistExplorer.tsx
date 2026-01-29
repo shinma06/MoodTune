@@ -39,7 +39,8 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
   const [currentIndex, setCurrentIndex] = useState(0)
   const { weatherType, actualWeatherType, testTimeOfDay, isTestMode, playlistAutoUpdate, playlistRefreshTrigger } = useWeather()
   const [currentHour, setCurrentHour] = useState(new Date().getHours())
-  const [showSettings, setShowSettings] = useState(false)
+  /** 開いているパネル（null = 両方閉じている）。同時に1つだけ開く */
+  const [openPanel, setOpenPanel] = useState<null | "mood" | "genre">(null)
   const [selectedGenres, isGenresInitialized] = useSelectedGenres()
   const [playlists, setPlaylists] = useState<DashboardItem[] | null>(initialPlaylists ?? null)
   const [isLoading, setIsLoading] = useState(false)
@@ -185,19 +186,19 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     }
   }, [weatherType, currentHour, isTestMode, testTimeOfDay])
   
-  /** 設定パネルの開閉（閉じたときにジャンル変更があればプレイリスト再生成） */
+  /** ジャンル選択パネルの開閉（閉じたときにジャンル変更があればプレイリスト再生成） */
   const handleToggleSettings = useCallback(() => {
-    if (!showSettings) {
+    if (openPanel !== "genre") {
       genresOnOpenRef.current = [...selectedGenres]
-      setShowSettings(true)
+      setOpenPanel("genre")
     } else {
-      setShowSettings(false)
+      setOpenPanel(null)
       if (hasGenresChanged(genresOnOpenRef.current, selectedGenres)) {
         const diff = getGenresDiff(genresOnOpenRef.current, selectedGenres)
         updatePlaylistsWithDiff(selectedGenres, diff, playlists)
       }
     }
-  }, [showSettings, selectedGenres, playlists, updatePlaylistsWithDiff])
+  }, [openPanel, selectedGenres, playlists, updatePlaylistsWithDiff])
 
   /** localStorage のジャンル読み込み完了後、保存値と表示プレイリストが食い違っていれば同期 */
   useEffect(() => {
@@ -316,24 +317,31 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
             {/* Weather Animation */}
             <WeatherAnimation weatherType={weatherType ? normalizeWeatherType(weatherType) : null} />
 
-            {/* Weather Test Panel */}
-            <WeatherTestPanel />
+            {/* Weather Test Panel（気分に合わせる）。ジャンルパネル開時はボタン非表示 */}
+            <WeatherTestPanel
+                isOpen={openPanel === "mood"}
+                onOpen={() => setOpenPanel("mood")}
+                onClose={() => setOpenPanel(null)}
+                hideToggleButton={openPanel === "genre"}
+            />
 
-            {/* Settings Toggle Button（ジャンル選択・右下で天気と被らない） */}
+            {/* Settings Toggle Button（ジャンル選択・右下）。気分パネル開時は非表示 */}
+            {openPanel !== "mood" && (
             <Button
                 variant="outline"
                 size="icon"
                 onClick={handleToggleSettings}
                 className={`
                     fixed bottom-4 right-4 z-50 bg-background/80 backdrop-blur-sm
-                    ${showSettings ? "bg-primary text-primary-foreground" : ""}
+                    ${openPanel === "genre" ? "bg-primary text-primary-foreground" : ""}
                 `}
             >
                 <Music className="h-4 w-4" />
             </Button>
+            )}
 
             {/* Settings Panel with Genre Selector（ボタンの上に表示） */}
-            {showSettings && (
+            {openPanel === "genre" && (
                 <div className="fixed bottom-16 right-4 z-50 w-80 max-w-[calc(100vw-2rem)]">
                     <GenreSelector />
                 </div>

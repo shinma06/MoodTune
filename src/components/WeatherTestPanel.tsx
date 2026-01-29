@@ -17,7 +17,21 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Sparkles } from "lucide-react"
 
-export default function WeatherTestPanel() {
+interface WeatherTestPanelProps {
+  /** 親で制御する場合の開閉状態 */
+  isOpen?: boolean
+  onOpen?: () => void
+  onClose?: () => void
+  /** true のときトグルボタンを非表示（他パネル開時） */
+  hideToggleButton?: boolean
+}
+
+export default function WeatherTestPanel({
+  isOpen: controlledIsOpen,
+  onOpen: onOpenProp,
+  onClose: onCloseProp,
+  hideToggleButton = false,
+}: WeatherTestPanelProps = {}) {
   const {
     weatherType,
     setWeatherType,
@@ -31,7 +45,9 @@ export default function WeatherTestPanel() {
     setPlaylistAutoUpdate,
     requestPlaylistRefresh,
   } = useWeather()
-  const [isOpen, setIsOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  /** 親制御時は props を、そうでなければ内部 state を使う */
+  const isOpen = onOpenProp !== undefined ? (controlledIsOpen ?? false) : internalOpen
   /** パネルを開いた時点の天気・時間（閉じたときに「開いた時点と変わっているか」の判定用） */
   const openedWeatherTypeRef = useRef<string | null>(null)
   const openedTimeOfDayRef = useRef<TimeOfDay | null>(null)
@@ -40,7 +56,8 @@ export default function WeatherTestPanel() {
   const handleOpenPanel = () => {
     openedWeatherTypeRef.current = weatherType
     openedTimeOfDayRef.current = testTimeOfDay
-    setIsOpen(true)
+    if (onOpenProp) onOpenProp()
+    else setInternalOpen(true)
   }
 
   /** 雰囲気（天気）・時間帯は即時Contextに反映（UIのみ。プレイリストは閉じたときのみ更新） */
@@ -63,7 +80,8 @@ export default function WeatherTestPanel() {
     if (weatherChanged || timeChanged) {
       requestPlaylistRefresh()
     }
-    setIsOpen(false)
+    if (onCloseProp) onCloseProp()
+    else setInternalOpen(false)
   }
 
   /** トグル: 開くときはスナップショット、閉じるときは変更があれば再生成してから閉じる（ジャンル選択パネルと同じ方式） */
@@ -96,7 +114,8 @@ export default function WeatherTestPanel() {
 
   return (
     <>
-      {/* トグルボタン（ジャンル選択パネルと同じ: 常時表示・押すと開閉・開時は primary） */}
+      {/* トグルボタン（ジャンルパネル開時は非表示） */}
+      {!hideToggleButton && (
       <Button
         variant="outline"
         size="icon"
@@ -109,6 +128,7 @@ export default function WeatherTestPanel() {
       >
         <Sparkles className="h-4 w-4" />
       </Button>
+      )}
 
       {isOpen && (
         <div className="fixed bottom-16 left-4 z-50 w-80 max-w-[calc(100vw-2rem)]">
