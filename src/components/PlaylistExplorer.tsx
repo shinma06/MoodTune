@@ -184,17 +184,16 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     }
   }, [isGenresInitialized, selectedGenres, playlists, updatePlaylistsWithDiff])
 
-  /** 時間帯（朝・昼・夕方・夜）が変わったタイミングでプレイリストを自動更新 */
+  /** 実時刻の時間帯（朝・昼・夕方・夜）が変わったタイミングでプレイリストを自動更新（手動設定中は行わない） */
   const calculatedTimeOfDayForEffect = getTimeOfDay(currentHour)
-  const timeOfDayForAutoUpdate = isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDayForEffect
   useEffect(() => {
-    if (!playlistAutoUpdate || !isGenresInitialized || selectedGenres.length === 0) return
+    if (!playlistAutoUpdate || isTestMode || !isGenresInitialized || selectedGenres.length === 0) return
     const prev = prevTimeOfDayRef.current
-    prevTimeOfDayRef.current = timeOfDayForAutoUpdate
-    if (prev !== null && prev !== timeOfDayForAutoUpdate) {
+    prevTimeOfDayRef.current = calculatedTimeOfDayForEffect
+    if (prev !== null && prev !== calculatedTimeOfDayForEffect) {
       refreshPlaylists()
     }
-  }, [timeOfDayForAutoUpdate, playlistAutoUpdate, isGenresInitialized, selectedGenres.length, refreshPlaylists])
+  }, [calculatedTimeOfDayForEffect, playlistAutoUpdate, isTestMode, isGenresInitialized, selectedGenres.length, refreshPlaylists])
 
   /** パネルから「プレイリストを再生成」が押されたときに手動で再生成 */
   useEffect(() => {

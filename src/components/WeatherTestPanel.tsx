@@ -32,49 +32,41 @@ export default function WeatherTestPanel() {
     requestPlaylistRefresh,
   } = useWeather()
   const [isOpen, setIsOpen] = useState(false)
-  const [testWeatherType, setTestWeatherType] = useState<WeatherType>(
-    weatherType ? normalizeWeatherType(weatherType) : "Clear"
-  )
-  const [localTimeOfDay, setLocalTimeOfDay] = useState<TimeOfDay>(
-    testTimeOfDay || "day"
-  )
-  const [localPlaylistAutoUpdate, setLocalPlaylistAutoUpdate] = useState(playlistAutoUpdate)
   const prevOpenRef = useRef(false)
+  /** パネルを開いた時点の天気・時間（閉じたときに「開く前から変更があったか」の判定用） */
+  const openedWeatherTypeRef = useRef<string | null>(null)
+  const openedTimeOfDayRef = useRef<TimeOfDay | null>(null)
 
-  /** パネルを開いたときにローカル状態をContextの現在値で同期（依存配列の長さは常に4で固定） */
-  const panelSyncDeps: [boolean, string | null, TimeOfDay | null, boolean] = [
-    isOpen,
-    weatherType,
-    testTimeOfDay,
-    playlistAutoUpdate,
-  ]
+  /** パネルを開いたときに現在の天気・時間をスナップショット */
   useEffect(() => {
     const justOpened = isOpen && !prevOpenRef.current
     prevOpenRef.current = isOpen
-    if (!justOpened) return
-    setTestWeatherType(weatherType ? normalizeWeatherType(weatherType) : "Clear")
-    setLocalTimeOfDay(testTimeOfDay ?? (getTimeOfDay(new Date().getHours()) as TimeOfDay))
-    setLocalPlaylistAutoUpdate(playlistAutoUpdate)
-  }, panelSyncDeps)
+    if (justOpened) {
+      openedWeatherTypeRef.current = weatherType
+      openedTimeOfDayRef.current = testTimeOfDay
+    }
+  }, [isOpen, weatherType, testTimeOfDay])
 
-  /** 雰囲気・時間帯はパネル内のローカルのみ更新（閉じたときに適用） */
+  /** 雰囲気（天気）・時間帯は即時Contextに反映（UIのみ。プレイリストは閉じたときのみ更新） */
   const handleWeatherTypeChange = (type: WeatherType) => {
-    setTestWeatherType(type)
+    setWeatherType(type)
+    setIsTestMode(true)
   }
 
   const handleTimeOfDayChange = (timeOfDay: TimeOfDay) => {
-    setLocalTimeOfDay(timeOfDay)
+    setTestTimeOfDay(timeOfDay)
+    setIsTestMode(true)
   }
 
-  /** パネルを閉じたタイミングで設定をContextに反映 */
+  /** 閉じたとき: 開いた時点から天気・時間が変わっている場合のみプレイリストを再生成 */
   const handleClosePanel = () => {
-    setWeatherType(testWeatherType)
-    setTestTimeOfDay(localTimeOfDay)
-    setPlaylistAutoUpdate(localPlaylistAutoUpdate)
-    setIsTestMode(true)
+    const weatherChanged = weatherType !== openedWeatherTypeRef.current
+    const timeChanged = testTimeOfDay !== openedTimeOfDayRef.current
+    if (weatherChanged || timeChanged) requestPlaylistRefresh()
     setIsOpen(false)
   }
 
+  /** リセットは即時反映（Contextを実際の天気・時間に戻す。プレイリストは閉じたときに判定） */
   const handleReset = () => {
     if (actualWeatherType) {
       setWeatherType(actualWeatherType)
@@ -83,27 +75,12 @@ export default function WeatherTestPanel() {
     }
     setTestTimeOfDay(null)
     setIsTestMode(false)
-    if (actualWeatherType) {
-      setTestWeatherType(normalizeWeatherType(actualWeatherType))
-    } else {
-      setTestWeatherType("Clear")
-    }
-    setLocalTimeOfDay("day")
   }
 
-  /** 表示用: パネル内ではローカル状態、パネル外ではContext */
-  const currentWeatherType = isOpen
-    ? testWeatherType
-    : isTestMode
-      ? testWeatherType
-      : weatherType
-        ? normalizeWeatherType(weatherType)
-        : "Clear"
-  const currentTimeOfDayLabel = isOpen
-    ? TIME_OF_DAY_OPTIONS.find((opt) => opt.value === localTimeOfDay)?.label
-    : testTimeOfDay || localTimeOfDay
-      ? TIME_OF_DAY_OPTIONS.find((opt) => opt.value === (testTimeOfDay || localTimeOfDay))?.label
-      : "-"
+  /** 表示用: Contextの現在値（即時反映のためパネル内外で同一） */
+  const currentWeatherType = weatherType ? normalizeWeatherType(weatherType) : "Clear"
+  const timeOfDayForDisplay: TimeOfDay = testTimeOfDay ?? (getTimeOfDay(new Date().getHours()) as TimeOfDay)
+  const currentTimeOfDayLabel = TIME_OF_DAY_OPTIONS.find((opt) => opt.value === timeOfDayForDisplay)?.label ?? "-"
 
   return (
     <>
@@ -146,7 +123,7 @@ export default function WeatherTestPanel() {
                 {WEATHER_TYPES.map((type) => {
                   const Icon = getWeatherIcon(type)
                   const color = getWeatherThemeColor(type)
-                  const isSelected = testWeatherType === type
+                  const isSelected = currentWeatherType === type
                   return (
                     <button
                       key={type}
@@ -170,7 +147,7 @@ export default function WeatherTestPanel() {
               <Label className="text-sm">時間帯</Label>
               <div className="grid grid-cols-4 gap-2">
                 {TIME_OF_DAY_OPTIONS.map((option) => {
-                  const isSelected = localTimeOfDay === option.value
+                  const isSelected = timeOfDayForDisplay === option.value
                   return (
                     <button
                       key={option.value}
@@ -205,12 +182,12 @@ export default function WeatherTestPanel() {
             <div className="flex items-center justify-between gap-2 pt-2 border-t">
               <Label className="text-sm">自動更新</Label>
               <Button
-                variant={localPlaylistAutoUpdate ? "default" : "outline"}
+                variant={playlistAutoUpdate ? "default" : "outline"}
                 size="sm"
                 className="min-w-16"
-                onClick={() => setLocalPlaylistAutoUpdate(!localPlaylistAutoUpdate)}
+                onClick={() => setPlaylistAutoUpdate(!playlistAutoUpdate)}
               >
-                {localPlaylistAutoUpdate ? "ON" : "OFF"}
+                {playlistAutoUpdate ? "ON" : "OFF"}
               </Button>
             </div>
             <p className="text-[10px] text-muted-foreground -mt-1">
