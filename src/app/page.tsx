@@ -10,9 +10,7 @@ import type { WeatherType, TimeOfDay } from "@/lib/weather-background"
 
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK_SPOTIFY === "true"
 
-/**
- * Generate initial playlist data
- */
+/** 初期表示用のプレイリストデータを生成 */
 async function getInitialPlaylists(): Promise<DashboardItem[]> {
   const currentHour = new Date().getHours()
   const timeOfDay = getTimeOfDay(currentHour) as TimeOfDay
@@ -27,22 +25,17 @@ async function getInitialPlaylists(): Promise<DashboardItem[]> {
 }
 
 export default async function Page() {
-  // モックモードの場合はログイン不要
   if (USE_MOCK) {
     const initialPlaylists = await getInitialPlaylists()
     return <PlaylistExplorer playlists={initialPlaylists} />
   }
 
-  // 通常モード: セッションを確認
   const session = await auth()
-
-  // ログイン済みの場合はPlaylistExplorerを表示
   if (session) {
     const initialPlaylists = await getInitialPlaylists()
     return <PlaylistExplorer playlists={initialPlaylists} />
   }
 
-  // 未ログインの場合はログインボタンを表示
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       <div className="text-center space-y-6 p-8">

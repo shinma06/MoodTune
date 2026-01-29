@@ -6,7 +6,6 @@ export async function GET(request: NextRequest) {
     const lat = searchParams.get("lat")
     const lon = searchParams.get("lon")
 
-    // パラメータのバリデーション
     if (!lat || !lon) {
       return NextResponse.json(
         { error: "緯度(lat)と経度(lon)のパラメータが必要です" },
@@ -17,7 +16,6 @@ export async function GET(request: NextRequest) {
     const latNum = parseFloat(lat)
     const lonNum = parseFloat(lon)
 
-    // 数値のバリデーション
     if (isNaN(latNum) || isNaN(lonNum)) {
       return NextResponse.json(
         { error: "緯度(lat)と経度(lon)は数値である必要があります" },
@@ -25,7 +23,6 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // 緯度・経度の範囲チェック
     if (latNum < -90 || latNum > 90) {
       return NextResponse.json(
         { error: "緯度は-90から90の範囲である必要があります" },
@@ -40,7 +37,6 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // APIキーの確認
     const apiKey = process.env.NEXT_PUBLIC_WEATHER_API_KEY
     if (!apiKey) {
       return NextResponse.json(
@@ -49,7 +45,6 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // OpenWeatherMap APIを呼び出し
     const apiUrl = new URL("https://api.openweathermap.org/data/2.5/weather")
     apiUrl.searchParams.set("lat", lat)
     apiUrl.searchParams.set("lon", lon)

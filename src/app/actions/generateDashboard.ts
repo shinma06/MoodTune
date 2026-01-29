@@ -20,12 +20,9 @@ const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK_SPOTIFY === "true"
  * ジャンル名に基づいてモック画像URLを生成
  */
 function getMockImageUrl(genre: string): string {
-  // ジャンル名をハッシュ化して一貫性のある画像を返す
   const genreHash = genre
     .split("")
     .reduce((acc, char) => acc + char.charCodeAt(0), 0)
-  
-  // Lorem Picsumを使用（サイズとシードで一貫性を保つ）
   return `https://picsum.photos/seed/${genreHash}/400/400`
 }
 
@@ -94,14 +91,11 @@ async function generatePlaylistInfo(
       prompt,
     })
 
-    // JSONをパース
     const jsonMatch = text.match(/\[[\s\S]*\]/)
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0])
       return Array.isArray(parsed) ? parsed : [parsed]
     }
-
-    // パースに失敗した場合はフォールバック
     return createFallbackPlaylistInfo(genres, weatherLabel, timeLabel)
   } catch (error) {
     console.error("Failed to generate playlist info:", error)
@@ -117,24 +111,17 @@ export async function generateDashboard(
   time: TimeOfDay,
   selectedGenres: Genre[]
 ): Promise<DashboardItem[]> {
-  // 1. AI生成（常に実行）
   const playlistInfos = await generatePlaylistInfo(weather, time, selectedGenres)
-
-  // 2. Spotifyクライアントの取得（モックモードでない場合）
   const spotifyClient = USE_MOCK ? null : await getSpotifyClient()
 
-  // 3. 画像取得
   const dashboardItems: DashboardItem[] = await Promise.all(
     playlistInfos.map(async (info, index) => {
       let imageUrl = ""
-
       if (USE_MOCK || !spotifyClient) {
-        // モックモードまたはクライアント取得失敗時
         imageUrl = getMockImageUrl(info.genre)
       } else {
-        // 通常モード
         const spotifyImage = await getSpotifyImage(spotifyClient, info.query)
-        imageUrl = spotifyImage || getMockImageUrl(info.genre) // フォールバック
+        imageUrl = spotifyImage || getMockImageUrl(info.genre)
       }
 
       return {

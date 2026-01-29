@@ -7,7 +7,8 @@ import { normalizeWeatherType } from "@/lib/weather-utils"
 import { useEffect, useState } from "react"
 
 interface WeatherAnimationProps {
-  weatherType?: WeatherType | null // propsで天気タイプを渡せるように（開発用）
+  /** 開発用: propsで天気タイプを上書き可能 */
+  weatherType?: WeatherType | null
 }
 
 export default function WeatherAnimation({ weatherType: propWeatherType }: WeatherAnimationProps = {}) {
@@ -15,7 +16,6 @@ export default function WeatherAnimation({ weatherType: propWeatherType }: Weath
   const [currentHour, setCurrentHour] = useState(new Date().getHours())
   const [showLightning, setShowLightning] = useState(false)
 
-  // propsで渡された天気タイプを優先、なければContextから取得
   const weatherType = propWeatherType ?? contextWeatherType
 
   useEffect(() => {
@@ -28,20 +28,18 @@ export default function WeatherAnimation({ weatherType: propWeatherType }: Weath
   const timeOfDay = getTimeOfDay(currentHour)
   const weather = weatherType ? normalizeWeatherType(weatherType) : "Clear"
 
-  // 雷雨のフラッシュ効果
   useEffect(() => {
     if (weather === "Thunderstorm") {
       const interval = setInterval(() => {
         setShowLightning(true)
         setTimeout(() => setShowLightning(false), 100)
-      }, Math.random() * 3000 + 2000) // 2-5秒間隔
+      }, Math.random() * 3000 + 2000)
       return () => clearInterval(interval)
     } else {
       setShowLightning(false)
     }
   }, [weather])
 
-  // propsで天気タイプが渡されている場合は常に表示、Contextの場合は天気タイプがない場合は非表示
   if (!propWeatherType && !contextWeatherType) return null
 
   return (

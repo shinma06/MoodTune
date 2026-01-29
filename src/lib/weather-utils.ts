@@ -17,24 +17,20 @@ import { WEATHER_TYPES } from "./constants"
  * 存在しない天気タイプの場合は"Clear"にフォールバック
  */
 export function normalizeWeatherType(weatherMain: string | null | undefined): WeatherType {
-  // null/undefinedの場合はClearにフォールバック
   if (!weatherMain) {
     return "Clear"
   }
-  // サポートされている天気タイプかチェック
   if (WEATHER_TYPES.includes(weatherMain as WeatherType)) {
     return weatherMain as WeatherType
   }
-  // 存在しない場合はClearにフォールバック
   return "Clear"
 }
 
-// 天候の種類に応じたアイコンのマッピング（各パターンに個別のアイコンを割り当て）
+/** 天気タイプと時間帯に応じたアイコンを返す */
 export function getWeatherIcon(
   weatherMain: string,
   timeOfDay?: TimeOfDay
 ): LucideIcon {
-  // Clearかつ夜の場合は月を表示
   if (weatherMain === "Clear" && timeOfDay === "night") {
     return Moon
   }
@@ -53,7 +49,7 @@ export function getWeatherIcon(
   return iconMap[weatherMain] || Sun
 }
 
-// 日時フォーマット関数
+/** 日時を表示用文字列にフォーマット */
 export function formatDateTime(date: Date) {
   const year = date.getFullYear().toString().slice(-2)
   const month = (date.getMonth() + 1).toString().padStart(2, "0")
@@ -69,7 +65,7 @@ export function formatDateTime(date: Date) {
   }
 }
 
-// 位置情報エラーメッセージの取得
+/** 位置情報エラーのユーザー向けメッセージを返す */
 export function getGeolocationErrorMessage(error: GeolocationPositionError): string {
   switch (error.code) {
     case error.PERMISSION_DENIED:
@@ -83,14 +79,13 @@ export function getGeolocationErrorMessage(error: GeolocationPositionError): str
   }
 }
 
-// 位置情報取得のオプション
 export const GEOLOCATION_OPTIONS: PositionOptions = {
   enableHighAccuracy: true,
   timeout: 10000,
   maximumAge: 0,
 }
 
-// 天気タイプごとのテーマカラー
+/** 天気タイプごとのアイコン用テーマカラー */
 export function getWeatherThemeColor(
   weatherType: WeatherType,
   timeOfDay?: TimeOfDay

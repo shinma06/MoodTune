@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react"
 
-// OpenWeatherMap APIレスポンスの型定義
+/** OpenWeatherMap API のレスポンス型 */
 export interface WeatherApiResponse {
   main: {
     temp: number
@@ -23,16 +23,16 @@ export interface WeatherApiResponse {
   }
 }
 
-// 天気データの型定義
+/** UI表示用の天気データ */
 export interface WeatherData {
   icon: LucideIcon
   temp: string
   city: string
   description: string
-  weatherMain: string // 天気タイプ（アイコンを動的に取得するために必要）
+  weatherMain: string
 }
 
-// 天気状態の型定義
+/** 天気取得の状態（ローディング / エラー / 成功） */
 export type WeatherState =
   | { status: "loading"; message: string }
   | { status: "error"; message: string }

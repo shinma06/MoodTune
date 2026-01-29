@@ -18,30 +18,24 @@ export default function WeatherMonitor() {
     })
     const { setWeatherType, setActualWeatherType, weatherType, testTimeOfDay, isTestMode } = useWeather()
     
-    // isTestModeの現在の値を保持（useCallbackの依存配列を避けるため）
     const isTestModeRef = useRef(isTestMode)
     useEffect(() => {
         isTestModeRef.current = isTestMode
     }, [isTestMode])
 
-    // 時計の更新（クライアントサイドでのみ実行）
     useEffect(() => {
-        // 初回設定
         setCurrentTime(new Date())
-        // 1秒ごとに更新
         const timer = setInterval(() => {
             setCurrentTime(new Date())
         }, 1000)
         return () => clearInterval(timer)
     }, [])
 
-    // 天気データの取得と処理
     const handleWeatherFetch = useCallback(async (lat: number, lon: number) => {
         try {
             setWeatherState({ status: "loading", message: "天気を確認中..." })
             const { weatherData, weatherMain } = await fetchWeatherData(lat, lon)
-            setActualWeatherType(weatherMain) // 実際の天気を保存
-            // テストモードでない場合のみweatherTypeを更新
+            setActualWeatherType(weatherMain)
             if (!isTestModeRef.current) {
                 setWeatherType(weatherMain)
             }
@@ -54,7 +48,6 @@ export default function WeatherMonitor() {
         }
     }, [setWeatherType, setActualWeatherType])
 
-    // 位置情報取得
     const { requestGeolocation } = useGeolocation({
         onSuccess: (position) => {
             const { latitude, longitude } = position.coords
@@ -68,7 +61,6 @@ export default function WeatherMonitor() {
         },
     })
 
-    // 初回の位置情報取得
     useEffect(() => {
         requestGeolocation()
     }, [requestGeolocation])
@@ -77,13 +69,10 @@ export default function WeatherMonitor() {
     const dateTime = currentTime ? formatDateTime(currentTime) : { dateString: "--/--/--/---", timeString: "--:--" }
     const { dateString, timeString } = dateTime
 
-    // 時間帯の計算とアイコンの取得
     const currentHour = currentTime?.getHours() ?? new Date().getHours()
     const calculatedTimeOfDay = getTimeOfDay(currentHour)
-    // テストモード時は手動設定の時間帯を使用、そうでない場合は実際の時間から計算
     const timeOfDay = isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay
     
-    // テストモード時はContextのweatherTypeを使用、そうでない場合はAPIから取得したデータを使用
     const displayWeatherType = isTestMode && weatherType
         ? normalizeWeatherType(weatherType)
         : weatherState.status === "success"
@@ -94,12 +83,10 @@ export default function WeatherMonitor() {
         ? getWeatherIcon(displayWeatherType, timeOfDay)
         : null
     
-    // 背景が暗いかどうかを判定
     const isDark = displayWeatherType && timeOfDay
         ? isDarkBackground(displayWeatherType, timeOfDay)
         : false
     
-    // 背景が暗い場合は暗い背景用の色を使用、そうでない場合は通常の色を使用
     const iconColor = displayWeatherType
         ? isDark
             ? getWeatherThemeColorForDark(displayWeatherType, timeOfDay)

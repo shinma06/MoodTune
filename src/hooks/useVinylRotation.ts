@@ -20,7 +20,7 @@ export function useVinylRotation({
   const [totalRotation, setTotalRotation] = useState(0)
   const vinylRef = useRef<HTMLDivElement>(null)
 
-  // 2つの角度間の最短角度差を計算（-180から180の範囲）
+  /** 2つの角度の最短差を -180〜180 の範囲で返す */
   const getAngleDifference = useCallback((angle1: number, angle2: number): number => {
     let diff = angle2 - angle1
     if (diff > 180) {
@@ -92,7 +92,6 @@ export function useVinylRotation({
     [isDragging, startRotation, calculateRotationFromDrag]
   )
 
-  // マウスイベントハンドラー
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       handleStart(e.clientX, e.clientY)
@@ -107,7 +106,6 @@ export function useVinylRotation({
     [handleMove]
   )
 
-  // タッチイベントハンドラー
   const handleTouchStart = useCallback(
     (e: React.TouchEvent) => {
       handleStart(e.touches[0].clientX, e.touches[0].clientY)
@@ -122,7 +120,6 @@ export function useVinylRotation({
     [handleMove]
   )
 
-  // グローバルマウスイベント
   useEffect(() => {
     const handleGlobalMouseUp = () => {
       if (isDragging) {

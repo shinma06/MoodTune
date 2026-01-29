@@ -21,7 +21,7 @@ interface PlaylistExplorerProps {
   playlists?: DashboardItem[]
 }
 
-// Vinyl color palette
+/** ビニール盤の色パレット */
 const VINYL_COLORS = [
   { vinylColor: "from-amber-900 to-amber-950", accentColor: "#d97706" },
   { vinylColor: "from-slate-700 to-slate-900", accentColor: "#64748b" },
@@ -30,7 +30,7 @@ const VINYL_COLORS = [
   { vinylColor: "from-orange-800 to-orange-950", accentColor: "#ea580c" },
 ] as const
 
-// Default playlist for empty state
+/** プレイリストが空のときの表示用ダミー */
 const EMPTY_PLAYLIST: DashboardItem = {
   id: "empty",
   genre: "---",
@@ -39,16 +39,12 @@ const EMPTY_PLAYLIST: DashboardItem = {
   imageUrl: "",
 }
 
-/**
- * Get vinyl colors by index
- */
+/** インデックスに対応するビニール盤の色を返す */
 function getVinylColors(index: number) {
   return VINYL_COLORS[index % VINYL_COLORS.length]
 }
 
-/**
- * Check if genre arrays have changed (order-independent)
- */
+/** ジャンル配列が変更されたか（順序に依存しない） */
 function hasGenresChanged(prev: string[], current: string[]): boolean {
   if (prev.length !== current.length) return true
   const sortedPrev = [...prev].sort()
@@ -56,9 +52,7 @@ function hasGenresChanged(prev: string[], current: string[]): boolean {
   return sortedPrev.some((g, i) => g !== sortedCurrent[i])
 }
 
-/**
- * Calculate diff between genre arrays
- */
+/** ジャンル配列の差分（追加・削除・変更なし）を算出 */
 function getGenresDiff(prev: string[], current: string[]) {
   const prevSet = new Set(prev)
   const currentSet = new Set(current)
@@ -70,9 +64,7 @@ function getGenresDiff(prev: string[], current: string[]) {
   }
 }
 
-/**
- * Get image URL with fallback
- */
+/** 画像URLを返す（空の場合はプレースホルダー） */
 function getImageUrl(url: string | undefined | null): string {
   if (!url || url.trim() === "") {
     return "/placeholder.svg"
@@ -80,9 +72,7 @@ function getImageUrl(url: string | undefined | null): string {
   return url
 }
 
-/**
- * Convert static playlists to DashboardItem format
- */
+/** 静的プレイリストを DashboardItem 形式に変換 */
 function convertStaticPlaylists(): DashboardItem[] {
   return PLAYLISTS.map((p) => ({
     id: p.id,
@@ -102,12 +92,11 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
   const [playlists, setPlaylists] = useState<DashboardItem[] | null>(initialPlaylists ?? null)
   const [isLoading, setIsLoading] = useState(false)
   
-  // Track genres when panel opens
+  /** パネルを開いた時点のジャンル（閉じたときの差分計算用） */
   const genresOnOpenRef = useRef<string[]>([])
-  // Track if initial sync has been performed
+  /** リロード後の初回同期を1回だけ行うためのフラグ */
   const hasPerformedInitialSyncRef = useRef(false)
   
-  // Memoized display playlists with fallback
   const displayPlaylists = useMemo(() => {
     if (playlists && playlists.length > 0) {
       return playlists
@@ -116,17 +105,16 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     return staticPlaylists.length > 0 ? staticPlaylists : [EMPTY_PLAYLIST]
   }, [playlists])
   
-  // Safe current index (always within bounds)
+  /** 常に配列範囲内のインデックス */
   const safeCurrentIndex = useMemo(() => {
     if (displayPlaylists.length === 0) return 0
     return Math.min(currentIndex, displayPlaylists.length - 1)
   }, [currentIndex, displayPlaylists.length])
   
-  // Current playlist (always defined)
   const currentPlaylist = displayPlaylists[safeCurrentIndex] ?? EMPTY_PLAYLIST
   const vinylColors = getVinylColors(safeCurrentIndex)
   
-  // Update playlists with diff (only fetch new genres)
+  /** ジャンル差分に応じてプレイリストを更新（追加ジャンルのみAPI呼び出し） */
   const updatePlaylistsWithDiff = useCallback(async (
     currentGenres: string[],
     diff: { added: string[], removed: string[], unchanged: string[] }
@@ -139,18 +127,15 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
       const calculatedTimeOfDay = getTimeOfDay(currentHour)
       const time = (isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay) as TimeOfDay
       
-      // Build map of existing playlists
       const existingMap = new Map<string, DashboardItem>()
       if (playlists) {
         playlists.forEach(p => existingMap.set(p.genre, p))
       }
       
-      // Keep unchanged playlists
       const unchangedPlaylists = diff.unchanged
         .map(genre => existingMap.get(genre))
         .filter((p): p is DashboardItem => p !== undefined)
       
-      // Generate only new genres
       let newPlaylists: DashboardItem[] = []
       if (diff.added.length > 0) {
         newPlaylists = await generateDashboard(
@@ -160,7 +145,6 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         )
       }
       
-      // Merge and maintain order
       const allMap = new Map<string, DashboardItem>()
       unchangedPlaylists.forEach(p => allMap.set(p.genre, p))
       newPlaylists.forEach(p => allMap.set(p.genre, p))
@@ -178,14 +162,12 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     }
   }, [weatherType, currentHour, isTestMode, testTimeOfDay, playlists])
   
-  // Handle settings panel toggle
+  /** 設定パネルの開閉（閉じたときにジャンル変更があればプレイリスト再生成） */
   const handleToggleSettings = useCallback(() => {
     if (!showSettings) {
-      // Opening: record current genres
       genresOnOpenRef.current = [...selectedGenres]
       setShowSettings(true)
     } else {
-      // Closing: check for changes and update if needed
       setShowSettings(false)
       if (hasGenresChanged(genresOnOpenRef.current, selectedGenres)) {
         const diff = getGenresDiff(genresOnOpenRef.current, selectedGenres)
@@ -194,27 +176,19 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     }
   }, [showSettings, selectedGenres, updatePlaylistsWithDiff])
 
-  // Sync playlists when localStorage genres are initialized
-  // This handles the case where user reloads the page with saved genres
+  /** localStorage のジャンル読み込み完了後、保存値と表示プレイリストが食い違っていれば同期 */
   useEffect(() => {
-    // Skip if not initialized yet or already synced
     if (!isGenresInitialized || hasPerformedInitialSyncRef.current) return
-    
-    // Mark as synced to prevent duplicate calls
     hasPerformedInitialSyncRef.current = true
     
-    // Get current playlist genres
     const currentPlaylistGenres = playlists?.map(p => p.genre) ?? []
-    
-    // Check if there's a mismatch between saved genres and current playlists
     if (hasGenresChanged(currentPlaylistGenres, selectedGenres)) {
-      // Calculate diff and update playlists
       const diff = getGenresDiff(currentPlaylistGenres, selectedGenres)
       updatePlaylistsWithDiff(selectedGenres, diff)
     }
   }, [isGenresInitialized, selectedGenres, playlists, updatePlaylistsWithDiff])
 
-  // Update current hour every minute
+  /** 現在時刻を1分ごとに更新 */
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentHour(new Date().getHours())
@@ -222,18 +196,14 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     return () => clearInterval(timer)
   }, [])
 
-  // Calculate background
   const calculatedTimeOfDay = getTimeOfDay(currentHour)
   const timeOfDay = isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay
   const weather = normalizeWeatherType(weatherType ?? "Clear")
   const background = getWeatherBackground(weather, timeOfDay)
-  
-  // Check if background is dark for text color
   const isDark = isDarkBackground(weather, timeOfDay)
   const genreColorClass = isDark ? "text-white/80" : "text-muted-foreground"
   const titleColorClass = isDark ? "text-white" : "text-foreground"
 
-  // Vinyl rotation management
   const {
     rotation,
     isDragging,
@@ -336,7 +306,6 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                                         alt={currentPlaylist.title}
                                         className="w-20 h-20 rounded-full object-cover"
                                         onError={(e) => {
-                                            // 画像読み込みエラー時のフォールバック
                                             const target = e.target as HTMLImageElement
                                             target.src = "/placeholder.svg"
                                         }}
@@ -388,7 +357,6 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                             alt={currentPlaylist.title}
                             className="w-32 h-32 rounded-lg shadow-lg object-cover"
                             onError={(e) => {
-                                // 画像読み込みエラー時のフォールバック
                                 const target = e.target as HTMLImageElement
                                 target.src = "/placeholder.svg"
                             }}

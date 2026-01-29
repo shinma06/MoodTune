@@ -6,7 +6,8 @@ import type { TimeOfDay } from "@/lib/weather-background"
 interface WeatherContextType {
   weatherType: string | null
   setWeatherType: (weather: string | null) => void
-  actualWeatherType: string | null // APIから取得した実際の天気
+  /** APIから取得した実際の天気（テストモードリセット用） */
+  actualWeatherType: string | null
   setActualWeatherType: (weather: string | null) => void
   testTimeOfDay: TimeOfDay | null
   setTestTimeOfDay: (timeOfDay: TimeOfDay | null) => void

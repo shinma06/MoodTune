@@ -35,7 +35,6 @@ export default function WeatherTestPanel() {
     testTimeOfDay || "day"
   )
 
-  // 選択時に自動適用
   const handleWeatherTypeChange = (type: WeatherType) => {
     setTestWeatherType(type)
     setWeatherType(type)
@@ -50,7 +49,6 @@ export default function WeatherTestPanel() {
   }
 
   const handleReset = () => {
-    // 実際の天気に戻す
     if (actualWeatherType) {
       setWeatherType(actualWeatherType)
     } else {
@@ -58,7 +56,6 @@ export default function WeatherTestPanel() {
     }
     setTestTimeOfDay(null)
     setIsTestMode(false)
-    // ローカル状態も実際の天気に戻す
     if (actualWeatherType) {
       setTestWeatherType(normalizeWeatherType(actualWeatherType))
     } else {
@@ -67,7 +64,6 @@ export default function WeatherTestPanel() {
     setLocalTimeOfDay("day")
   }
 
-  // テストモード時は時間帯を手動設定、そうでない場合は実際の時間を使用
   const currentWeatherType = isTestMode
     ? testWeatherType
     : weatherType ? normalizeWeatherType(weatherType) : "Clear"

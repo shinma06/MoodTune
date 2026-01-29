@@ -5,12 +5,9 @@ import { useState, useEffect, useCallback } from "react"
 // カスタムイベント名（同一ページ内でのlocalStorage変更を通知）
 const STORAGE_CHANGE_EVENT = "local-storage-change"
 
-/**
- * localStorage変更イベントをディスパッチ（非同期で実行してレンダリング中のsetState問題を回避）
- */
+/** 同一ページ内の他コンポーネントに変更を通知（レンダリング中の setState を避けるため queueMicrotask で発火） */
 function dispatchStorageChange(key: string) {
   if (typeof window !== "undefined") {
-    // 現在のレンダリングサイクルが完了してからイベントを発火
     queueMicrotask(() => {
       window.dispatchEvent(new CustomEvent(STORAGE_CHANGE_EVENT, { detail: { key } }))
     })
@@ -27,12 +24,9 @@ export function useLocalStorage<T>(
   key: string,
   initialValue: T
 ): [T, (value: T | ((prev: T) => T)) => void, boolean] {
-  // SSR対策: 初期レンダリング時はinitialValueを使用
   const [storedValue, setStoredValue] = useState<T>(initialValue)
-  // localStorageからの読み込みが完了したかどうか
   const [isInitialized, setIsInitialized] = useState(false)
 
-  // クライアントサイドでのみlocalStorageから値を読み込む
   useEffect(() => {
     if (typeof window === "undefined") return
 
@@ -44,11 +38,9 @@ export function useLocalStorage<T>(
     } catch (error) {
       console.warn(`localStorage の読み込みに失敗しました (key: ${key}):`, error)
     }
-    // 読み込み完了（値があってもなくても初期化完了）
     setIsInitialized(true)
   }, [key])
 
-  // 同一ページ内でのlocalStorage変更を検知
   useEffect(() => {
     if (typeof window === "undefined") return
 
@@ -66,7 +58,6 @@ export function useLocalStorage<T>(
       }
     }
 
-    // 他タブからの変更を検知
     const handleNativeStorageChange = (e: StorageEvent) => {
       if (e.key === key && e.newValue) {
         try {
@@ -86,7 +77,6 @@ export function useLocalStorage<T>(
     }
   }, [key])
 
-  // 値を更新してlocalStorageに保存
   const setValue = useCallback(
     (value: T | ((prev: T) => T)) => {
       try {
@@ -94,7 +84,6 @@ export function useLocalStorage<T>(
           const valueToStore = value instanceof Function ? value(prev) : value
           if (typeof window !== "undefined") {
             window.localStorage.setItem(key, JSON.stringify(valueToStore))
-            // 同一ページ内の他のフックに変更を通知
             dispatchStorageChange(key)
           }
           return valueToStore

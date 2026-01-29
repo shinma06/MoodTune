@@ -1,7 +1,7 @@
 import type { WeatherApiResponse, WeatherData } from "@/types/weather"
 import { getWeatherIcon, normalizeWeatherType } from "./weather-utils"
 
-// 天気APIからデータを取得
+/** 緯度・経度から天気APIを叩き、正規化した天気データを返す */
 export async function fetchWeatherData(lat: number, lon: number): Promise<{
   weatherData: WeatherData
   weatherMain: string
@@ -15,7 +15,6 @@ export async function fetchWeatherData(lat: number, lon: number): Promise<{
 
   const data: WeatherApiResponse = await response.json()
   const rawWeatherMain = data.weather[0]?.main || "Clear"
-  // 天気タイプを正規化（サポートされていない場合はClearにフォールバック）
   const weatherMain = normalizeWeatherType(rawWeatherMain)
 
   return {

@@ -16,7 +16,6 @@ export async function getSpotifyClient(): Promise<SpotifyWebApi | null> {
       return null
     }
 
-    // 型定義ファイル (src/types/next-auth.d.ts) で拡張された Session 型を使用
     const accessToken = session.accessToken
 
     if (!accessToken || typeof accessToken !== "string") {
