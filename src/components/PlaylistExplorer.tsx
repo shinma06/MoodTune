@@ -96,14 +96,8 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
   }, [currentIndex, displayPlaylists.length])
   
   const currentPlaylist = displayPlaylists[safeCurrentIndex] ?? EMPTY_PLAYLIST
-  /** 初期同期のみ：サーバーから J-POP 1件だけのとき、選択ジャンルの先頭が J-POP でなければ現実のレコード色 */
-  const isShowingStaleJPop =
-    isLoading &&
-    playlists?.length === 1 &&
-    currentPlaylist.genre === "J-POP" &&
-    selectedGenres.length > 0 &&
-    selectedGenres[0] !== "J-POP"
-  const vinylColors = isShowingStaleJPop
+  /** プレイリスト生成中は現実のレコード色。生成完了後は現在表示中のジャンルのテーマカラー */
+  const vinylColors = isLoading
     ? REALISTIC_VINYL_THEME
     : getGenreThemeColors(currentPlaylist.genre)
   
@@ -449,10 +443,10 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                         </div>
                     )}
 
-                    {/* Indicator dots（ジャンルごとのテーマカラー。現実のレコード色表示時はアクティブをそれに合わせる） */}
+                    {/* Indicator dots（ジャンルごとのテーマカラー。生成中はアクティブを現実のレコード色に合わせる） */}
                     <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 flex gap-1.5">
                         {displayPlaylists.map((item, i) => {
-                            const colors = isShowingStaleJPop ? REALISTIC_VINYL_THEME : getGenreThemeColors(item.genre)
+                            const colors = (isLoading && i === safeCurrentIndex) ? REALISTIC_VINYL_THEME : getGenreThemeColors(item.genre)
                             const isActive = i === safeCurrentIndex
                             return (
                                 <div
