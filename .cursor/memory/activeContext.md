@@ -6,6 +6,9 @@ UI/UX 改善とコードベースのリファクタリング
 
 ## 最近の変更履歴
 
+- 初回アクセス時の時間帯表示ずれの修正:
+  - SSR/ハイドレーションでサーバー時刻が使われていたため、初回は常に昼背景になる問題を修正
+  - `PlaylistExplorer` と `WeatherAnimation` の `useEffect` でマウント時に `setCurrentHour(new Date().getHours())` を実行し、クライアント現地時刻で補正
 - レコード自動回転:
   - アイドル時は 12 秒/周で常に回転（`useVinylRotation`）
   - ユーザーがドラッグすると自動回転を停止、離すと再開
