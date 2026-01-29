@@ -3,6 +3,7 @@
 ## アーキテクチャ
 
 ### ディレクトリ構造
+
 ```
 src/
 ├── app/              # Next.js App Router
@@ -38,6 +39,7 @@ src/
 ```
 
 ### データフロー
+
 1. **WeatherMonitor**: 位置情報取得 → API呼び出し → WeatherContext更新
 2. **PlaylistExplorer**: WeatherContextから天気取得 → 背景色計算 → 表示
 3. **WeatherAnimation**: WeatherContextから天気取得 → アニメーション表示
@@ -46,6 +48,7 @@ src/
 ## 技術スタック
 
 ### フロントエンド
+
 - **Framework**: Next.js 15 (App Router)
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS 4.x
@@ -54,59 +57,69 @@ src/
 - **Fonts**: Geist (sans), Cormorant Garamond (serif)
 
 ### バックエンド/API
+
 - **API Route**: Next.js API Routes
 - **External API**: OpenWeatherMap API
 
 ### 状態管理
+
 - **React Context**: WeatherContext（天気データ、テストモード）
 - **Local State**: useState（各コンポーネントのローカル状態）
 
 ## デザインパターン
 
 ### コンポーネント設計
+
 - **Functional Components**: 全て関数コンポーネント
 - **Server Components First**: デフォルトでServer Component、必要時のみ'use client'
 - **Composition**: 小さなコンポーネントを組み合わせて構築
 
 ### 状態管理パターン
+
 - **Context API**: グローバルな天気データ
 - **Props Drilling回避**: Contextで必要なデータを共有
 
 ### データ取得パターン
+
 - **Client-side Fetching**: WeatherMonitorで位置情報取得後、API呼び出し
 - **Error Handling**: try-catchとエラー状態の管理
 
 ## 命名規則
 
 ### ファイル名
+
 - **Components**: PascalCase (例: `WeatherMonitor.tsx`)
 - **Utilities**: kebab-case (例: `weather-utils.ts`)
 - **Types**: kebab-case (例: `weather.ts`)
 
 ### 変数・関数名
+
 - **Components**: PascalCase (例: `WeatherMonitor`)
 - **Functions**: camelCase (例: `getWeatherIcon`)
 - **Constants**: UPPER_SNAKE_CASE (例: `BACKGROUND_TOP_COLOR`)
 - **Types/Interfaces**: PascalCase (例: `WeatherType`, `BackgroundGradient`)
 
 ### CSSクラス
+
 - **Tailwind Utilities**: 標準のTailwindクラス
 - **Custom Classes**: `.cursorrules`に従い、shadcn/uiコンポーネントを優先
 
 ## コーディング規約
 
 ### TypeScript
+
 - 明示的な型定義を推奨
 - `any`型の使用は禁止
 - Interface/Typeは`types/`ディレクトリに集約
 
 ### React
+
 - Hooksの使用は必要最小限
 - `useCallback`, `useMemo`はパフォーマンスが必要な場合のみ
 - 副作用は`useEffect`で管理
 
 ### スタイリング
+
 - Tailwind CSSのみ使用（カスタムCSSは最小限）
 - shadcn/uiコンポーネントを優先
 - レスポンシブ: `sm:`, `md:`, `lg:`ブレークポイントを使用
-
