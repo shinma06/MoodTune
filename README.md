@@ -1,4 +1,6 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+This is a [Next.js](https://next.js.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+
+**MoodTune** — 天気と時間帯に合わせた音楽プレイリストを表示します。ジャンル選択・気分パネル（雰囲気・時間帯）でプレイリストを更新できます。Spotify 連携はオプション（未設定時はモックで動作）。
 
 ## Getting Started
 
@@ -19,6 +21,18 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Environment Variables
+
+| Variable                                  | Required    | Description                                                                                      |
+| ----------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------ |
+| `OPENAI_API_KEY`                          | **Yes**     | OpenAI API key for playlist title/query generation.                                              |
+| `AUTH_SECRET`                             | For auth    | Random string for NextAuth (e.g. `openssl rand -base64 32`). Needed if you enable Spotify login. |
+| `NEXT_PUBLIC_USE_MOCK_SPOTIFY`            | No          | Omit or `true`: mock mode (no Spotify, no login). Set `false` to enable Spotify login.           |
+| `NEXT_PUBLIC_WEATHER_API_KEY`             | For weather | OpenWeatherMap API key if you use live weather.                                                  |
+| `AUTH_SPOTIFY_ID` / `AUTH_SPOTIFY_SECRET` | For Spotify | Only when `NEXT_PUBLIC_USE_MOCK_SPOTIFY=false`.                                                  |
+
+**Minimum for deploy (no Spotify):** set `OPENAI_API_KEY`. The app runs in mock mode and does not require login.
 
 ## Learn More
 
