@@ -9,7 +9,6 @@ import { useWeather } from "@/contexts/WeatherContext"
 import { getWeatherBackground, getTimeOfDay, type WeatherType, isDarkBackground } from "@/lib/weather-background"
 import { normalizeWeatherType } from "@/lib/weather-utils"
 import { formatGradientBackground } from "@/lib/weather-background-utils"
-import { PLAYLISTS } from "@/lib/playlists"
 import { useVinylRotation } from "@/hooks/useVinylRotation"
 import { getGenreThemeColors } from "@/lib/constants"
 import { Music } from "lucide-react"
@@ -59,17 +58,6 @@ function getImageUrl(url: string | undefined | null): string {
   return url
 }
 
-/** 静的プレイリストを DashboardItem 形式に変換 */
-function convertStaticPlaylists(): DashboardItem[] {
-  return PLAYLISTS.map((p) => ({
-    id: p.id,
-    genre: p.genre,
-    title: p.title,
-    query: "",
-    imageUrl: p.coverUrl,
-  }))
-}
-
 export default function PlaylistExplorer({ playlists: initialPlaylists }: PlaylistExplorerProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const { weatherType, actualWeatherType, testTimeOfDay, isTestMode, playlistAutoUpdate, playlistRefreshTrigger } = useWeather()
@@ -87,13 +75,13 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
   const prevTimeOfDayRef = useRef<TimeOfDay | null>(null)
   const prevActualWeatherRef = useRef<string | null>(null)
   
+  /** 生成失敗時は空のままローディング表示を継続（静的フォールバックは使わない） */
   const displayPlaylists = useMemo(() => {
-    if (playlists && playlists.length > 0) {
-      return playlists
-    }
-    const staticPlaylists = convertStaticPlaylists()
-    return staticPlaylists.length > 0 ? staticPlaylists : [EMPTY_PLAYLIST]
+    return playlists && playlists.length > 0 ? playlists : []
   }, [playlists])
+  
+  /** ローディング表示を出す条件（生成中 or 未取得・失敗でプレイリストが空） */
+  const isLoadingOrEmpty = isLoading || displayPlaylists.length === 0
   
   /** 常に配列範囲内のインデックス */
   const safeCurrentIndex = useMemo(() => {
@@ -338,15 +326,19 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                             ))}
                             <div className="absolute inset-0 flex items-center justify-center">
                                 <div className="w-24 h-24 rounded-full bg-card shadow-xl flex items-center justify-center overflow-hidden">
-                                    <img
-                                        src={getImageUrl(currentPlaylist.imageUrl)}
-                                        alt={currentPlaylist.title}
-                                        className="w-20 h-20 rounded-full object-cover"
-                                        onError={(e) => {
-                                            const target = e.target as HTMLImageElement
-                                            target.src = "/placeholder.svg"
-                                        }}
-                                    />
+                                    {isLoadingOrEmpty ? (
+                                        <div className="w-20 h-20 rounded-full bg-muted/50 animate-pulse" />
+                                    ) : (
+                                        <img
+                                            src={getImageUrl(currentPlaylist.imageUrl)}
+                                            alt={currentPlaylist.title}
+                                            className="w-20 h-20 rounded-full object-cover"
+                                            onError={(e) => {
+                                                const target = e.target as HTMLImageElement
+                                                target.src = "/placeholder.svg"
+                                            }}
+                                        />
+                                    )}
                                 </div>
                             </div>
                             <div className="absolute inset-0 flex items-center justify-center">
@@ -376,15 +368,15 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
             <div className="w-full max-w-md space-y-6 pb-4 relative z-10">
                 <div className="text-center space-y-3">
                     <p className={`text-xs uppercase tracking-widest font-light ${genreColorClass}`}>
-                        {isLoading ? "読み込み中..." : currentPlaylist.genre}
+                        {isLoadingOrEmpty ? "読み込み中..." : currentPlaylist.genre}
                     </p>
                     <h2 className={`text-2xl font-serif leading-tight text-balance ${titleColorClass}`}>
-                        {isLoading ? "プレイリストを生成中" : currentPlaylist.title}
+                        {isLoadingOrEmpty ? "プレイリストを生成中" : currentPlaylist.title}
                     </h2>
                 </div>
 
                 <div className="flex items-center justify-center">
-                    {isLoading ? (
+                    {isLoadingOrEmpty ? (
                         <div className="w-32 h-32 rounded-lg bg-muted/50 animate-pulse flex items-center justify-center">
                             <Music className={`w-8 h-8 ${isDark ? "text-white/30" : "text-muted-foreground/30"}`} />
                         </div>

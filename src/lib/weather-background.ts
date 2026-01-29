@@ -20,14 +20,14 @@ export interface BackgroundGradient {
     to2?: string // 最終色（5色以上のグラデーション用）
 }
 
-// 上部色の定義
-export const BACKGROUND_TOP_COLOR_BRIGHT = "#FAFAFA" // 明るい背景用の白ベース
+/** 明るい背景用の上部色（内部使用のみ） */
+const BACKGROUND_TOP_COLOR_BRIGHT = "#FAFAFA"
 
 /**
- * 天気と時間帯に応じた適切なtop色を取得
+ * 天気と時間帯に応じた適切なtop色を取得（内部使用のみ）
  * 暗い雰囲気の場合は、天気の雰囲気に合わせた暗い色を使用し、上部UIのテキストを白ベースにする
  */
-export function getTopColor(weather: WeatherType, timeOfDay: TimeOfDay): string {
+function getTopColor(weather: WeatherType, timeOfDay: TimeOfDay): string {
     // 非常に暗い天気（Thunderstorm）は暗いtop色を使用
     const isVeryDarkWeather = weather === "Thunderstorm"
     if (isVeryDarkWeather) {
