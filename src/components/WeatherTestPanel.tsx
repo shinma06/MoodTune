@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { X, Sparkles } from "lucide-react"
+import { Sparkles } from "lucide-react"
 
 export default function WeatherTestPanel() {
   const {
@@ -54,7 +54,7 @@ export default function WeatherTestPanel() {
     setIsTestMode(true)
   }
 
-  /** 閉じたとき: 開いた時点の天気・時間と比べて変わっている場合のみプレイリストを再生成 */
+  /** パネルを閉じる: 開いた時点の天気・時間と比べて変わっている場合のみプレイリストを再生成 */
   const handleClosePanel = () => {
     const openedWeather = openedWeatherTypeRef.current
     const openedTime = openedTimeOfDayRef.current
@@ -64,6 +64,15 @@ export default function WeatherTestPanel() {
       requestPlaylistRefresh()
     }
     setIsOpen(false)
+  }
+
+  /** トグル: 開くときはスナップショット、閉じるときは変更があれば再生成してから閉じる（ジャンル選択パネルと同じ方式） */
+  const handleTogglePanel = () => {
+    if (isOpen) {
+      handleClosePanel()
+    } else {
+      handleOpenPanel()
+    }
   }
 
   /** リセットは即時反映（Contextを実際の天気・時間に戻す。プレイリストは閉じたときに判定） */
@@ -87,39 +96,33 @@ export default function WeatherTestPanel() {
 
   return (
     <>
-      {/* トグルボタン */}
-      {!isOpen && (
-        <Button
-          variant="outline"
-          size="icon"
-          className="fixed bottom-4 left-4 z-50 bg-background/80 backdrop-blur-sm"
-          onClick={handleOpenPanel}
-          aria-label="気分に合わせるパネルを開く"
-        >
-          <Sparkles className="h-4 w-4" />
-        </Button>
-      )}
+      {/* トグルボタン（ジャンル選択パネルと同じ: 常時表示・押すと開閉・開時は primary） */}
+      <Button
+        variant="outline"
+        size="icon"
+        className={`
+          fixed bottom-4 left-4 z-50 bg-background/80 backdrop-blur-sm
+          ${isOpen ? "bg-primary text-primary-foreground" : ""}
+        `}
+        onClick={handleTogglePanel}
+        aria-label={isOpen ? "気分に合わせるパネルを閉じる" : "気分に合わせるパネルを開く"}
+      >
+        <Sparkles className="h-4 w-4" />
+      </Button>
 
       {isOpen && (
-        <Card className="fixed bottom-4 left-4 z-50 w-80 bg-background/95 backdrop-blur-sm shadow-lg">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">気分に合わせる</CardTitle>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                onClick={handleClosePanel}
-                aria-label="閉じる"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <CardDescription className="text-xs">
-              雰囲気や時間帯を選んで、今の気分に合わせたプレイリストを再生成できます
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <div className="fixed bottom-16 left-4 z-50 w-80 max-w-[calc(100vw-2rem)]">
+          <Card className="w-full bg-background/80 backdrop-blur-sm border-border/50">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Sparkles className="w-4 h-4" />
+                気分に合わせる
+              </CardTitle>
+              <CardDescription className="text-xs">
+                雰囲気や時間帯を選んで、今の気分に合わせたプレイリストを再生成できます
+              </CardDescription>
+            </CardHeader>
+          <CardContent className="pt-0 space-y-4">
             <div className="space-y-2">
               <Label className="text-sm">雰囲気（天気）</Label>
               <div className="grid grid-cols-3 gap-2">
@@ -133,9 +136,9 @@ export default function WeatherTestPanel() {
                       key={type}
                       className={`relative flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all ${
                         isSelected
-                          ? "border-primary bg-primary/5"
+                          ? "border-primary bg-primary/10 ring-2 ring-primary/30 ring-offset-2 ring-offset-background"
                           : "border-border hover:bg-muted/50"
-                      } ${isActualWeather ? "ring-2 ring-muted-foreground/40 ring-offset-2 ring-offset-background" : ""}`}
+                      } ${isActualWeather && !isSelected ? "ring-2 ring-muted-foreground/40 ring-offset-2 ring-offset-background" : ""}`}
                       onClick={() => handleWeatherTypeChange(type)}
                     >
                       {isActualWeather && (
@@ -163,9 +166,9 @@ export default function WeatherTestPanel() {
                       key={option.value}
                       className={`relative flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all text-xs ${
                         isSelected
-                          ? "border-primary bg-primary/5"
+                          ? "border-primary bg-primary/10 ring-2 ring-primary/30 ring-offset-2 ring-offset-background"
                           : "border-border hover:bg-muted/50"
-                      } ${isActualTime ? "ring-2 ring-muted-foreground/40 ring-offset-2 ring-offset-background" : ""}`}
+                      } ${isActualTime && !isSelected ? "ring-2 ring-muted-foreground/40 ring-offset-2 ring-offset-background" : ""}`}
                       onClick={() => handleTimeOfDayChange(option.value)}
                     >
                       {isActualTime && (
@@ -215,7 +218,8 @@ export default function WeatherTestPanel() {
               </div>
             )}
           </CardContent>
-        </Card>
+          </Card>
+        </div>
       )}
     </>
   )
