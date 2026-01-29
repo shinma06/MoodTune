@@ -9,7 +9,8 @@ import type { DashboardItem } from "@/types/dashboard"
 
 export type { DashboardItem }
 
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK_SPOTIFY === "true"
+/** Spotify 未連携時は true。明示的に "false" でない限りモック画像を使用 */
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK_SPOTIFY !== "false"
 
 /**
  * ジャンル名に基づいてモック画像URLを生成

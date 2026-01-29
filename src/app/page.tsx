@@ -8,7 +8,8 @@ import { normalizeWeatherType } from "@/lib/weather-utils"
 import { DEFAULT_SELECTED_GENRES } from "@/lib/constants"
 import type { WeatherType, TimeOfDay } from "@/lib/weather-background"
 
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK_SPOTIFY === "true"
+/** Spotify 未連携時は true。明示的に "false" でない限りモック（ログイン不要） */
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK_SPOTIFY !== "false"
 
 /** 初期表示用のプレイリストデータを生成 */
 async function getInitialPlaylists(): Promise<DashboardItem[]> {
