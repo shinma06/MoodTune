@@ -70,8 +70,8 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
   const [selectedGenres, isGenresInitialized] = useSelectedGenres()
   const [playlists, setPlaylists] = useState<DashboardItem[] | null>(initialPlaylists ?? null)
   const [isLoading, setIsLoading] = useState(false)
-  /** 生成中の種別（全件再生成 or 個別再生成）。表示文言の切り替え用 */
-  const [loadingMode, setLoadingMode] = useState<"all" | "single" | null>(null)
+  /** 生成中の種別（全件 / 個別 / 追加ジャンルのみ）。表示文言の切り替え用 */
+  const [loadingMode, setLoadingMode] = useState<"all" | "single" | "added" | null>(null)
   
   /** パネルを開いた時点のジャンル（閉じたときの差分計算用） */
   const genresOnOpenRef = useRef<string[]>([])
@@ -151,14 +151,15 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     }
   }, [weatherType, currentHour, isTestMode, testTimeOfDay, selectedGenres])
 
-  /** ジャンル差分に応じてプレイリストを更新（追加ジャンルのみAPI呼び出し） */
+  /** ジャンル差分に応じてプレイリストを更新（追加ジャンルのみAPI呼び出し。既存は currentPlaylists を再利用） */
   const updatePlaylistsWithDiff = useCallback(async (
     currentGenres: string[],
-    diff: { added: string[], removed: string[], unchanged: string[] }
+    diff: { added: string[], removed: string[], unchanged: string[] },
+    currentPlaylists: DashboardItem[] | null
   ) => {
     if (currentGenres.length === 0) return
     
-    setLoadingMode("all")
+    setLoadingMode("added")
     setIsLoading(true)
     try {
       const weather = normalizeWeatherType(weatherType ?? "Clear") as WeatherType
@@ -166,8 +167,8 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
       const time = (isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay) as TimeOfDay
       
       const existingMap = new Map<string, DashboardItem>()
-      if (playlists) {
-        playlists.forEach(p => existingMap.set(p.genre, p))
+      if (currentPlaylists) {
+        currentPlaylists.forEach(p => existingMap.set(p.genre, p))
       }
       
       const unchangedPlaylists = diff.unchanged
@@ -199,7 +200,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
       setIsLoading(false)
       setLoadingMode(null)
     }
-  }, [weatherType, currentHour, isTestMode, testTimeOfDay, playlists])
+  }, [weatherType, currentHour, isTestMode, testTimeOfDay])
   
   /** 設定パネルの開閉（閉じたときにジャンル変更があればプレイリスト再生成） */
   const handleToggleSettings = useCallback(() => {
@@ -210,10 +211,10 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
       setShowSettings(false)
       if (hasGenresChanged(genresOnOpenRef.current, selectedGenres)) {
         const diff = getGenresDiff(genresOnOpenRef.current, selectedGenres)
-        updatePlaylistsWithDiff(selectedGenres, diff)
+        updatePlaylistsWithDiff(selectedGenres, diff, playlists)
       }
     }
-  }, [showSettings, selectedGenres, updatePlaylistsWithDiff])
+  }, [showSettings, selectedGenres, playlists, updatePlaylistsWithDiff])
 
   /** localStorage のジャンル読み込み完了後、保存値と表示プレイリストが食い違っていれば同期 */
   useEffect(() => {
@@ -223,7 +224,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     const currentPlaylistGenres = playlists?.map(p => p.genre) ?? []
     if (hasGenresChanged(currentPlaylistGenres, selectedGenres)) {
       const diff = getGenresDiff(currentPlaylistGenres, selectedGenres)
-      updatePlaylistsWithDiff(selectedGenres, diff)
+      updatePlaylistsWithDiff(selectedGenres, diff, playlists)
     }
   }, [isGenresInitialized, selectedGenres, playlists, updatePlaylistsWithDiff])
 
@@ -473,7 +474,9 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                             ? "全件再生成中..."
                             : isLoading && loadingMode === "single"
                               ? "再生成中..."
-                              : "読み込み中...")
+                              : isLoading && loadingMode === "added"
+                                ? "追加ジャンルを生成中..."
+                                : "読み込み中...")
                           : currentPlaylist.genre}
                     </p>
                     <h2 className={`text-2xl font-serif leading-tight text-balance ${titleColorClass}`}>
@@ -482,7 +485,9 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                             ? "プレイリストを全件再生成中"
                             : isLoading && loadingMode === "single"
                               ? "プレイリストを再生成中"
-                              : "プレイリストを生成中")
+                              : isLoading && loadingMode === "added"
+                                ? "追加ジャンルのプレイリストを生成中"
+                                : "プレイリストを生成中")
                           : currentPlaylist.title}
                     </h2>
                 </div>
