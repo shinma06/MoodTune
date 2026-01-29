@@ -305,7 +305,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
 
     return (
         <div
-            className="min-h-screen flex flex-col items-center justify-between p-6 pb-8 overflow-hidden touch-none transition-all duration-1000 ease-in-out relative z-10"
+            className="min-h-screen flex flex-col items-center justify-between p-4 pb-20 sm:p-6 sm:pb-8 overflow-x-hidden overflow-y-auto transition-all duration-1000 ease-in-out relative z-10"
             style={{
                 background: formatGradientBackground(background),
             }}
@@ -343,11 +343,13 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                 </div>
             )}
 
-            {/* Weather Section */}
-            <WeatherMonitor />
+            {/* Weather Section（縦幅が狭くても潰れないよう固定。items-center と同様に中央寄せを維持） */}
+            <div className="shrink-0 w-full flex justify-center">
+                <WeatherMonitor />
+            </div>
 
-            {/* Vinyl Record Section */}
-            <div className="flex-1 flex items-center justify-center w-full max-w-md relative z-10">
+            {/* Vinyl Record Section（縦幅が狭いときはレコードを縮小して重なりを防止） */}
+            <div className="flex-1 min-h-0 flex items-center justify-center w-full max-w-md relative z-10 py-2">
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 text-center space-y-0.5">
                     <p className={`text-[10px] font-light whitespace-nowrap ${isDark ? "text-white/80" : "text-muted-foreground/70"}`}>
                         左右にスピンして他のプレイリストへ
@@ -358,7 +360,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                 </div>
 
                 <div
-                    className="relative w-72 h-72 rounded-full transition-shadow duration-200"
+                    className="relative w-[min(18rem,42vh)] h-[min(18rem,42vh)] rounded-full transition-shadow duration-200"
                     style={
                         showRegenerateFeedback
                           ? {
@@ -372,7 +374,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                     
                     <div
                         ref={vinylRef}
-                        className={`relative w-full h-full select-none ${isLoading ? "pointer-events-none cursor-default" : "cursor-grab active:cursor-grabbing"}`}
+                        className={`relative w-full h-full select-none touch-none ${isLoading ? "pointer-events-none cursor-default" : "cursor-grab active:cursor-grabbing"}`}
                         style={{
                             transform: `rotate(${rotation}deg)`,
                             transition: isDragging
@@ -400,14 +402,14 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                                 />
                             ))}
                             <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="w-24 h-24 rounded-full bg-card shadow-xl flex items-center justify-center overflow-hidden">
+                                <div className="w-[33%] h-[33%] min-w-12 min-h-12 max-w-24 max-h-24 rounded-full bg-card shadow-xl flex items-center justify-center overflow-hidden">
                                     {isLoadingOrEmpty ? (
-                                        <div className="w-20 h-20 rounded-full bg-muted/50 animate-pulse" />
+                                        <div className="w-[83%] h-[83%] rounded-full bg-muted/50 animate-pulse" />
                                     ) : (
                                         <img
                                             src={getImageUrl(currentPlaylist.imageUrl)}
                                             alt={currentPlaylist.title}
-                                            className="w-20 h-20 rounded-full object-cover"
+                                            className="w-full h-full rounded-full object-cover"
                                             onError={(e) => {
                                                 const target = e.target as HTMLImageElement
                                                 target.src = "/placeholder.svg"
@@ -425,7 +427,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                     {/* 3周フィードバック文言（1周超で表示、3周に近づくほど強調） */}
                     {regenerateMessage && (
                         <div
-                            className="absolute left-1/2 -translate-x-1/2 -bottom-9 w-full text-center pointer-events-none transition-opacity duration-150"
+                            className="absolute left-1/2 -translate-x-1/2 -bottom-6 sm:-bottom-9 w-full text-center pointer-events-none transition-opacity duration-150"
                             style={{
                                 opacity: 0.7 + regenerateProgress * 0.3,
                             }}
@@ -441,7 +443,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                     )}
 
                     {/* Indicator dots（ジャンルごとのテーマカラー。初期同期 stale J-POP または空状態のときはアクティブを現実のレコード色に合わせる） */}
-                    <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 flex gap-1.5">
+                    <div className="absolute -bottom-8 sm:-bottom-12 left-1/2 -translate-x-1/2 flex gap-1.5">
                         {displayPlaylists.map((item, i) => {
                             const colors = (useRealisticVinyl && i === safeCurrentIndex) ? REALISTIC_VINYL_THEME : getGenreThemeColors(item.genre)
                             const isActive = i === safeCurrentIndex
@@ -457,27 +459,27 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                 </div>
             </div>
 
-            {/* Playlist Info Section */}
-            <div className="w-full max-w-md space-y-6 pb-4 relative z-10">
-                <div className="text-center space-y-3">
-                    <p className={`text-xs uppercase tracking-widest font-light ${genreColorClass}`}>
+            {/* Playlist Info Section（縦幅が狭いときは余白・画像を縮小） */}
+            <div className="w-full max-w-md shrink-0 space-y-4 sm:space-y-6 pb-4 relative z-10">
+                <div className="text-center space-y-2 sm:space-y-3">
+                    <p className={`text-[10px] sm:text-xs uppercase tracking-widest font-light ${genreColorClass}`}>
                         {isLoadingOrEmpty ? getLoadingGenreText(loadingMode) : currentPlaylist.genre}
                     </p>
-                    <h2 className={`text-2xl font-serif leading-tight text-balance ${titleColorClass}`}>
+                    <h2 className={`text-xl sm:text-2xl font-serif leading-tight text-balance ${titleColorClass}`}>
                         {isLoadingOrEmpty ? getLoadingTitleText(loadingMode) : currentPlaylist.title}
                     </h2>
                 </div>
 
                 <div className="flex items-center justify-center">
                     {isLoadingOrEmpty ? (
-                        <div className="w-32 h-32 rounded-lg bg-muted/50 animate-pulse flex items-center justify-center">
-                            <Music className={`w-8 h-8 ${isDark ? "text-white/30" : "text-muted-foreground/30"}`} />
+                        <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-lg bg-muted/50 animate-pulse flex items-center justify-center">
+                            <Music className={`w-6 h-6 sm:w-8 sm:h-8 ${isDark ? "text-white/30" : "text-muted-foreground/30"}`} />
                         </div>
                     ) : (
                         <img
                             src={getImageUrl(currentPlaylist.imageUrl)}
                             alt={currentPlaylist.title}
-                            className="w-32 h-32 rounded-lg shadow-lg object-cover"
+                            className="w-24 h-24 sm:w-32 sm:h-32 rounded-lg shadow-lg object-cover"
                             onError={(e) => {
                                 const target = e.target as HTMLImageElement
                                 target.src = "/placeholder.svg"
