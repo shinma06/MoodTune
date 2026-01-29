@@ -5,7 +5,7 @@ const REGENERATE_THRESHOLD_DEG = 3 * 360
 /** 1周 = 360°（この角度を超えると「個別再生成の域」に入り、3周未満で離したら戻り演出） */
 const REGENERATE_ZONE_ENTRY_DEG = 360
 /** 戻り演出の基準時間（1周あたりの目安 ms）。回転量に比例して延長し角速度を一定にする */
-const SNAPBACK_DURATION_PER_TURN_MS = 500
+const SNAPBACK_DURATION_PER_TURN_MS = 240
 
 interface UseVinylRotationOptions {
   onRotationComplete: (direction: "next" | "prev") => void
