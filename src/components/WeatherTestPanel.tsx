@@ -41,7 +41,13 @@ export default function WeatherTestPanel() {
   const [localPlaylistAutoUpdate, setLocalPlaylistAutoUpdate] = useState(playlistAutoUpdate)
   const prevOpenRef = useRef(false)
 
-  /** パネルを開いたときにローカル状態をContextの現在値で同期（依存配列の長さは固定） */
+  /** パネルを開いたときにローカル状態をContextの現在値で同期（依存配列の長さは常に4で固定） */
+  const panelSyncDeps: [boolean, string | null, TimeOfDay | null, boolean] = [
+    isOpen,
+    weatherType,
+    testTimeOfDay,
+    playlistAutoUpdate,
+  ]
   useEffect(() => {
     const justOpened = isOpen && !prevOpenRef.current
     prevOpenRef.current = isOpen
@@ -49,7 +55,7 @@ export default function WeatherTestPanel() {
     setTestWeatherType(weatherType ? normalizeWeatherType(weatherType) : "Clear")
     setLocalTimeOfDay(testTimeOfDay ?? (getTimeOfDay(new Date().getHours()) as TimeOfDay))
     setLocalPlaylistAutoUpdate(playlistAutoUpdate)
-  }, [isOpen, weatherType, testTimeOfDay, playlistAutoUpdate])
+  }, panelSyncDeps)
 
   /** 雰囲気・時間帯はパネル内のローカルのみ更新（閉じたときに適用） */
   const handleWeatherTypeChange = (type: WeatherType) => {
