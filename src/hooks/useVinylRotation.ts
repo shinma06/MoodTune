@@ -6,6 +6,9 @@ export const REGENERATE_THRESHOLD_DEG = 3 * 360
 export const REGENERATE_ZONE_ENTRY_DEG = 360
 /** 戻り演出の基準時間（1周あたりの目安 ms）。回転量に比例して延長し角速度を一定にする */
 const SNAPBACK_DURATION_PER_TURN_MS = 240
+/** アイドル時は 1 周 12 秒で回転 */
+const IDLE_REVOLUTION_MS = 12_000
+const IDLE_ROTATION_DEG_PER_MS = 360 / IDLE_REVOLUTION_MS
 
 interface UseVinylRotationOptions {
   onRotationComplete: (direction: "next" | "prev") => void
@@ -44,6 +47,16 @@ export function useVinylRotation({
   const cumulativeRotationRef = useRef(0)
   /** 前回の接触点の角度（度）。累積計算用 */
   const lastAngleRef = useRef(0)
+  /** アイドル時の累積回転（度）。自動回転用 */
+  const idleRotationRef = useRef(0)
+  /** 前回の rAF 時刻（ms）。アイドル回転の delta 計算用 */
+  const lastIdleTimeRef = useRef<number | null>(null)
+  /** rAF 内で参照するため（最新の isDragging） */
+  const isDraggingRef = useRef(false)
+  /** rAF 内で参照するため（snapBack 中か） */
+  const snapBackActiveRef = useRef(false)
+  isDraggingRef.current = isDragging
+  snapBackActiveRef.current = snapBackDurationMs !== null
 
   /** 2つの角度の最短差を -180〜180 の範囲で返す */
   const getAngleDifference = useCallback((angle1: number, angle2: number): number => {
@@ -91,6 +104,7 @@ export function useVinylRotation({
     setTotalRotation(0)
     setCumulativeRotation(0)
     cumulativeRotationRef.current = 0
+    idleRotationRef.current = 0
   }, [])
 
   /** 指定角度から 0° まで、CSS transition（linear）で回した角度分を逆方向に戻す。角速度一定で滑らかに一貫した制御。 */
@@ -110,6 +124,22 @@ export function useVinylRotation({
     },
     []
   )
+
+  /** アイドル時は 33⅓ RPM で常に回転。ドラッグ・スナップバック中は停止 */
+  useEffect(() => {
+    let rafId: number
+    const loop = (now: number) => {
+      rafId = requestAnimationFrame(loop)
+      if (isDraggingRef.current || snapBackActiveRef.current) return
+      if (lastIdleTimeRef.current === null) lastIdleTimeRef.current = now
+      const dt = now - lastIdleTimeRef.current
+      lastIdleTimeRef.current = now
+      idleRotationRef.current += IDLE_ROTATION_DEG_PER_MS * dt
+      setRotation(idleRotationRef.current)
+    }
+    rafId = requestAnimationFrame(loop)
+    return () => cancelAnimationFrame(rafId)
+  }, [])
 
   /** 戻り演出の transitionend で状態をクリア */
   useEffect(() => {

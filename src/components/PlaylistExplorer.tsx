@@ -388,7 +388,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                               ? "none"
                               : snapBackDurationMs != null
                                 ? `transform ${snapBackDurationMs}ms cubic-bezier(0.6, 0, 1, 1)`
-                                : "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                                : "none",
                         }}
                         onTouchStart={handleTouchStart}
                         onTouchMove={handleTouchMove}
