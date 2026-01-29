@@ -110,6 +110,28 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     }
   }, [weatherType, currentHour, isTestMode, testTimeOfDay, selectedGenres])
 
+  /** 表示中の1ジャンルだけ現在の天気・時間で再生成（レコード右3周で発火） */
+  const refreshPlaylistByGenre = useCallback(async (genre: Genre) => {
+    if (!selectedGenres.includes(genre)) return
+    setIsLoading(true)
+    try {
+      const weather = normalizeWeatherType(weatherType ?? "Clear") as WeatherType
+      const calculatedTimeOfDay = getTimeOfDay(currentHour)
+      const time = (isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay) as TimeOfDay
+      const generated = await generateDashboard(weather, time, [genre])
+      const newItem = generated[0]
+      if (!newItem) return
+      setPlaylists((prev) => {
+        if (!prev) return [newItem]
+        return prev.map((p) => (p.genre === genre ? newItem : p))
+      })
+    } catch (error) {
+      console.error("Failed to refresh playlist by genre:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [weatherType, currentHour, isTestMode, testTimeOfDay, selectedGenres])
+
   /** ジャンル差分に応じてプレイリストを更新（追加ジャンルのみAPI呼び出し） */
   const updatePlaylistsWithDiff = useCallback(async (
     currentGenres: string[],
@@ -248,6 +270,10 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         setCurrentIndex((prev) => (prev - 1 + length) % length)
       }
     },
+    onRegenerateCurrent:
+      displayPlaylists.length > 0 && currentPlaylist.genre !== "---"
+        ? () => refreshPlaylistByGenre(currentPlaylist.genre as Genre)
+        : undefined,
   })
 
     return (
