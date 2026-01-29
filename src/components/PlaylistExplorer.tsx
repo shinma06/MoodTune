@@ -372,7 +372,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                     
                     <div
                         ref={vinylRef}
-                        className="relative w-full h-full cursor-grab active:cursor-grabbing select-none"
+                        className={`relative w-full h-full select-none ${isLoading ? "pointer-events-none cursor-default" : "cursor-grab active:cursor-grabbing"}`}
                         style={{
                             transform: `rotate(${rotation}deg)`,
                             transition: isDragging
