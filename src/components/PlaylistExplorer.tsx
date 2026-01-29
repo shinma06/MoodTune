@@ -222,6 +222,11 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     }
   }, [calculatedTimeOfDayForEffect, playlistAutoUpdate, isTestMode, isGenresInitialized, selectedGenres.length, refreshPlaylists])
 
+  /** プレイリスト生成中はパネルを閉じ、値変更を防ぐ（同期ずれ防止） */
+  useEffect(() => {
+    if (isLoading) setOpenPanel(null)
+  }, [isLoading])
+
   /** パネルから「プレイリストを再生成」が押されたときに手動で再生成 */
   useEffect(() => {
     if (playlistRefreshTrigger === 0 || !isGenresInitialized || selectedGenres.length === 0) return
@@ -308,16 +313,16 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
             {/* Weather Animation */}
             <WeatherAnimation weatherType={weatherType ? normalizeWeatherType(weatherType) : null} />
 
-            {/* Weather Test Panel（気分に合わせる）。ジャンルパネル開時はボタン非表示 */}
+            {/* Weather Test Panel（気分に合わせる）。ジャンルパネル開時または生成中はボタン非表示・生成中はパネルも閉じる */}
             <WeatherTestPanel
-                isOpen={openPanel === "mood"}
+                isOpen={openPanel === "mood" && !isLoading}
                 onOpen={() => setOpenPanel("mood")}
                 onClose={() => setOpenPanel(null)}
-                hideToggleButton={openPanel === "genre"}
+                hideToggleButton={openPanel === "genre" || isLoading}
             />
 
-            {/* Settings Toggle Button（ジャンル選択・右下）。気分パネル開時は非表示 */}
-            {openPanel !== "mood" && (
+            {/* Settings Toggle Button（ジャンル選択・右下）。気分パネル開時または生成中は非表示 */}
+            {openPanel !== "mood" && !isLoading && (
             <Button
                 variant="outline"
                 size="icon"
@@ -331,8 +336,8 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
             </Button>
             )}
 
-            {/* Settings Panel with Genre Selector（ボタンの上に表示） */}
-            {openPanel === "genre" && (
+            {/* Settings Panel with Genre Selector（ボタンの上に表示）。生成中は非表示 */}
+            {openPanel === "genre" && !isLoading && (
                 <div className="fixed bottom-16 right-4 z-50 w-80 max-w-[calc(100vw-2rem)]">
                     <GenreSelector />
                 </div>
