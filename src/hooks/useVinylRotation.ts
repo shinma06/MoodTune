@@ -13,17 +13,21 @@ interface UseVinylRotationOptions {
   rotationThreshold?: number
   /** 右に3周以上回したときに呼ぶ（現在表示中のジャンルを個別再生成） */
   onRegenerateCurrent?: () => void
+  /** 左に3周以上回したときに呼ぶ（全件再生成） */
+  onRegenerateAll?: () => void
 }
 
 /**
  * レコード盤の回転操作を管理するカスタムフック
  * - 45°以上で next/prev（操作と衝突しない）
  * - 右に3周以上で onRegenerateCurrent（個別再生成）
+ * - 左に3周以上で onRegenerateAll（全件再生成）
  */
 export function useVinylRotation({
   onRotationComplete,
   rotationThreshold = 45,
   onRegenerateCurrent,
+  onRegenerateAll,
 }: UseVinylRotationOptions) {
   const [rotation, setRotation] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
@@ -129,6 +133,11 @@ export function useVinylRotation({
       resetRotation()
       return
     }
+    if (onRegenerateAll && cumulative <= -REGENERATE_THRESHOLD_DEG) {
+      onRegenerateAll()
+      resetRotation()
+      return
+    }
     // 個別再生成の域（1周超）に入っているが3周未満で離した → 回した角度分を逆方向に戻す演出（左右どちらも）
     const absCumulative = Math.abs(cumulative)
     if (
@@ -154,6 +163,7 @@ export function useVinylRotation({
     rotationThreshold,
     onRotationComplete,
     onRegenerateCurrent,
+    onRegenerateAll,
     resetRotation,
     runSnapBackAnimation,
   ])

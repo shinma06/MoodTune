@@ -60,12 +60,14 @@ function getImageUrl(url: string | undefined | null): string {
 
 export default function PlaylistExplorer({ playlists: initialPlaylists }: PlaylistExplorerProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
-  const { weatherType, actualWeatherType, testTimeOfDay, isTestMode, playlistAutoUpdate, playlistRefreshTrigger, requestPlaylistRefresh } = useWeather()
+  const { weatherType, actualWeatherType, testTimeOfDay, isTestMode, playlistAutoUpdate, playlistRefreshTrigger } = useWeather()
   const [currentHour, setCurrentHour] = useState(new Date().getHours())
   const [showSettings, setShowSettings] = useState(false)
   const [selectedGenres, isGenresInitialized] = useSelectedGenres()
   const [playlists, setPlaylists] = useState<DashboardItem[] | null>(initialPlaylists ?? null)
   const [isLoading, setIsLoading] = useState(false)
+  /** 生成中の種別（全件再生成 or 個別再生成）。表示文言の切り替え用 */
+  const [loadingMode, setLoadingMode] = useState<"all" | "single" | null>(null)
   
   /** パネルを開いた時点のジャンル（閉じたときの差分計算用） */
   const genresOnOpenRef = useRef<string[]>([])
@@ -104,6 +106,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
   /** 現在の天気・時間帯・ジャンルでプレイリストを全件再生成 */
   const refreshPlaylists = useCallback(async () => {
     if (selectedGenres.length === 0) return
+    setLoadingMode("all")
     setIsLoading(true)
     try {
       const weather = normalizeWeatherType(weatherType ?? "Clear") as WeatherType
@@ -116,12 +119,14 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
       console.error("Failed to refresh playlists:", error)
     } finally {
       setIsLoading(false)
+      setLoadingMode(null)
     }
   }, [weatherType, currentHour, isTestMode, testTimeOfDay, selectedGenres])
 
   /** 表示中の1ジャンルだけ現在の天気・時間で再生成（レコード右3周で発火） */
   const refreshPlaylistByGenre = useCallback(async (genre: Genre) => {
     if (!selectedGenres.includes(genre)) return
+    setLoadingMode("single")
     setIsLoading(true)
     try {
       const weather = normalizeWeatherType(weatherType ?? "Clear") as WeatherType
@@ -138,6 +143,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
       console.error("Failed to refresh playlist by genre:", error)
     } finally {
       setIsLoading(false)
+      setLoadingMode(null)
     }
   }, [weatherType, currentHour, isTestMode, testTimeOfDay, selectedGenres])
 
@@ -148,6 +154,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
   ) => {
     if (currentGenres.length === 0) return
     
+    setLoadingMode("all")
     setIsLoading(true)
     try {
       const weather = normalizeWeatherType(weatherType ?? "Clear") as WeatherType
@@ -186,6 +193,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
       console.error("Failed to generate dashboard:", error)
     } finally {
       setIsLoading(false)
+      setLoadingMode(null)
     }
   }, [weatherType, currentHour, isTestMode, testTimeOfDay, playlists])
   
@@ -284,6 +292,8 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
       displayPlaylists.length > 0 && currentPlaylist.genre !== "---"
         ? () => refreshPlaylistByGenre(currentPlaylist.genre as Genre)
         : undefined,
+    onRegenerateAll:
+      selectedGenres.length > 0 ? refreshPlaylists : undefined,
   })
 
     return (
@@ -405,10 +415,22 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
             <div className="w-full max-w-md space-y-6 pb-4 relative z-10">
                 <div className="text-center space-y-3">
                     <p className={`text-xs uppercase tracking-widest font-light ${genreColorClass}`}>
-                        {isLoadingOrEmpty ? "読み込み中..." : currentPlaylist.genre}
+                        {isLoadingOrEmpty
+                          ? (isLoading && loadingMode === "all"
+                            ? "全件再生成中..."
+                            : isLoading && loadingMode === "single"
+                              ? "再生成中..."
+                              : "読み込み中...")
+                          : currentPlaylist.genre}
                     </p>
                     <h2 className={`text-2xl font-serif leading-tight text-balance ${titleColorClass}`}>
-                        {isLoadingOrEmpty ? "プレイリストを生成中" : currentPlaylist.title}
+                        {isLoadingOrEmpty
+                          ? (isLoading && loadingMode === "all"
+                            ? "プレイリストを全件再生成中"
+                            : isLoading && loadingMode === "single"
+                              ? "プレイリストを再生成中"
+                              : "プレイリストを生成中")
+                          : currentPlaylist.title}
                     </h2>
                 </div>
 
@@ -429,17 +451,6 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                         />
                     )}
                 </div>
-
-                {/* 仮: プレイリスト全件再生成ボタン */}
-                <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    onClick={requestPlaylistRefresh}
-                    disabled={isLoadingOrEmpty || selectedGenres.length === 0}
-                >
-                    {isLoadingOrEmpty ? "生成中..." : "プレイリストを全件再生成"}
-                </Button>
             </div>
         </div>
     )
