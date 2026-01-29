@@ -17,6 +17,7 @@ export default function GenreSelector() {
     GENRE_STORAGE_KEY,
     DEFAULT_SELECTED_GENRES
   )
+  // Note: isInitialized is not needed in GenreSelector component itself
 
   const toggleGenre = (genre: Genre) => {
     setSelectedGenres((prev) => {
@@ -95,11 +96,12 @@ export default function GenreSelector() {
 
 /**
  * Hook to get selected genres from localStorage
+ * @returns [selectedGenres, isInitialized] - ジャンル配列と初期化完了フラグ
  */
-export function useSelectedGenres(): Genre[] {
-  const [selectedGenres] = useLocalStorage<Genre[]>(
+export function useSelectedGenres(): [Genre[], boolean] {
+  const [selectedGenres, , isInitialized] = useLocalStorage<Genre[]>(
     GENRE_STORAGE_KEY,
     DEFAULT_SELECTED_GENRES
   )
-  return selectedGenres
+  return [selectedGenres, isInitialized]
 }

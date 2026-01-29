@@ -98,12 +98,14 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
   const { weatherType, testTimeOfDay, isTestMode } = useWeather()
   const [currentHour, setCurrentHour] = useState(new Date().getHours())
   const [showSettings, setShowSettings] = useState(false)
-  const selectedGenres = useSelectedGenres()
+  const [selectedGenres, isGenresInitialized] = useSelectedGenres()
   const [playlists, setPlaylists] = useState<DashboardItem[] | null>(initialPlaylists ?? null)
   const [isLoading, setIsLoading] = useState(false)
   
   // Track genres when panel opens
   const genresOnOpenRef = useRef<string[]>([])
+  // Track if initial sync has been performed
+  const hasPerformedInitialSyncRef = useRef(false)
   
   // Memoized display playlists with fallback
   const displayPlaylists = useMemo(() => {
@@ -191,6 +193,26 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
       }
     }
   }, [showSettings, selectedGenres, updatePlaylistsWithDiff])
+
+  // Sync playlists when localStorage genres are initialized
+  // This handles the case where user reloads the page with saved genres
+  useEffect(() => {
+    // Skip if not initialized yet or already synced
+    if (!isGenresInitialized || hasPerformedInitialSyncRef.current) return
+    
+    // Mark as synced to prevent duplicate calls
+    hasPerformedInitialSyncRef.current = true
+    
+    // Get current playlist genres
+    const currentPlaylistGenres = playlists?.map(p => p.genre) ?? []
+    
+    // Check if there's a mismatch between saved genres and current playlists
+    if (hasGenresChanged(currentPlaylistGenres, selectedGenres)) {
+      // Calculate diff and update playlists
+      const diff = getGenresDiff(currentPlaylistGenres, selectedGenres)
+      updatePlaylistsWithDiff(selectedGenres, diff)
+    }
+  }, [isGenresInitialized, selectedGenres, playlists, updatePlaylistsWithDiff])
 
   // Update current hour every minute
   useEffect(() => {

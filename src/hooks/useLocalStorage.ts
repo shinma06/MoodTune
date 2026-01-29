@@ -21,14 +21,16 @@ function dispatchStorageChange(key: string) {
  * localStorage を使った永続化フック（同一ページ内での変更も検知可能）
  * @param key ストレージのキー
  * @param initialValue 初期値
- * @returns [値, 値を更新する関数]
+ * @returns [値, 値を更新する関数, 初期化完了フラグ]
  */
 export function useLocalStorage<T>(
   key: string,
   initialValue: T
-): [T, (value: T | ((prev: T) => T)) => void] {
+): [T, (value: T | ((prev: T) => T)) => void, boolean] {
   // SSR対策: 初期レンダリング時はinitialValueを使用
   const [storedValue, setStoredValue] = useState<T>(initialValue)
+  // localStorageからの読み込みが完了したかどうか
+  const [isInitialized, setIsInitialized] = useState(false)
 
   // クライアントサイドでのみlocalStorageから値を読み込む
   useEffect(() => {
@@ -42,6 +44,8 @@ export function useLocalStorage<T>(
     } catch (error) {
       console.warn(`localStorage の読み込みに失敗しました (key: ${key}):`, error)
     }
+    // 読み込み完了（値があってもなくても初期化完了）
+    setIsInitialized(true)
   }, [key])
 
   // 同一ページ内でのlocalStorage変更を検知
@@ -102,5 +106,5 @@ export function useLocalStorage<T>(
     [key]
   )
 
-  return [storedValue, setValue]
+  return [storedValue, setValue, isInitialized]
 }
