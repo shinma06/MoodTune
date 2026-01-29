@@ -111,7 +111,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
       const time = (isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay) as TimeOfDay
       const generated = await generateDashboard(weather, time, selectedGenres as Genre[])
       setPlaylists(generated)
-      setCurrentIndex(0)
+      setCurrentIndex((prev) => Math.min(prev, Math.max(0, generated.length - 1)))
     } catch (error) {
       console.error("Failed to refresh playlists:", error)
     } finally {
