@@ -85,7 +85,7 @@ function convertStaticPlaylists(): DashboardItem[] {
 
 export default function PlaylistExplorer({ playlists: initialPlaylists }: PlaylistExplorerProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
-  const { weatherType, testTimeOfDay, isTestMode } = useWeather()
+  const { weatherType, actualWeatherType, testTimeOfDay, isTestMode, playlistAutoUpdate } = useWeather()
   const [currentHour, setCurrentHour] = useState(new Date().getHours())
   const [showSettings, setShowSettings] = useState(false)
   const [selectedGenres, isGenresInitialized] = useSelectedGenres()
@@ -96,6 +96,9 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
   const genresOnOpenRef = useRef<string[]>([])
   /** リロード後の初回同期を1回だけ行うためのフラグ */
   const hasPerformedInitialSyncRef = useRef(false)
+  /** 時間帯・天気の自動更新用の前回値 */
+  const prevTimeOfDayRef = useRef<TimeOfDay | null>(null)
+  const prevActualWeatherRef = useRef<string | null>(null)
   
   const displayPlaylists = useMemo(() => {
     if (playlists && playlists.length > 0) {
@@ -114,6 +117,24 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
   const currentPlaylist = displayPlaylists[safeCurrentIndex] ?? EMPTY_PLAYLIST
   const vinylColors = getVinylColors(safeCurrentIndex)
   
+  /** 現在の天気・時間帯・ジャンルでプレイリストを全件再生成 */
+  const refreshPlaylists = useCallback(async () => {
+    if (selectedGenres.length === 0) return
+    setIsLoading(true)
+    try {
+      const weather = normalizeWeatherType(weatherType ?? "Clear") as WeatherType
+      const calculatedTimeOfDay = getTimeOfDay(currentHour)
+      const time = (isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay) as TimeOfDay
+      const generated = await generateDashboard(weather, time, selectedGenres as Genre[])
+      setPlaylists(generated)
+      setCurrentIndex(0)
+    } catch (error) {
+      console.error("Failed to refresh playlists:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [weatherType, currentHour, isTestMode, testTimeOfDay, selectedGenres])
+
   /** ジャンル差分に応じてプレイリストを更新（追加ジャンルのみAPI呼び出し） */
   const updatePlaylistsWithDiff = useCallback(async (
     currentGenres: string[],
@@ -187,6 +208,29 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
       updatePlaylistsWithDiff(selectedGenres, diff)
     }
   }, [isGenresInitialized, selectedGenres, playlists, updatePlaylistsWithDiff])
+
+  /** 時間帯（朝・昼・夕方・夜）が変わったタイミングでプレイリストを自動更新 */
+  const calculatedTimeOfDayForEffect = getTimeOfDay(currentHour)
+  const timeOfDayForAutoUpdate = isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDayForEffect
+  useEffect(() => {
+    if (!playlistAutoUpdate || !isGenresInitialized || selectedGenres.length === 0) return
+    const prev = prevTimeOfDayRef.current
+    prevTimeOfDayRef.current = timeOfDayForAutoUpdate
+    if (prev !== null && prev !== timeOfDayForAutoUpdate) {
+      refreshPlaylists()
+    }
+  }, [timeOfDayForAutoUpdate, playlistAutoUpdate, isGenresInitialized, selectedGenres.length, refreshPlaylists])
+
+  /** APIが天気の変更を示したタイミングでプレイリストを自動更新（テストモード時は対象外） */
+  useEffect(() => {
+    if (!playlistAutoUpdate || isTestMode || !isGenresInitialized || selectedGenres.length === 0) return
+    const current = actualWeatherType ?? null
+    const prev = prevActualWeatherRef.current
+    prevActualWeatherRef.current = current
+    if (prev !== null && prev !== current) {
+      refreshPlaylists()
+    }
+  }, [actualWeatherType, playlistAutoUpdate, isTestMode, isGenresInitialized, selectedGenres.length, refreshPlaylists])
 
   /** 現在時刻を1分ごとに更新 */
   useEffect(() => {

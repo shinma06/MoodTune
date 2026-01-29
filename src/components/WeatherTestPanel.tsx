@@ -26,6 +26,8 @@ export default function WeatherTestPanel() {
     setTestTimeOfDay,
     isTestMode,
     setIsTestMode,
+    playlistAutoUpdate,
+    setPlaylistAutoUpdate,
   } = useWeather()
   const [isOpen, setIsOpen] = useState(false)
   const [testWeatherType, setTestWeatherType] = useState<WeatherType>(
@@ -152,6 +154,22 @@ export default function WeatherTestPanel() {
                 })}
               </div>
             </div>
+
+            {/* プレイリスト自動更新トグル */}
+            <div className="flex items-center justify-between gap-2 pt-2 border-t">
+              <Label className="text-sm">プレイリストの自動更新</Label>
+              <Button
+                variant={playlistAutoUpdate ? "default" : "outline"}
+                size="sm"
+                className="min-w-[4rem]"
+                onClick={() => setPlaylistAutoUpdate(!playlistAutoUpdate)}
+              >
+                {playlistAutoUpdate ? "ON" : "OFF"}
+              </Button>
+            </div>
+            <p className="text-[10px] text-muted-foreground -mt-1">
+              時間帯の切り替えや天気の変化でプレイリストを自動で再生成します
+            </p>
 
             {/* リセットボタン */}
             {isTestMode && (

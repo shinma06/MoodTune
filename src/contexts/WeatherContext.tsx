@@ -13,6 +13,9 @@ interface WeatherContextType {
   setTestTimeOfDay: (timeOfDay: TimeOfDay | null) => void
   isTestMode: boolean
   setIsTestMode: (isTestMode: boolean) => void
+  /** 時間帯・天気変更時にプレイリストを自動更新するか */
+  playlistAutoUpdate: boolean
+  setPlaylistAutoUpdate: (enabled: boolean) => void
 }
 
 const WeatherContext = createContext<WeatherContextType | undefined>(undefined)
@@ -22,6 +25,7 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
   const [actualWeatherType, setActualWeatherType] = useState<string | null>(null)
   const [testTimeOfDay, setTestTimeOfDay] = useState<TimeOfDay | null>(null)
   const [isTestMode, setIsTestMode] = useState(false)
+  const [playlistAutoUpdate, setPlaylistAutoUpdate] = useState(true)
 
   return (
     <WeatherContext.Provider
@@ -34,6 +38,8 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
         setTestTimeOfDay,
         isTestMode,
         setIsTestMode,
+        playlistAutoUpdate,
+        setPlaylistAutoUpdate,
       }}
     >
       {children}
