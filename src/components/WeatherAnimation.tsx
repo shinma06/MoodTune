@@ -18,7 +18,9 @@ export default function WeatherAnimation({ weatherType: propWeatherType }: Weath
 
   const weatherType = propWeatherType ?? contextWeatherType
 
+  /** マウント時に現地時刻で補正し、1分ごとに更新（SSR/ハイドレーションのずれ対策） */
   useEffect(() => {
+    setCurrentHour(new Date().getHours())
     const timer = setInterval(() => {
       setCurrentHour(new Date().getHours())
     }, 60000)

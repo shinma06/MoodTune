@@ -240,8 +240,9 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     }
   }, [actualWeatherType, playlistAutoUpdate, isTestMode, isGenresInitialized, selectedGenres.length, refreshPlaylists])
 
-  /** 現在時刻を1分ごとに更新 */
+  /** 現在時刻をマウント時と1分ごとに更新（マウント時はクライアント現地時刻でSSR/ハイドレーションのずれを補正） */
   useEffect(() => {
+    setCurrentHour(new Date().getHours())
     const timer = setInterval(() => {
       setCurrentHour(new Date().getHours())
     }, 60000)
