@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useWeather } from "@/contexts/WeatherContext"
 import { getWeatherIcon, getWeatherThemeColor, normalizeWeatherType } from "@/lib/weather-utils"
 import { getTimeOfDay } from "@/lib/weather-background"
@@ -39,14 +39,17 @@ export default function WeatherTestPanel() {
     testTimeOfDay || "day"
   )
   const [localPlaylistAutoUpdate, setLocalPlaylistAutoUpdate] = useState(playlistAutoUpdate)
+  const prevOpenRef = useRef(false)
 
-  /** パネルを開いたときにローカル状態をContextの現在値で同期 */
+  /** パネルを開いたときにローカル状態をContextの現在値で同期（依存配列の長さは固定） */
   useEffect(() => {
-    if (!isOpen) return
+    const justOpened = isOpen && !prevOpenRef.current
+    prevOpenRef.current = isOpen
+    if (!justOpened) return
     setTestWeatherType(weatherType ? normalizeWeatherType(weatherType) : "Clear")
     setLocalTimeOfDay(testTimeOfDay ?? (getTimeOfDay(new Date().getHours()) as TimeOfDay))
     setLocalPlaylistAutoUpdate(playlistAutoUpdate)
-  }, [isOpen])
+  }, [isOpen, weatherType, testTimeOfDay, playlistAutoUpdate])
 
   /** 雰囲気・時間帯はパネル内のローカルのみ更新（閉じたときに適用） */
   const handleWeatherTypeChange = (type: WeatherType) => {
