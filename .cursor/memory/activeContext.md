@@ -6,6 +6,10 @@ UI/UX 改善とコードベースのリファクタリング
 
 ## 最近の変更履歴
 
+- 表示用時刻の単一ソース（displayHour）:
+  - `WeatherContext` に `displayHour` を追加し、背景・テキスト色・アニメーションの時間帯判定を一括管理
+  - Provider の `useEffect` でマウント時と1分ごとにクライアント現地時刻を更新（SSR/ハイドレーション・コンポーネント間のずれを防止）
+  - `PlaylistExplorer` / `WeatherAnimation` / `WeatherMonitor` はすべて `displayHour` を参照し、`isDark` と背景が常に同期
 - レコード自動回転:
   - アイドル時は 12 秒/周で常に回転（`useVinylRotation`）
   - ユーザーがドラッグすると自動回転を停止、離すと再開

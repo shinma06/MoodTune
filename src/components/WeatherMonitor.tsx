@@ -16,7 +16,7 @@ export default function WeatherMonitor() {
         status: "loading",
         message: "位置情報を取得中...",
     })
-    const { setWeatherType, setActualWeatherType, weatherType, testTimeOfDay, isTestMode } = useWeather()
+    const { displayHour, setWeatherType, setActualWeatherType, weatherType, testTimeOfDay, isTestMode } = useWeather()
     
     const isTestModeRef = useRef(isTestMode)
     useEffect(() => {
@@ -69,8 +69,8 @@ export default function WeatherMonitor() {
     const dateTime = currentTime ? formatDateTime(currentTime) : { dateString: "--/--/--/---", timeString: "--:--" }
     const { dateString, timeString } = dateTime
 
-    const currentHour = currentTime?.getHours() ?? new Date().getHours()
-    const calculatedTimeOfDay = getTimeOfDay(currentHour)
+    /** 時間帯は Context の displayHour を使用（背景・テキスト色と同一ソースでずれを防止） */
+    const calculatedTimeOfDay = getTimeOfDay(displayHour)
     const timeOfDay = isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay
     
     const displayWeatherType = isTestMode && weatherType

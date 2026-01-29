@@ -12,20 +12,11 @@ interface WeatherAnimationProps {
 }
 
 export default function WeatherAnimation({ weatherType: propWeatherType }: WeatherAnimationProps = {}) {
-  const { weatherType: contextWeatherType } = useWeather()
-  const [currentHour, setCurrentHour] = useState(new Date().getHours())
+  const { displayHour, weatherType: contextWeatherType } = useWeather()
   const [showLightning, setShowLightning] = useState(false)
 
   const weatherType = propWeatherType ?? contextWeatherType
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentHour(new Date().getHours())
-    }, 60000)
-    return () => clearInterval(timer)
-  }, [])
-
-  const timeOfDay = getTimeOfDay(currentHour)
+  const timeOfDay = getTimeOfDay(displayHour)
   const weather = weatherType ? normalizeWeatherType(weatherType) : "Clear"
 
   useEffect(() => {

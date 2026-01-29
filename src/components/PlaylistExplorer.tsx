@@ -37,9 +37,9 @@ interface PlaylistExplorerProps {
 
 export default function PlaylistExplorer({ playlists: initialPlaylists }: PlaylistExplorerProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
-  const { weatherType, actualWeatherType, testTimeOfDay, isTestMode, playlistAutoUpdate, playlistRefreshTrigger } = useWeather()
-  const [currentHour, setCurrentHour] = useState(new Date().getHours())
-  const [showSettings, setShowSettings] = useState(false)
+  const { displayHour, weatherType, actualWeatherType, testTimeOfDay, isTestMode, playlistAutoUpdate, playlistRefreshTrigger } = useWeather()
+  /** 開いているパネル（null = 両方閉じている）。同時に1つだけ開く */
+  const [openPanel, setOpenPanel] = useState<null | "mood" | "genre">(null)
   const [selectedGenres, isGenresInitialized] = useSelectedGenres()
   const [playlists, setPlaylists] = useState<DashboardItem[] | null>(initialPlaylists ?? null)
   const [isLoading, setIsLoading] = useState(false)
@@ -94,7 +94,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     setIsLoading(true)
     try {
       const weather = normalizeWeatherType(weatherType ?? "Clear") as WeatherType
-      const calculatedTimeOfDay = getTimeOfDay(currentHour)
+      const calculatedTimeOfDay = getTimeOfDay(displayHour)
       const time = (isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay) as TimeOfDay
       const generated = await generateDashboard(weather, time, selectedGenres as Genre[])
       setPlaylists(generated)
@@ -105,7 +105,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
       setIsLoading(false)
       setLoadingMode(null)
     }
-  }, [weatherType, currentHour, isTestMode, testTimeOfDay, selectedGenres])
+  }, [weatherType, displayHour, isTestMode, testTimeOfDay, selectedGenres])
 
   /** 表示中の1ジャンルだけ現在の天気・時間で再生成（レコード右3周で発火） */
   const refreshPlaylistByGenre = useCallback(async (genre: Genre) => {
@@ -115,7 +115,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     setIsLoading(true)
     try {
       const weather = normalizeWeatherType(weatherType ?? "Clear") as WeatherType
-      const calculatedTimeOfDay = getTimeOfDay(currentHour)
+      const calculatedTimeOfDay = getTimeOfDay(displayHour)
       const time = (isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay) as TimeOfDay
       const generated = await generateDashboard(weather, time, [genre])
       const newItem = generated[0]
@@ -130,7 +130,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
       setIsLoading(false)
       setLoadingMode(null)
     }
-  }, [weatherType, currentHour, isTestMode, testTimeOfDay, selectedGenres])
+  }, [weatherType, displayHour, isTestMode, testTimeOfDay, selectedGenres])
 
   /** ジャンル差分に応じてプレイリストを更新（追加ジャンルのみAPI呼び出し。既存は currentPlaylists を再利用） */
   const updatePlaylistsWithDiff = useCallback(async (
@@ -146,7 +146,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     setIsLoading(true)
     try {
       const weather = normalizeWeatherType(weatherType ?? "Clear") as WeatherType
-      const calculatedTimeOfDay = getTimeOfDay(currentHour)
+      const calculatedTimeOfDay = getTimeOfDay(displayHour)
       const time = (isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay) as TimeOfDay
       
       const existingMap = new Map<string, DashboardItem>()
@@ -183,21 +183,21 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
       setIsLoading(false)
       setLoadingMode(null)
     }
-  }, [weatherType, currentHour, isTestMode, testTimeOfDay])
+  }, [weatherType, displayHour, isTestMode, testTimeOfDay])
   
-  /** 設定パネルの開閉（閉じたときにジャンル変更があればプレイリスト再生成） */
+  /** ジャンル選択パネルの開閉（閉じたときにジャンル変更があればプレイリスト再生成） */
   const handleToggleSettings = useCallback(() => {
-    if (!showSettings) {
+    if (openPanel !== "genre") {
       genresOnOpenRef.current = [...selectedGenres]
-      setShowSettings(true)
+      setOpenPanel("genre")
     } else {
-      setShowSettings(false)
+      setOpenPanel(null)
       if (hasGenresChanged(genresOnOpenRef.current, selectedGenres)) {
         const diff = getGenresDiff(genresOnOpenRef.current, selectedGenres)
         updatePlaylistsWithDiff(selectedGenres, diff, playlists)
       }
     }
-  }, [showSettings, selectedGenres, playlists, updatePlaylistsWithDiff])
+  }, [openPanel, selectedGenres, playlists, updatePlaylistsWithDiff])
 
   /** localStorage のジャンル読み込み完了後、保存値と表示プレイリストが食い違っていれば同期 */
   useEffect(() => {
@@ -212,7 +212,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
   }, [isGenresInitialized, selectedGenres, playlists, updatePlaylistsWithDiff])
 
   /** 実時刻の時間帯（朝・昼・夕方・夜）が変わったタイミングでプレイリストを自動更新（手動設定中は行わない） */
-  const calculatedTimeOfDayForEffect = getTimeOfDay(currentHour)
+  const calculatedTimeOfDayForEffect = getTimeOfDay(displayHour)
   useEffect(() => {
     if (!playlistAutoUpdate || isTestMode || !isGenresInitialized || selectedGenres.length === 0) return
     const prev = prevTimeOfDayRef.current
@@ -221,6 +221,11 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
       refreshPlaylists()
     }
   }, [calculatedTimeOfDayForEffect, playlistAutoUpdate, isTestMode, isGenresInitialized, selectedGenres.length, refreshPlaylists])
+
+  /** プレイリスト生成中はパネルを閉じ、値変更を防ぐ（同期ずれ防止） */
+  useEffect(() => {
+    if (isLoading) setOpenPanel(null)
+  }, [isLoading])
 
   /** パネルから「プレイリストを再生成」が押されたときに手動で再生成 */
   useEffect(() => {
@@ -239,15 +244,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     }
   }, [actualWeatherType, playlistAutoUpdate, isTestMode, isGenresInitialized, selectedGenres.length, refreshPlaylists])
 
-  /** 現在時刻を1分ごとに更新 */
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentHour(new Date().getHours())
-    }, 60000)
-    return () => clearInterval(timer)
-  }, [])
-
-  const calculatedTimeOfDay = getTimeOfDay(currentHour)
+  const calculatedTimeOfDay = getTimeOfDay(displayHour)
   const timeOfDay = isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay
   const weather = normalizeWeatherType(weatherType ?? "Clear")
   const background = getWeatherBackground(weather, timeOfDay)
@@ -308,7 +305,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
 
     return (
         <div
-            className="min-h-screen flex flex-col items-center justify-between p-6 pb-8 overflow-hidden touch-none transition-all duration-1000 ease-in-out relative z-10"
+            className="min-h-screen flex flex-col items-center justify-between p-4 pb-20 sm:p-6 sm:pb-8 overflow-x-hidden overflow-y-auto transition-all duration-1000 ease-in-out relative z-10"
             style={{
                 background: formatGradientBackground(background),
             }}
@@ -316,34 +313,43 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
             {/* Weather Animation */}
             <WeatherAnimation weatherType={weatherType ? normalizeWeatherType(weatherType) : null} />
 
-            {/* Weather Test Panel */}
-            <WeatherTestPanel />
+            {/* Weather Test Panel（気分に合わせる）。ジャンルパネル開時または生成中はボタン非表示・生成中はパネルも閉じる */}
+            <WeatherTestPanel
+                isOpen={openPanel === "mood" && !isLoading}
+                onOpen={() => setOpenPanel("mood")}
+                onClose={() => setOpenPanel(null)}
+                hideToggleButton={openPanel === "genre" || isLoading}
+            />
 
-            {/* Settings Toggle Button（ジャンル選択・右下で天気と被らない） */}
+            {/* Settings Toggle Button（ジャンル選択・右下）。気分パネル開時または生成中は非表示 */}
+            {openPanel !== "mood" && !isLoading && (
             <Button
                 variant="outline"
                 size="icon"
                 onClick={handleToggleSettings}
                 className={`
                     fixed bottom-4 right-4 z-50 bg-background/80 backdrop-blur-sm
-                    ${showSettings ? "bg-primary text-primary-foreground" : ""}
+                    ${openPanel === "genre" ? "bg-primary text-primary-foreground" : ""}
                 `}
             >
                 <Music className="h-4 w-4" />
             </Button>
+            )}
 
-            {/* Settings Panel with Genre Selector（ボタンの上に表示） */}
-            {showSettings && (
+            {/* Settings Panel with Genre Selector（ボタンの上に表示）。生成中は非表示 */}
+            {openPanel === "genre" && !isLoading && (
                 <div className="fixed bottom-16 right-4 z-50 w-80 max-w-[calc(100vw-2rem)]">
                     <GenreSelector />
                 </div>
             )}
 
-            {/* Weather Section */}
-            <WeatherMonitor />
+            {/* Weather Section（縦幅が狭くても潰れないよう固定。items-center と同様に中央寄せを維持） */}
+            <div className="shrink-0 w-full flex justify-center">
+                <WeatherMonitor />
+            </div>
 
-            {/* Vinyl Record Section */}
-            <div className="flex-1 flex items-center justify-center w-full max-w-md relative z-10">
+            {/* Vinyl Record Section（縦幅が狭いときはレコードを縮小して重なりを防止） */}
+            <div className="flex-1 min-h-0 flex items-center justify-center w-full max-w-md relative z-10 py-2">
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 text-center space-y-0.5">
                     <p className={`text-[10px] font-light whitespace-nowrap ${isDark ? "text-white/80" : "text-muted-foreground/70"}`}>
                         左右にスピンして他のプレイリストへ
@@ -354,7 +360,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                 </div>
 
                 <div
-                    className="relative w-72 h-72 rounded-full transition-shadow duration-200"
+                    className="relative w-[min(18rem,42vh)] h-[min(18rem,42vh)] rounded-full transition-shadow duration-200"
                     style={
                         showRegenerateFeedback
                           ? {
@@ -368,7 +374,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                     
                     <div
                         ref={vinylRef}
-                        className="relative w-full h-full cursor-grab active:cursor-grabbing select-none"
+                        className={`relative w-full h-full select-none touch-none ${isLoading ? "pointer-events-none cursor-default" : "cursor-grab active:cursor-grabbing"}`}
                         style={{
                             transform: `rotate(${rotation}deg)`,
                             transition: isDragging
@@ -396,14 +402,14 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                                 />
                             ))}
                             <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="w-24 h-24 rounded-full bg-card shadow-xl flex items-center justify-center overflow-hidden">
+                                <div className="w-[33%] h-[33%] min-w-12 min-h-12 max-w-24 max-h-24 rounded-full bg-card shadow-xl flex items-center justify-center overflow-hidden">
                                     {isLoadingOrEmpty ? (
-                                        <div className="w-20 h-20 rounded-full bg-muted/50 animate-pulse" />
+                                        <div className="w-[83%] h-[83%] rounded-full bg-muted/50 animate-pulse" />
                                     ) : (
                                         <img
                                             src={getImageUrl(currentPlaylist.imageUrl)}
                                             alt={currentPlaylist.title}
-                                            className="w-20 h-20 rounded-full object-cover"
+                                            className="w-full h-full rounded-full object-cover"
                                             onError={(e) => {
                                                 const target = e.target as HTMLImageElement
                                                 target.src = "/placeholder.svg"
@@ -421,7 +427,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                     {/* 3周フィードバック文言（1周超で表示、3周に近づくほど強調） */}
                     {regenerateMessage && (
                         <div
-                            className="absolute left-1/2 -translate-x-1/2 -bottom-9 w-full text-center pointer-events-none transition-opacity duration-150"
+                            className="absolute left-1/2 -translate-x-1/2 -bottom-6 sm:-bottom-9 w-full text-center pointer-events-none transition-opacity duration-150"
                             style={{
                                 opacity: 0.7 + regenerateProgress * 0.3,
                             }}
@@ -437,7 +443,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                     )}
 
                     {/* Indicator dots（ジャンルごとのテーマカラー。初期同期 stale J-POP または空状態のときはアクティブを現実のレコード色に合わせる） */}
-                    <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 flex gap-1.5">
+                    <div className="absolute -bottom-8 sm:-bottom-12 left-1/2 -translate-x-1/2 flex gap-1.5">
                         {displayPlaylists.map((item, i) => {
                             const colors = (useRealisticVinyl && i === safeCurrentIndex) ? REALISTIC_VINYL_THEME : getGenreThemeColors(item.genre)
                             const isActive = i === safeCurrentIndex
@@ -453,27 +459,27 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                 </div>
             </div>
 
-            {/* Playlist Info Section */}
-            <div className="w-full max-w-md space-y-6 pb-4 relative z-10">
-                <div className="text-center space-y-3">
-                    <p className={`text-xs uppercase tracking-widest font-light ${genreColorClass}`}>
+            {/* Playlist Info Section（縦幅が狭いときは余白・画像を縮小） */}
+            <div className="w-full max-w-md shrink-0 space-y-4 sm:space-y-6 pb-4 relative z-10">
+                <div className="text-center space-y-2 sm:space-y-3">
+                    <p className={`text-[10px] sm:text-xs uppercase tracking-widest font-light ${genreColorClass}`}>
                         {isLoadingOrEmpty ? getLoadingGenreText(loadingMode) : currentPlaylist.genre}
                     </p>
-                    <h2 className={`text-2xl font-serif leading-tight text-balance ${titleColorClass}`}>
+                    <h2 className={`text-xl sm:text-2xl font-serif leading-tight text-balance ${titleColorClass}`}>
                         {isLoadingOrEmpty ? getLoadingTitleText(loadingMode) : currentPlaylist.title}
                     </h2>
                 </div>
 
                 <div className="flex items-center justify-center">
                     {isLoadingOrEmpty ? (
-                        <div className="w-32 h-32 rounded-lg bg-muted/50 animate-pulse flex items-center justify-center">
-                            <Music className={`w-8 h-8 ${isDark ? "text-white/30" : "text-muted-foreground/30"}`} />
+                        <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-lg bg-muted/50 animate-pulse flex items-center justify-center">
+                            <Music className={`w-6 h-6 sm:w-8 sm:h-8 ${isDark ? "text-white/30" : "text-muted-foreground/30"}`} />
                         </div>
                     ) : (
                         <img
                             src={getImageUrl(currentPlaylist.imageUrl)}
                             alt={currentPlaylist.title}
-                            className="w-32 h-32 rounded-lg shadow-lg object-cover"
+                            className="w-24 h-24 sm:w-32 sm:h-32 rounded-lg shadow-lg object-cover"
                             onError={(e) => {
                                 const target = e.target as HTMLImageElement
                                 target.src = "/placeholder.svg"
