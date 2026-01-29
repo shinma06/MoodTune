@@ -70,8 +70,8 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
   const [selectedGenres, isGenresInitialized] = useSelectedGenres()
   const [playlists, setPlaylists] = useState<DashboardItem[] | null>(initialPlaylists ?? null)
   const [isLoading, setIsLoading] = useState(false)
-  /** 生成中の種別（全件 / 個別 / 追加ジャンルのみ）。表示文言の切り替え用 */
-  const [loadingMode, setLoadingMode] = useState<"all" | "single" | "added" | null>(null)
+  /** 生成中の種別（初回 / 全件再生成 / 個別 / 追加ジャンルのみ）。表示文言の切り替え用 */
+  const [loadingMode, setLoadingMode] = useState<"initial" | "all" | "single" | "added" | null>(null)
   
   /** パネルを開いた時点のジャンル（閉じたときの差分計算用） */
   const genresOnOpenRef = useRef<string[]>([])
@@ -155,11 +155,12 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
   const updatePlaylistsWithDiff = useCallback(async (
     currentGenres: string[],
     diff: { added: string[], removed: string[], unchanged: string[] },
-    currentPlaylists: DashboardItem[] | null
+    currentPlaylists: DashboardItem[] | null,
+    isInitialSync = false
   ) => {
     if (currentGenres.length === 0) return
-    
-    setLoadingMode("added")
+
+    setLoadingMode(isInitialSync ? "initial" : "added")
     setIsLoading(true)
     try {
       const weather = normalizeWeatherType(weatherType ?? "Clear") as WeatherType
@@ -224,7 +225,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     const currentPlaylistGenres = playlists?.map(p => p.genre) ?? []
     if (hasGenresChanged(currentPlaylistGenres, selectedGenres)) {
       const diff = getGenresDiff(currentPlaylistGenres, selectedGenres)
-      updatePlaylistsWithDiff(selectedGenres, diff, playlists)
+      updatePlaylistsWithDiff(selectedGenres, diff, playlists, true)
     }
   }, [isGenresInitialized, selectedGenres, playlists, updatePlaylistsWithDiff])
 
@@ -470,24 +471,28 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                 <div className="text-center space-y-3">
                     <p className={`text-xs uppercase tracking-widest font-light ${genreColorClass}`}>
                         {isLoadingOrEmpty
-                          ? (isLoading && loadingMode === "all"
-                            ? "全件再生成中..."
-                            : isLoading && loadingMode === "single"
-                              ? "再生成中..."
-                              : isLoading && loadingMode === "added"
-                                ? "追加ジャンルを生成中..."
-                                : "読み込み中...")
+                          ? (isLoading && loadingMode === "initial"
+                            ? "生成中..."
+                            : isLoading && loadingMode === "all"
+                              ? "全件再生成中..."
+                              : isLoading && loadingMode === "single"
+                                ? "再生成中..."
+                                : isLoading && loadingMode === "added"
+                                  ? "追加ジャンルを生成中..."
+                                  : "読み込み中...")
                           : currentPlaylist.genre}
                     </p>
                     <h2 className={`text-2xl font-serif leading-tight text-balance ${titleColorClass}`}>
                         {isLoadingOrEmpty
-                          ? (isLoading && loadingMode === "all"
-                            ? "プレイリストを全件再生成中"
-                            : isLoading && loadingMode === "single"
-                              ? "プレイリストを再生成中"
-                              : isLoading && loadingMode === "added"
-                                ? "追加ジャンルのプレイリストを生成中"
-                                : "プレイリストを生成中")
+                          ? (isLoading && loadingMode === "initial"
+                            ? "プレイリストを生成中"
+                            : isLoading && loadingMode === "all"
+                              ? "プレイリストを全件再生成中"
+                              : isLoading && loadingMode === "single"
+                                ? "プレイリストを再生成中"
+                                : isLoading && loadingMode === "added"
+                                  ? "追加ジャンルのプレイリストを生成中"
+                                  : "プレイリストを生成中")
                           : currentPlaylist.title}
                     </h2>
                 </div>
