@@ -11,6 +11,7 @@ import { normalizeWeatherType } from "@/lib/weather-utils"
 import { formatGradientBackground } from "@/lib/weather-background-utils"
 import { PLAYLISTS } from "@/lib/playlists"
 import { useVinylRotation } from "@/hooks/useVinylRotation"
+import { getGenreThemeColors } from "@/lib/constants"
 import { Music } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { generateDashboard, type DashboardItem } from "@/app/actions/generateDashboard"
@@ -21,15 +22,6 @@ interface PlaylistExplorerProps {
   playlists?: DashboardItem[]
 }
 
-/** ビニール盤の色パレット */
-const VINYL_COLORS = [
-  { vinylColor: "from-amber-900 to-amber-950", accentColor: "#d97706" },
-  { vinylColor: "from-slate-700 to-slate-900", accentColor: "#64748b" },
-  { vinylColor: "from-emerald-800 to-emerald-950", accentColor: "#059669" },
-  { vinylColor: "from-purple-900 to-purple-950", accentColor: "#7c3aed" },
-  { vinylColor: "from-orange-800 to-orange-950", accentColor: "#ea580c" },
-] as const
-
 /** プレイリストが空のときの表示用ダミー */
 const EMPTY_PLAYLIST: DashboardItem = {
   id: "empty",
@@ -37,11 +29,6 @@ const EMPTY_PLAYLIST: DashboardItem = {
   title: "プレイリストがありません",
   query: "",
   imageUrl: "",
-}
-
-/** インデックスに対応するビニール盤の色を返す */
-function getVinylColors(index: number) {
-  return VINYL_COLORS[index % VINYL_COLORS.length]
 }
 
 /** ジャンル配列が変更されたか（順序に依存しない） */
@@ -115,7 +102,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
   }, [currentIndex, displayPlaylists.length])
   
   const currentPlaylist = displayPlaylists[safeCurrentIndex] ?? EMPTY_PLAYLIST
-  const vinylColors = getVinylColors(safeCurrentIndex)
+  const vinylColors = getGenreThemeColors(currentPlaylist.genre)
   
   /** 現在の天気・時間帯・ジャンルでプレイリストを全件再生成 */
   const refreshPlaylists = useCallback(async () => {
@@ -368,10 +355,10 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                         </div>
                     </div>
 
-                    {/* Indicator dots */}
+                    {/* Indicator dots（ジャンルごとのテーマカラー） */}
                     <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 flex gap-1.5">
-                        {displayPlaylists.map((_, i) => {
-                            const colors = getVinylColors(i)
+                        {displayPlaylists.map((item, i) => {
+                            const colors = getGenreThemeColors(item.genre)
                             const isActive = i === safeCurrentIndex
                             return (
                                 <div

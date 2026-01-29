@@ -1,31 +1,46 @@
 import type { WeatherType, TimeOfDay } from "./weather-background"
 
-// 利用可能な音楽ジャンル一覧（日本でよく使われる表記）
-export const AVAILABLE_GENRES = [
-  "J-POP",
-  "J-Rock",
-  "J-HipHop", // 日本のヒップホップ
-  "Hip Hop", // 海外のヒップホップ
-  "Lo-fi Hip Hop",
-  "City Pop",
-  "R&B",
-  "J-R&B",
-  "Anime Song",
-  "Vocaloid",
-  "Idol Pop",
-  "K-POP (Boy Group)",
-  "K-POP (Girl Group)",
-  "EDM",
-  "House",
-  "Techno",
-  "Acoustic",
-  "Jazz",
-  "Piano",
-  "Chill Out",
-  "City Jazz",
+/** ジャンルごとのレコード・ページネーション用テーマカラー */
+export type GenreThemeColors = { vinylColor: string; accentColor: string }
+
+/**
+ * ジャンル定義の単一ソース（保守性のためここだけ編集すればよい）
+ * - id: アプリ内で一意のジャンルID（表示・API・ストレージで使用）
+ * - themeColors: レコード・ページネーションのテーマカラー
+ */
+const GENRE_DEFINITIONS = [
+  { id: "J-POP" as const, themeColors: { vinylColor: "from-rose-600 to-pink-800", accentColor: "#e11d48" } },
+  { id: "J-Rock" as const, themeColors: { vinylColor: "from-red-800 to-rose-950", accentColor: "#b91c1c" } },
+  { id: "J-HipHop" as const, themeColors: { vinylColor: "from-amber-700 to-orange-900", accentColor: "#d97706" } },
+  { id: "Hip Hop" as const, themeColors: { vinylColor: "from-violet-700 to-purple-900", accentColor: "#7c3aed" } },
+  { id: "Lo-fi Hip Hop" as const, themeColors: { vinylColor: "from-amber-800 to-amber-950", accentColor: "#b45309" } },
+  { id: "City Pop" as const, themeColors: { vinylColor: "from-cyan-600 to-fuchsia-700", accentColor: "#0891b2" } },
+  { id: "R&B" as const, themeColors: { vinylColor: "from-indigo-700 to-violet-900", accentColor: "#4f46e5" } },
+  { id: "J-R&B" as const, themeColors: { vinylColor: "from-violet-600 to-purple-800", accentColor: "#7c3aed" } },
+  { id: "Anime Song" as const, themeColors: { vinylColor: "from-sky-500 to-blue-700", accentColor: "#0ea5e9" } },
+  { id: "Vocaloid" as const, themeColors: { vinylColor: "from-teal-500 to-cyan-700", accentColor: "#14b8a6" } },
+  { id: "Idol Pop" as const, themeColors: { vinylColor: "from-pink-500 to-rose-600", accentColor: "#ec4899" } },
+  { id: "K-POP (Boy Group)" as const, themeColors: { vinylColor: "from-slate-600 to-slate-900", accentColor: "#475569" } },
+  { id: "K-POP (Girl Group)" as const, themeColors: { vinylColor: "from-pink-600 to-rose-800", accentColor: "#db2777" } },
+  { id: "EDM" as const, themeColors: { vinylColor: "from-lime-600 to-emerald-700", accentColor: "#65a30d" } },
+  { id: "House" as const, themeColors: { vinylColor: "from-orange-600 to-red-700", accentColor: "#ea580c" } },
+  { id: "Techno" as const, themeColors: { vinylColor: "from-slate-500 to-zinc-800", accentColor: "#64748b" } },
+  { id: "Acoustic" as const, themeColors: { vinylColor: "from-amber-700 to-yellow-800", accentColor: "#ca8a04" } },
+  { id: "Jazz" as const, themeColors: { vinylColor: "from-amber-800 to-amber-950", accentColor: "#b45309" } },
+  { id: "Piano" as const, themeColors: { vinylColor: "from-emerald-700 to-teal-900", accentColor: "#047857" } },
+  { id: "Chill Out" as const, themeColors: { vinylColor: "from-teal-600 to-cyan-800", accentColor: "#0d9488" } },
+  { id: "City Jazz" as const, themeColors: { vinylColor: "from-blue-600 to-indigo-800", accentColor: "#2563eb" } },
 ] as const
 
-export type Genre = (typeof AVAILABLE_GENRES)[number]
+/** 利用可能な音楽ジャンル一覧（GENRE_DEFINITIONS から導出） */
+export const AVAILABLE_GENRES = GENRE_DEFINITIONS.map((g) => g.id)
+
+export type Genre = (typeof GENRE_DEFINITIONS)[number]["id"]
+
+/** ジャンルごとのテーマカラー（GENRE_DEFINITIONS から導出） */
+export const GENRE_THEME_COLORS: Record<Genre, GenreThemeColors> = Object.fromEntries(
+  GENRE_DEFINITIONS.map((g) => [g.id, g.themeColors])
+) as Record<Genre, GenreThemeColors>
 
 // ユーザーが選択できる最大ジャンル数
 export const MAX_SELECTED_GENRES = 8
@@ -76,4 +91,17 @@ export const TIME_OF_DAY_LABELS: Record<TimeOfDay, string> = {
   day: "昼",
   dusk: "夕方",
   night: "夜",
+}
+
+const DEFAULT_THEME_COLORS: GenreThemeColors = {
+  vinylColor: "from-slate-600 to-slate-800",
+  accentColor: "#64748b",
+}
+
+/** ジャンル名からテーマカラーを取得（未定義はデフォルト） */
+export function getGenreThemeColors(genre: string): GenreThemeColors {
+  if (genre in GENRE_THEME_COLORS) {
+    return GENRE_THEME_COLORS[genre as Genre]
+  }
+  return DEFAULT_THEME_COLORS
 }
