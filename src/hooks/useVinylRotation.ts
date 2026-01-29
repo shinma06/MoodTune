@@ -2,6 +2,10 @@ import { useState, useRef, useCallback, useEffect } from "react"
 
 /** 3周 = 1080°（右回転で個別再生成の閾値） */
 const REGENERATE_THRESHOLD_DEG = 3 * 360
+/** 1周 = 360°（この角度を超えると「個別再生成の域」に入り、3周未満で離したら戻り演出） */
+const REGENERATE_ZONE_ENTRY_DEG = 360
+/** 戻り演出の基準時間（1周あたりの目安 ms）。回転量に比例して延長し角速度を一定にする */
+const SNAPBACK_DURATION_PER_TURN_MS = 400
 
 interface UseVinylRotationOptions {
   onRotationComplete: (direction: "next" | "prev") => void
@@ -32,6 +36,8 @@ export function useVinylRotation({
   const cumulativeRotationRef = useRef(0)
   /** 前回の接触点の角度（度）。累積計算用 */
   const lastAngleRef = useRef(0)
+  /** 戻り演出の requestAnimationFrame ID */
+  const snapBackRafRef = useRef<number | null>(null)
 
   /** 2つの角度の最短差を -180〜180 の範囲で返す */
   const getAngleDifference = useCallback((angle1: number, angle2: number): number => {
@@ -80,6 +86,36 @@ export function useVinylRotation({
     cumulativeRotationRef.current = 0
   }, [])
 
+  /** easeOutCubic: 終わりに向けて減速 */
+  const easeOutCubic = useCallback((t: number): number => 1 - (1 - t) ** 3, [])
+
+  /** 指定角度から 0° まで、回した角度分を逆方向にアニメーションして戻す（最短ルートではなく） */
+  const runSnapBackAnimation = useCallback(
+    (fromRotationDeg: number) => {
+      const startTime = performance.now()
+      const durationMs = Math.max(
+        300,
+        SNAPBACK_DURATION_PER_TURN_MS * (Math.abs(fromRotationDeg) / 360)
+      )
+
+      const tick = () => {
+        const elapsed = performance.now() - startTime
+        const progress = Math.min(1, elapsed / durationMs)
+        const eased = easeOutCubic(progress)
+        setRotation(fromRotationDeg * (1 - eased))
+
+        if (progress < 1) {
+          snapBackRafRef.current = requestAnimationFrame(tick)
+        } else {
+          snapBackRafRef.current = null
+          resetRotation()
+        }
+      }
+      snapBackRafRef.current = requestAnimationFrame(tick)
+    },
+    [easeOutCubic, resetRotation]
+  )
+
   const handleTouchEnd = useCallback(() => {
     if (!isDragging) return
     setIsDragging(false)
@@ -92,6 +128,15 @@ export function useVinylRotation({
       resetRotation()
       return
     }
+    // 個別再生成の域（1周超）に入っているが3周未満で離した → 回した角度分を逆方向に戻す演出（左右どちらも）
+    const absCumulative = Math.abs(cumulative)
+    if (
+      absCumulative > REGENERATE_ZONE_ENTRY_DEG &&
+      absCumulative < REGENERATE_THRESHOLD_DEG
+    ) {
+      runSnapBackAnimation(rotation)
+      return
+    }
     if (rotationDiff >= rotationThreshold) {
       onRotationComplete("next")
       resetRotation()
@@ -101,29 +146,45 @@ export function useVinylRotation({
     } else {
       resetRotation()
     }
-  }, [isDragging, totalRotation, rotationThreshold, onRotationComplete, onRegenerateCurrent, resetRotation])
+  }, [
+    isDragging,
+    rotation,
+    totalRotation,
+    rotationThreshold,
+    onRotationComplete,
+    onRegenerateCurrent,
+    resetRotation,
+    runSnapBackAnimation,
+  ])
 
-  const handleStart = useCallback((clientX: number, clientY: number) => {
-    setIsDragging(true)
-    setStartX(clientX)
-    setStartY(clientY)
-    setStartRotation(rotation)
-    setTotalRotation(0)
-    cumulativeRotationRef.current = 0
-    lastAngleRef.current = getAngleFromCenter(clientX, clientY)
-  }, [rotation, getAngleFromCenter])
+  const handleStart = useCallback(
+    (clientX: number, clientY: number) => {
+      if (snapBackRafRef.current !== null) {
+        cancelAnimationFrame(snapBackRafRef.current)
+        snapBackRafRef.current = null
+      }
+      setIsDragging(true)
+      setStartX(clientX)
+      setStartY(clientY)
+      setStartRotation(rotation)
+      setTotalRotation(0)
+      cumulativeRotationRef.current = 0
+      lastAngleRef.current = getAngleFromCenter(clientX, clientY)
+    },
+    [rotation, getAngleFromCenter]
+  )
 
   const handleMove = useCallback(
     (clientX: number, clientY: number) => {
       if (!isDragging) return
       const angleDiff = calculateRotationFromDrag(clientX, clientY)
-      const newRotation = startRotation + angleDiff
-      setRotation(newRotation)
-      setTotalRotation(angleDiff)
       const currentAngle = getAngleFromCenter(clientX, clientY)
       const delta = getAngleDifference(lastAngleRef.current, currentAngle)
       cumulativeRotationRef.current += delta
       lastAngleRef.current = currentAngle
+      // 表示は累積回転で更新（何周しても正しく追従し、戻り演出で「回した角度分」逆回転できる）
+      setRotation(startRotation + cumulativeRotationRef.current)
+      setTotalRotation(angleDiff)
     },
     [isDragging, startRotation, calculateRotationFromDrag, getAngleFromCenter, getAngleDifference]
   )

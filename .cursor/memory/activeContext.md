@@ -6,6 +6,10 @@
 
 ## 最近の変更履歴
 
+- レコード戻り演出（useVinylRotation）:
+  - 個別再生成の域（1周超）に入っているが3周未満で指を離した場合、回転した角度分だけ左回りで初期位置までアニメーションして戻す
+  - REGENERATE_ZONE_ENTRY_DEG（360°）、SNAPBACK_DURATION_MS（450ms）、easeOutCubic で戻り演出を実装
+  - ドラッグ開始時に進行中の戻りアニメーションをキャンセル
 - ハイドレーション不整合の解消:
   - `src/hooks/useLocalStorage.ts`: 第3の戻り値として `isInitialized: boolean` を追加
     - SSR時は `false`、localStorage読み込み完了後に `true`
