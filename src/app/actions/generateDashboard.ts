@@ -99,6 +99,21 @@ async function generatePlaylistInfo(
   }
 }
 
+/** プレイリスト情報を DashboardItem に変換（undefined を空文字にしシリアライズ可能にする） */
+function toDashboardItem(
+  info: { genre: string; title: string; query: string },
+  index: number,
+  imageUrl: string
+): DashboardItem {
+  return {
+    id: `playlist-${index + 1}`,
+    genre: String(info?.genre ?? ""),
+    title: String(info?.title ?? ""),
+    query: String(info?.query ?? ""),
+    imageUrl: String(imageUrl ?? ""),
+  }
+}
+
 /**
  * ダッシュボードデータを生成
  * エラー時は空配列を返し、Server Action が常に正常レスポンスを返すようにする（クライアントの "unexpected response" を防ぐ）
@@ -108,27 +123,48 @@ export async function generateDashboard(
   time: TimeOfDay,
   selectedGenres: Genre[]
 ): Promise<DashboardItem[]> {
+  if (!Array.isArray(selectedGenres) || selectedGenres.length === 0) {
+    return []
+  }
+
   try {
-    const playlistInfos = await generatePlaylistInfo(weather, time, selectedGenres)
-    const spotifyClient = USE_MOCK ? null : await getSpotifyClient()
+    let playlistInfos: Array<{ genre: string; title: string; query: string }>
+    try {
+      playlistInfos = await generatePlaylistInfo(weather, time, selectedGenres)
+    } catch {
+      playlistInfos = createFallbackPlaylistInfo(
+        selectedGenres,
+        WEATHER_TYPE_LABELS[weather] ?? "晴れ",
+        TIME_OF_DAY_LABELS[time] ?? "昼"
+      )
+    }
+    if (!Array.isArray(playlistInfos) || playlistInfos.length === 0) {
+      return []
+    }
+
+    let spotifyClient: Awaited<ReturnType<typeof getSpotifyClient>> = null
+    if (!USE_MOCK) {
+      try {
+        spotifyClient = await getSpotifyClient()
+      } catch {
+        spotifyClient = null
+      }
+    }
 
     const dashboardItems: DashboardItem[] = await Promise.all(
       playlistInfos.map(async (info, index) => {
         let imageUrl = ""
-        if (USE_MOCK || !spotifyClient) {
-          imageUrl = getMockImageUrl(info.genre)
-        } else {
-          const spotifyImage = await getSpotifyImage(spotifyClient, info.query)
-          imageUrl = spotifyImage || getMockImageUrl(info.genre)
+        try {
+          if (USE_MOCK || !spotifyClient) {
+            imageUrl = getMockImageUrl(info?.genre ?? "")
+          } else {
+            const spotifyImage = await getSpotifyImage(spotifyClient, info?.query ?? "")
+            imageUrl = spotifyImage || getMockImageUrl(info?.genre ?? "")
+          }
+        } catch {
+          imageUrl = getMockImageUrl(info?.genre ?? "")
         }
-
-        return {
-          id: `playlist-${index + 1}`,
-          genre: info.genre,
-          title: info.title,
-          query: info.query,
-          imageUrl,
-        }
+        return toDashboardItem(info, index, imageUrl)
       })
     )
 
