@@ -105,34 +105,40 @@ async function generatePlaylistInfo(
 
 /**
  * ダッシュボードデータを生成
+ * エラー時は空配列を返し、Server Action が常に正常レスポンスを返すようにする（クライアントの "unexpected response" を防ぐ）
  */
 export async function generateDashboard(
   weather: WeatherType,
   time: TimeOfDay,
   selectedGenres: Genre[]
 ): Promise<DashboardItem[]> {
-  const playlistInfos = await generatePlaylistInfo(weather, time, selectedGenres)
-  const spotifyClient = USE_MOCK ? null : await getSpotifyClient()
+  try {
+    const playlistInfos = await generatePlaylistInfo(weather, time, selectedGenres)
+    const spotifyClient = USE_MOCK ? null : await getSpotifyClient()
 
-  const dashboardItems: DashboardItem[] = await Promise.all(
-    playlistInfos.map(async (info, index) => {
-      let imageUrl = ""
-      if (USE_MOCK || !spotifyClient) {
-        imageUrl = getMockImageUrl(info.genre)
-      } else {
-        const spotifyImage = await getSpotifyImage(spotifyClient, info.query)
-        imageUrl = spotifyImage || getMockImageUrl(info.genre)
-      }
+    const dashboardItems: DashboardItem[] = await Promise.all(
+      playlistInfos.map(async (info, index) => {
+        let imageUrl = ""
+        if (USE_MOCK || !spotifyClient) {
+          imageUrl = getMockImageUrl(info.genre)
+        } else {
+          const spotifyImage = await getSpotifyImage(spotifyClient, info.query)
+          imageUrl = spotifyImage || getMockImageUrl(info.genre)
+        }
 
-      return {
-        id: `playlist-${index + 1}`,
-        genre: info.genre,
-        title: info.title,
-        query: info.query,
-        imageUrl,
-      }
-    })
-  )
+        return {
+          id: `playlist-${index + 1}`,
+          genre: info.genre,
+          title: info.title,
+          query: info.query,
+          imageUrl,
+        }
+      })
+    )
 
-  return dashboardItems
+    return dashboardItems
+  } catch (error) {
+    console.error("Failed to generate dashboard:", error)
+    return []
+  }
 }
