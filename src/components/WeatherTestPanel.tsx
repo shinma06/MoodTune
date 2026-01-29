@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useRef } from "react"
 import { useWeather } from "@/contexts/WeatherContext"
 import { getWeatherIcon, getWeatherThemeColor, normalizeWeatherType } from "@/lib/weather-utils"
 import { getTimeOfDay } from "@/lib/weather-background"
@@ -32,20 +32,16 @@ export default function WeatherTestPanel() {
     requestPlaylistRefresh,
   } = useWeather()
   const [isOpen, setIsOpen] = useState(false)
-  const prevOpenRef = useRef(false)
-  /** パネルを開いた時点の天気・時間（閉じたときに「開く前から変更があったか」の判定用） */
+  /** パネルを開いた時点の天気・時間（閉じたときに「開いた時点と変わっているか」の判定用） */
   const openedWeatherTypeRef = useRef<string | null>(null)
   const openedTimeOfDayRef = useRef<TimeOfDay | null>(null)
 
-  /** パネルを開いたときに現在の天気・時間をスナップショット */
-  useEffect(() => {
-    const justOpened = isOpen && !prevOpenRef.current
-    prevOpenRef.current = isOpen
-    if (justOpened) {
-      openedWeatherTypeRef.current = weatherType
-      openedTimeOfDayRef.current = testTimeOfDay
-    }
-  }, [isOpen, weatherType, testTimeOfDay])
+  /** パネルを開く: この時点の天気・時間をスナップショットしてから開く */
+  const handleOpenPanel = () => {
+    openedWeatherTypeRef.current = weatherType
+    openedTimeOfDayRef.current = testTimeOfDay
+    setIsOpen(true)
+  }
 
   /** 雰囲気（天気）・時間帯は即時Contextに反映（UIのみ。プレイリストは閉じたときのみ更新） */
   const handleWeatherTypeChange = (type: WeatherType) => {
@@ -58,11 +54,15 @@ export default function WeatherTestPanel() {
     setIsTestMode(true)
   }
 
-  /** 閉じたとき: 開いた時点から天気・時間が変わっている場合のみプレイリストを再生成 */
+  /** 閉じたとき: 開いた時点の天気・時間と比べて変わっている場合のみプレイリストを再生成 */
   const handleClosePanel = () => {
-    const weatherChanged = weatherType !== openedWeatherTypeRef.current
-    const timeChanged = testTimeOfDay !== openedTimeOfDayRef.current
-    if (weatherChanged || timeChanged) requestPlaylistRefresh()
+    const openedWeather = openedWeatherTypeRef.current
+    const openedTime = openedTimeOfDayRef.current
+    const weatherChanged = weatherType !== openedWeather
+    const timeChanged = testTimeOfDay !== openedTime
+    if (weatherChanged || timeChanged) {
+      requestPlaylistRefresh()
+    }
     setIsOpen(false)
   }
 
@@ -81,6 +81,9 @@ export default function WeatherTestPanel() {
   const currentWeatherType = weatherType ? normalizeWeatherType(weatherType) : "Clear"
   const timeOfDayForDisplay: TimeOfDay = testTimeOfDay ?? (getTimeOfDay(new Date().getHours()) as TimeOfDay)
   const currentTimeOfDayLabel = TIME_OF_DAY_OPTIONS.find((opt) => opt.value === timeOfDayForDisplay)?.label ?? "-"
+  /** 実際の天気・時間帯（API・実時刻。選択肢の「現在」強調用） */
+  const actualWeatherTypeNormalized = actualWeatherType ? normalizeWeatherType(actualWeatherType) : null
+  const actualTimeOfDay = getTimeOfDay(new Date().getHours()) as TimeOfDay
 
   return (
     <>
@@ -90,7 +93,7 @@ export default function WeatherTestPanel() {
           variant="outline"
           size="icon"
           className="fixed bottom-4 left-4 z-50 bg-background/80 backdrop-blur-sm"
-          onClick={() => setIsOpen(true)}
+          onClick={handleOpenPanel}
           aria-label="気分に合わせるパネルを開く"
         >
           <Sparkles className="h-4 w-4" />
@@ -124,16 +127,22 @@ export default function WeatherTestPanel() {
                   const Icon = getWeatherIcon(type)
                   const color = getWeatherThemeColor(type)
                   const isSelected = currentWeatherType === type
+                  const isActualWeather = actualWeatherTypeNormalized === type
                   return (
                     <button
                       key={type}
-                      className={`flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all ${
+                      className={`relative flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all ${
                         isSelected
                           ? "border-primary bg-primary/5"
                           : "border-border hover:bg-muted/50"
-                      }`}
+                      } ${isActualWeather ? "ring-2 ring-muted-foreground/40 ring-offset-2 ring-offset-background" : ""}`}
                       onClick={() => handleWeatherTypeChange(type)}
                     >
+                      {isActualWeather && (
+                        <span className="absolute -top-1 -right-1 rounded bg-muted-foreground px-1 text-[9px] font-medium text-background ring-1 ring-background">
+                          現在
+                        </span>
+                      )}
                       <Icon className="w-5 h-5" style={{ color }} />
                       <span className="text-xs">{WEATHER_TYPE_LABELS[type]}</span>
                     </button>
@@ -148,16 +157,22 @@ export default function WeatherTestPanel() {
               <div className="grid grid-cols-4 gap-2">
                 {TIME_OF_DAY_OPTIONS.map((option) => {
                   const isSelected = timeOfDayForDisplay === option.value
+                  const isActualTime = actualTimeOfDay === option.value
                   return (
                     <button
                       key={option.value}
-                      className={`flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all text-xs ${
+                      className={`relative flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all text-xs ${
                         isSelected
                           ? "border-primary bg-primary/5"
                           : "border-border hover:bg-muted/50"
-                      }`}
+                      } ${isActualTime ? "ring-2 ring-muted-foreground/40 ring-offset-2 ring-offset-background" : ""}`}
                       onClick={() => handleTimeOfDayChange(option.value)}
                     >
+                      {isActualTime && (
+                        <span className="absolute -top-1 -right-1 rounded bg-muted-foreground px-1 text-[9px] font-medium text-background ring-1 ring-background">
+                          現在
+                        </span>
+                      )}
                       <span className={isSelected ? "text-primary font-medium" : ""}>
                         {option.label}
                       </span>
@@ -165,18 +180,6 @@ export default function WeatherTestPanel() {
                   )
                 })}
               </div>
-            </div>
-
-            {/* プレイリストを再生成 */}
-            <div className="pt-2 border-t">
-              <Button
-                onClick={requestPlaylistRefresh}
-                variant="default"
-                className="w-full"
-                size="sm"
-              >
-                プレイリストを再生成
-              </Button>
             </div>
 
             <div className="flex items-center justify-between gap-2 pt-2 border-t">

@@ -60,7 +60,7 @@ function getImageUrl(url: string | undefined | null): string {
 
 export default function PlaylistExplorer({ playlists: initialPlaylists }: PlaylistExplorerProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
-  const { weatherType, actualWeatherType, testTimeOfDay, isTestMode, playlistAutoUpdate, playlistRefreshTrigger } = useWeather()
+  const { weatherType, actualWeatherType, testTimeOfDay, isTestMode, playlistAutoUpdate, playlistRefreshTrigger, requestPlaylistRefresh } = useWeather()
   const [currentHour, setCurrentHour] = useState(new Date().getHours())
   const [showSettings, setShowSettings] = useState(false)
   const [selectedGenres, isGenresInitialized] = useSelectedGenres()
@@ -391,6 +391,17 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                         />
                     )}
                 </div>
+
+                {/* 仮: プレイリスト全件再生成ボタン */}
+                <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={requestPlaylistRefresh}
+                    disabled={isLoadingOrEmpty || selectedGenres.length === 0}
+                >
+                    {isLoadingOrEmpty ? "生成中..." : "プレイリストを全件再生成"}
+                </Button>
             </div>
         </div>
     )
