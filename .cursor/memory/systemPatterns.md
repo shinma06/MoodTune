@@ -6,23 +6,35 @@
 ```
 src/
 ├── app/              # Next.js App Router
+│   ├── actions/      # Server Actions
+│   │   └── generateDashboard.ts
 │   ├── api/          # API Routes
 │   ├── page.tsx      # メインページ
 │   └── layout.tsx    # ルートレイアウト
 ├── components/       # Reactコンポーネント
 │   ├── ui/           # shadcn/uiコンポーネント
+│   ├── GenreSelector.tsx
 │   ├── PlaylistExplorer.tsx
 │   ├── WeatherMonitor.tsx
 │   ├── WeatherAnimation.tsx
 │   └── WeatherTestPanel.tsx
 ├── contexts/         # React Context
 │   └── WeatherContext.tsx
+├── hooks/            # カスタムフック
+│   ├── useGeolocation.ts
+│   ├── useLocalStorage.ts
+│   └── useVinylRotation.ts
 ├── lib/              # ユーティリティ関数
+│   ├── constants.ts        # 定数・ジャンル定義
+│   ├── playlist-utils.ts   # プレイリスト関連ユーティリティ
+│   ├── spotify-server.ts   # Spotify API クライアント
 │   ├── weather-api.ts
 │   ├── weather-background.ts
+│   ├── weather-background-utils.ts
 │   └── weather-utils.ts
 └── types/            # TypeScript型定義
-    └── weather.ts
+    ├── dashboard.ts  # DashboardItem
+    └── weather.ts    # WeatherApiResponse, WeatherData
 ```
 
 ### データフロー

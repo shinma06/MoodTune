@@ -15,51 +15,24 @@ import {
   REGENERATE_ZONE_ENTRY_DEG,
 } from "@/hooks/useVinylRotation"
 import { getGenreThemeColors, REALISTIC_VINYL_THEME } from "@/lib/constants"
+import {
+  hasGenresChanged,
+  getGenresDiff,
+  getImageUrl,
+  getLoadingGenreText,
+  getLoadingTitleText,
+  EMPTY_PLAYLIST,
+  type LoadingMode,
+} from "@/lib/playlist-utils"
 import { Music } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { generateDashboard, type DashboardItem } from "@/app/actions/generateDashboard"
+import { generateDashboard } from "@/app/actions/generateDashboard"
+import type { DashboardItem } from "@/types/dashboard"
 import type { TimeOfDay } from "@/lib/weather-background"
 import type { Genre } from "@/lib/constants"
 
 interface PlaylistExplorerProps {
   playlists?: DashboardItem[]
-}
-
-/** プレイリストが空のときの表示用ダミー */
-const EMPTY_PLAYLIST: DashboardItem = {
-  id: "empty",
-  genre: "---",
-  title: "プレイリストがありません",
-  query: "",
-  imageUrl: "",
-}
-
-/** ジャンル配列が変更されたか（順序に依存しない） */
-function hasGenresChanged(prev: string[], current: string[]): boolean {
-  if (prev.length !== current.length) return true
-  const sortedPrev = [...prev].sort()
-  const sortedCurrent = [...current].sort()
-  return sortedPrev.some((g, i) => g !== sortedCurrent[i])
-}
-
-/** ジャンル配列の差分（追加・削除・変更なし）を算出 */
-function getGenresDiff(prev: string[], current: string[]) {
-  const prevSet = new Set(prev)
-  const currentSet = new Set(current)
-  
-  return {
-    added: current.filter(g => !prevSet.has(g)),
-    removed: prev.filter(g => !currentSet.has(g)),
-    unchanged: current.filter(g => prevSet.has(g)),
-  }
-}
-
-/** 画像URLを返す（空の場合はプレースホルダー） */
-function getImageUrl(url: string | undefined | null): string {
-  if (!url || url.trim() === "") {
-    return "/placeholder.svg"
-  }
-  return url
 }
 
 export default function PlaylistExplorer({ playlists: initialPlaylists }: PlaylistExplorerProps) {
@@ -71,7 +44,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
   const [playlists, setPlaylists] = useState<DashboardItem[] | null>(initialPlaylists ?? null)
   const [isLoading, setIsLoading] = useState(false)
   /** 生成中の種別（初回 / 全件再生成 / 個別 / 追加ジャンルのみ）。表示文言の切り替え用 */
-  const [loadingMode, setLoadingMode] = useState<"initial" | "all" | "single" | "added" | null>(null)
+  const [loadingMode, setLoadingMode] = useState<LoadingMode>(null)
   
   /** パネルを開いた時点のジャンル（閉じたときの差分計算用） */
   const genresOnOpenRef = useRef<string[]>([])
@@ -472,30 +445,10 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
             <div className="w-full max-w-md space-y-6 pb-4 relative z-10">
                 <div className="text-center space-y-3">
                     <p className={`text-xs uppercase tracking-widest font-light ${genreColorClass}`}>
-                        {isLoadingOrEmpty
-                          ? (isLoading && loadingMode === "initial"
-                            ? "生成中..."
-                            : isLoading && loadingMode === "all"
-                              ? "全件再生成中..."
-                              : isLoading && loadingMode === "single"
-                                ? "再生成中..."
-                                : isLoading && loadingMode === "added"
-                                  ? "追加ジャンルを生成中..."
-                                  : "読み込み中...")
-                          : currentPlaylist.genre}
+                        {isLoadingOrEmpty ? getLoadingGenreText(loadingMode) : currentPlaylist.genre}
                     </p>
                     <h2 className={`text-2xl font-serif leading-tight text-balance ${titleColorClass}`}>
-                        {isLoadingOrEmpty
-                          ? (isLoading && loadingMode === "initial"
-                            ? "プレイリストを生成中"
-                            : isLoading && loadingMode === "all"
-                              ? "プレイリストを全件再生成中"
-                              : isLoading && loadingMode === "single"
-                                ? "プレイリストを再生成中"
-                                : isLoading && loadingMode === "added"
-                                  ? "追加ジャンルのプレイリストを生成中"
-                                  : "プレイリストを生成中")
-                          : currentPlaylist.title}
+                        {isLoadingOrEmpty ? getLoadingTitleText(loadingMode) : currentPlaylist.title}
                     </h2>
                 </div>
 

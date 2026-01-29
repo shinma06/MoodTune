@@ -5,14 +5,9 @@ import { openai } from "@ai-sdk/openai"
 import { getSpotifyClient } from "@/lib/spotify-server"
 import { WEATHER_TYPE_LABELS, TIME_OF_DAY_LABELS, type Genre } from "@/lib/constants"
 import type { WeatherType, TimeOfDay } from "@/lib/weather-background"
+import type { DashboardItem } from "@/types/dashboard"
 
-export interface DashboardItem {
-  id: string
-  genre: string
-  title: string
-  query: string
-  imageUrl: string
-}
+export type { DashboardItem }
 
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK_SPOTIFY === "true"
 

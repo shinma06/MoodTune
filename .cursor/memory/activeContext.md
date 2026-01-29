@@ -2,35 +2,33 @@
 
 ## 現在のセッションの焦点
 
-ハイドレーション不整合の解消とデータ同期の確実化
+UI/UX 改善とコードベースのリファクタリング
 
 ## 最近の変更履歴
 
-- レコード戻り演出（useVinylRotation）:
-  - 個別再生成の域（1周超）に入っているが3周未満で指を離した場合、回転した角度分だけ左回りで初期位置までアニメーションして戻す
-  - REGENERATE_ZONE_ENTRY_DEG（360°）、SNAPBACK_DURATION_MS（450ms）、easeOutCubic で戻り演出を実装
-  - ドラッグ開始時に進行中の戻りアニメーションをキャンセル
-- ハイドレーション不整合の解消:
-  - `src/hooks/useLocalStorage.ts`: 第3の戻り値として `isInitialized: boolean` を追加
-    - SSR時は `false`、localStorage読み込み完了後に `true`
-  - `src/components/GenreSelector.tsx`: `useSelectedGenres` の戻り値を `[Genre[], boolean]` に変更
-  - `src/components/PlaylistExplorer.tsx`:
-    - `isGenresInitialized` フラグを受け取り、初期化完了時にプレイリストを自動同期
-    - `hasPerformedInitialSyncRef` でリロード後の重複同期を防止
-- ジャンル選択とプレイリスト生成の同期改善:
-  - `src/hooks/useLocalStorage.ts`: カスタムイベントで同一ページ内のlocalStorage変更を通知
-  - `src/components/PlaylistExplorer.tsx`: パネルを閉じた際に差分更新を実行
-  - 変更のないジャンルはデータを再利用（API呼び出し削減）
-- undefinedエラーの修正:
-  - `displayPlaylists`が空の場合のフォールバック追加
-  - `safeCurrentIndex`で常に有効な範囲内のインデックスを保証
-  - `EMPTY_PLAYLIST`定数で空状態のプレースホルダーを提供
+- レコード自動回転:
+  - アイドル時は 12 秒/周で常に回転（`useVinylRotation`）
+  - ユーザーがドラッグすると自動回転を停止、離すと再開
+- レコード色の表示ルール:
+  - 現実のレコード色を使うのは (1) 初期同期時の stale J-POP (2) 空状態 のみ
+  - それ以外は表示中のジャンルのテーマカラーを使用
+- ジャンルごとのレコードグラデーション:
+  - City Pop のような美しいグラデーションを他ジャンルにも適用
+  - 派手すぎる場合は控えめに調整（K-POP Boy Group、Techno など）
+- 気分に合わせるパネルの UI 統一:
+  - ジャンル選択パネルと同じトグルボタン方式に変更（X ボタン削除）
+  - Card スタイル、位置、選択枠の視認性を統一
+- 初期同期時のローディング文言:
+  - `loadingMode: "initial"` で「プレイリストを生成中」（"再生成" ではない）を表示
+- generateDashboard のエラーハンドリング:
+  - try/catch で空配列を返し、クライアントの unexpected response を防止
 - プロジェクト全体のリファクタリング:
-  - `src/lib/constants.ts`: `GENRE_STORAGE_KEY`, `DEFAULT_SELECTED_GENRES`を追加
-  - `src/components/GenreSelector.tsx`: 共通定数を使用
-  - `src/app/page.tsx`: 共通定数を使用
-  - ユーティリティ関数の整理（`getVinylColors`, `getImageUrl`, `hasGenresChanged`, `getGenresDiff`）
-  - `useMemo`による最適化
+  - `src/types/dashboard.ts`: `DashboardItem` 型を専用ファイルに移動
+  - `src/lib/playlist-utils.ts`: ユーティリティ関数・定数を集約
+    - `hasGenresChanged`, `getGenresDiff`, `getImageUrl`
+    - `getLoadingGenreText`, `getLoadingTitleText`
+    - `EMPTY_PLAYLIST`, `LoadingMode`
+  - `PlaylistExplorer.tsx`: ユーティリティ関数を import に変更し、524 → 約 490 行に削減
 
 ## 現在の開発状態
 
