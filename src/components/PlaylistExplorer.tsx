@@ -253,6 +253,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
   const {
     rotation,
     isDragging,
+    snapBackDurationMs,
     vinylRef,
     handleMouseDown,
     handleMouseUp,
@@ -329,7 +330,11 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                         className="relative w-full h-full cursor-grab active:cursor-grabbing select-none"
                         style={{
                             transform: `rotate(${rotation}deg)`,
-                            transition: isDragging ? "none" : "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                            transition: isDragging
+                              ? "none"
+                              : snapBackDurationMs != null
+                                ? `transform ${snapBackDurationMs}ms linear`
+                                : "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                         }}
                         onTouchStart={handleTouchStart}
                         onTouchMove={handleTouchMove}

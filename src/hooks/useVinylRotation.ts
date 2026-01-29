@@ -5,7 +5,7 @@ const REGENERATE_THRESHOLD_DEG = 3 * 360
 /** 1周 = 360°（この角度を超えると「個別再生成の域」に入り、3周未満で離したら戻り演出） */
 const REGENERATE_ZONE_ENTRY_DEG = 360
 /** 戻り演出の基準時間（1周あたりの目安 ms）。回転量に比例して延長し角速度を一定にする */
-const SNAPBACK_DURATION_PER_TURN_MS = 400
+const SNAPBACK_DURATION_PER_TURN_MS = 500
 
 interface UseVinylRotationOptions {
   onRotationComplete: (direction: "next" | "prev") => void
@@ -31,13 +31,13 @@ export function useVinylRotation({
   const [startY, setStartY] = useState(0)
   const [startRotation, setStartRotation] = useState(0)
   const [totalRotation, setTotalRotation] = useState(0)
+  /** 戻り演出中の transition 時間（ms）。null のときは通常の transition を使用 */
+  const [snapBackDurationMs, setSnapBackDurationMs] = useState<number | null>(null)
   const vinylRef = useRef<HTMLDivElement>(null)
   /** 1ジェスチャー内の累積回転（度）。3周検知用 */
   const cumulativeRotationRef = useRef(0)
   /** 前回の接触点の角度（度）。累積計算用 */
   const lastAngleRef = useRef(0)
-  /** 戻り演出の requestAnimationFrame ID */
-  const snapBackRafRef = useRef<number | null>(null)
 
   /** 2つの角度の最短差を -180〜180 の範囲で返す */
   const getAngleDifference = useCallback((angle1: number, angle2: number): number => {
@@ -86,35 +86,36 @@ export function useVinylRotation({
     cumulativeRotationRef.current = 0
   }, [])
 
-  /** easeOutCubic: 終わりに向けて減速 */
-  const easeOutCubic = useCallback((t: number): number => 1 - (1 - t) ** 3, [])
-
-  /** 指定角度から 0° まで、回した角度分を逆方向にアニメーションして戻す（最短ルートではなく） */
+  /** 指定角度から 0° まで、CSS transition（linear）で回した角度分を逆方向に戻す。角速度一定で滑らかに一貫した制御。 */
   const runSnapBackAnimation = useCallback(
     (fromRotationDeg: number) => {
-      const startTime = performance.now()
       const durationMs = Math.max(
-        300,
+        200,
         SNAPBACK_DURATION_PER_TURN_MS * (Math.abs(fromRotationDeg) / 360)
       )
-
-      const tick = () => {
-        const elapsed = performance.now() - startTime
-        const progress = Math.min(1, elapsed / durationMs)
-        const eased = easeOutCubic(progress)
-        setRotation(fromRotationDeg * (1 - eased))
-
-        if (progress < 1) {
-          snapBackRafRef.current = requestAnimationFrame(tick)
-        } else {
-          snapBackRafRef.current = null
-          resetRotation()
-        }
-      }
-      snapBackRafRef.current = requestAnimationFrame(tick)
+      setSnapBackDurationMs(durationMs)
+      setRotation(fromRotationDeg)
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setRotation(0)
+        })
+      })
     },
-    [easeOutCubic, resetRotation]
+    []
   )
+
+  /** 戻り演出の transitionend で状態をクリア */
+  useEffect(() => {
+    if (snapBackDurationMs === null || !vinylRef.current) return
+    const el = vinylRef.current
+    const onTransitionEnd = (e: TransitionEvent) => {
+      if (e.propertyName !== "transform") return
+      setSnapBackDurationMs(null)
+      resetRotation()
+    }
+    el.addEventListener("transitionend", onTransitionEnd)
+    return () => el.removeEventListener("transitionend", onTransitionEnd)
+  }, [snapBackDurationMs, resetRotation])
 
   const handleTouchEnd = useCallback(() => {
     if (!isDragging) return
@@ -159,9 +160,9 @@ export function useVinylRotation({
 
   const handleStart = useCallback(
     (clientX: number, clientY: number) => {
-      if (snapBackRafRef.current !== null) {
-        cancelAnimationFrame(snapBackRafRef.current)
-        snapBackRafRef.current = null
+      if (snapBackDurationMs !== null) {
+        setSnapBackDurationMs(null)
+        resetRotation()
       }
       setIsDragging(true)
       setStartX(clientX)
@@ -171,7 +172,7 @@ export function useVinylRotation({
       cumulativeRotationRef.current = 0
       lastAngleRef.current = getAngleFromCenter(clientX, clientY)
     },
-    [rotation, getAngleFromCenter]
+    [rotation, snapBackDurationMs, getAngleFromCenter, resetRotation]
   )
 
   const handleMove = useCallback(
@@ -239,6 +240,7 @@ export function useVinylRotation({
   return {
     rotation,
     isDragging,
+    snapBackDurationMs,
     vinylRef,
     handleMouseDown,
     handleMouseUp: handleTouchEnd,
