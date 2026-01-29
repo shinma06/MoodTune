@@ -344,9 +344,14 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
 
             {/* Vinyl Record Section */}
             <div className="flex-1 flex items-center justify-center w-full max-w-md relative z-10">
-                <p className={`absolute top-0 left-1/2 -translate-x-1/2 text-center text-[10px] font-light whitespace-nowrap ${isDark ? "text-white/80" : "text-muted-foreground/70"}`}>
-                    左右にスピンして他のプレイリストへ
-                </p>
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 text-center space-y-0.5">
+                    <p className={`text-[10px] font-light whitespace-nowrap ${isDark ? "text-white/80" : "text-muted-foreground/70"}`}>
+                        左右にスピンして他のプレイリストへ
+                    </p>
+                    <p className={`text-[9px] font-light whitespace-nowrap ${isDark ? "text-white/60" : "text-muted-foreground/50"}`}>
+                        右3周で再生成・左3周で全件再生成
+                    </p>
+                </div>
 
                 <div
                     className="relative w-72 h-72 rounded-full transition-shadow duration-200"
