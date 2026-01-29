@@ -6,16 +6,20 @@ import type { TimeOfDay } from "@/lib/weather-background"
 interface WeatherContextType {
   weatherType: string | null
   setWeatherType: (weather: string | null) => void
-  /** APIから取得した実際の天気（テストモードリセット用） */
+  /** APIから取得した実際の天気（手動設定をやめるときの復帰用） */
   actualWeatherType: string | null
   setActualWeatherType: (weather: string | null) => void
   testTimeOfDay: TimeOfDay | null
   setTestTimeOfDay: (timeOfDay: TimeOfDay | null) => void
+  /** 手動で雰囲気（天気・時間帯）を設定しているか */
   isTestMode: boolean
   setIsTestMode: (isTestMode: boolean) => void
   /** 時間帯・天気変更時にプレイリストを自動更新するか */
   playlistAutoUpdate: boolean
   setPlaylistAutoUpdate: (enabled: boolean) => void
+  /** パネルから「プレイリストを再生成」が押されたときのトリガー（インクリメントで発火） */
+  playlistRefreshTrigger: number
+  requestPlaylistRefresh: () => void
 }
 
 const WeatherContext = createContext<WeatherContextType | undefined>(undefined)
@@ -26,6 +30,11 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
   const [testTimeOfDay, setTestTimeOfDay] = useState<TimeOfDay | null>(null)
   const [isTestMode, setIsTestMode] = useState(false)
   const [playlistAutoUpdate, setPlaylistAutoUpdate] = useState(true)
+  const [playlistRefreshTrigger, setPlaylistRefreshTrigger] = useState(0)
+
+  const requestPlaylistRefresh = () => {
+    setPlaylistRefreshTrigger((prev) => prev + 1)
+  }
 
   return (
     <WeatherContext.Provider
@@ -40,6 +49,8 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
         setIsTestMode,
         playlistAutoUpdate,
         setPlaylistAutoUpdate,
+        playlistRefreshTrigger,
+        requestPlaylistRefresh,
       }}
     >
       {children}

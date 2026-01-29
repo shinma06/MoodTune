@@ -85,7 +85,7 @@ function convertStaticPlaylists(): DashboardItem[] {
 
 export default function PlaylistExplorer({ playlists: initialPlaylists }: PlaylistExplorerProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
-  const { weatherType, actualWeatherType, testTimeOfDay, isTestMode, playlistAutoUpdate } = useWeather()
+  const { weatherType, actualWeatherType, testTimeOfDay, isTestMode, playlistAutoUpdate, playlistRefreshTrigger } = useWeather()
   const [currentHour, setCurrentHour] = useState(new Date().getHours())
   const [showSettings, setShowSettings] = useState(false)
   const [selectedGenres, isGenresInitialized] = useSelectedGenres()
@@ -221,7 +221,13 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     }
   }, [timeOfDayForAutoUpdate, playlistAutoUpdate, isGenresInitialized, selectedGenres.length, refreshPlaylists])
 
-  /** APIが天気の変更を示したタイミングでプレイリストを自動更新（テストモード時は対象外） */
+  /** パネルから「プレイリストを再生成」が押されたときに手動で再生成 */
+  useEffect(() => {
+    if (playlistRefreshTrigger === 0 || !isGenresInitialized || selectedGenres.length === 0) return
+    refreshPlaylists()
+  }, [playlistRefreshTrigger, isGenresInitialized, selectedGenres.length, refreshPlaylists])
+
+  /** APIが天気の変更を示したタイミングでプレイリストを自動更新（手動設定中は対象外） */
   useEffect(() => {
     if (!playlistAutoUpdate || isTestMode || !isGenresInitialized || selectedGenres.length === 0) return
     const current = actualWeatherType ?? null

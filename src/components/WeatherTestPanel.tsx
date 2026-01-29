@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { X, Settings } from "lucide-react"
+import { X, Sparkles } from "lucide-react"
 
 export default function WeatherTestPanel() {
   const {
@@ -28,6 +28,7 @@ export default function WeatherTestPanel() {
     setIsTestMode,
     playlistAutoUpdate,
     setPlaylistAutoUpdate,
+    requestPlaylistRefresh,
   } = useWeather()
   const [isOpen, setIsOpen] = useState(false)
   const [testWeatherType, setTestWeatherType] = useState<WeatherType>(
@@ -79,34 +80,34 @@ export default function WeatherTestPanel() {
           size="icon"
           className="fixed bottom-4 left-4 z-50 bg-background/80 backdrop-blur-sm"
           onClick={() => setIsOpen(true)}
+          aria-label="気分に合わせるパネルを開く"
         >
-          <Settings className="h-4 w-4" />
+          <Sparkles className="h-4 w-4" />
         </Button>
       )}
 
-      {/* テストパネル */}
       {isOpen && (
         <Card className="fixed bottom-4 left-4 z-50 w-80 bg-background/95 backdrop-blur-sm shadow-lg">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">天気テストパネル</CardTitle>
+              <CardTitle className="text-lg">気分に合わせる</CardTitle>
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6"
                 onClick={() => setIsOpen(false)}
+                aria-label="閉じる"
               >
                 <X className="h-4 w-4" />
               </Button>
             </div>
             <CardDescription className="text-xs">
-              天気と時間帯を手動で設定してテストできます
+              雰囲気や時間帯を選んで、今の気分に合わせたプレイリストを再生成できます
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* 天気選択 */}
             <div className="space-y-2">
-              <Label className="text-sm">天気</Label>
+              <Label className="text-sm">雰囲気（天気）</Label>
               <div className="grid grid-cols-3 gap-2">
                 {WEATHER_TYPES.map((type) => {
                   const Icon = getWeatherIcon(type)
@@ -155,44 +156,47 @@ export default function WeatherTestPanel() {
               </div>
             </div>
 
-            {/* プレイリスト自動更新トグル */}
+            {/* プレイリストを再生成 */}
+            <div className="pt-2 border-t">
+              <Button
+                onClick={requestPlaylistRefresh}
+                variant="default"
+                className="w-full"
+                size="sm"
+              >
+                プレイリストを再生成
+              </Button>
+            </div>
+
             <div className="flex items-center justify-between gap-2 pt-2 border-t">
-              <Label className="text-sm">プレイリストの自動更新</Label>
+              <Label className="text-sm">自動更新</Label>
               <Button
                 variant={playlistAutoUpdate ? "default" : "outline"}
                 size="sm"
-                className="min-w-[4rem]"
+                className="min-w-16"
                 onClick={() => setPlaylistAutoUpdate(!playlistAutoUpdate)}
               >
                 {playlistAutoUpdate ? "ON" : "OFF"}
               </Button>
             </div>
             <p className="text-[10px] text-muted-foreground -mt-1">
-              時間帯の切り替えや天気の変化でプレイリストを自動で再生成します
+              実際の時間・天気の変化でプレイリストを自動で再生成します
             </p>
 
-            {/* リセットボタン */}
             {isTestMode && (
-              <div className="pt-2">
+              <div className="pt-2 flex flex-col gap-2">
                 <Button
                   onClick={handleReset}
                   variant="outline"
                   className="w-full"
                   size="sm"
                 >
-                  リセット
+                  実際の天気・時間に戻す
                 </Button>
-              </div>
-            )}
-
-            {/* 現在の状態表示 */}
-            {isTestMode && (
-              <div className="pt-2 border-t text-xs text-muted-foreground space-y-1">
-                <div>
-                  テストモード: <span className="font-mono">{currentWeatherType ? WEATHER_TYPE_LABELS[currentWeatherType] : "-"}</span>
-                </div>
-                <div>
-                  時間帯: <span className="font-mono">{testTimeOfDay || localTimeOfDay ? TIME_OF_DAY_OPTIONS.find(opt => opt.value === (testTimeOfDay || localTimeOfDay))?.label : "-"}</span>
+                <div className="pt-2 border-t text-xs text-muted-foreground space-y-1">
+                  <div>
+                    現在の設定: <span className="font-mono">{currentWeatherType ? WEATHER_TYPE_LABELS[currentWeatherType] : "-"}</span> / {testTimeOfDay || localTimeOfDay ? TIME_OF_DAY_OPTIONS.find(opt => opt.value === (testTimeOfDay || localTimeOfDay))?.label : "-"}
+                  </div>
                 </div>
               </div>
             )}
