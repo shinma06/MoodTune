@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useWeather } from "@/contexts/WeatherContext"
 import { getWeatherIcon, getWeatherThemeColor, normalizeWeatherType } from "@/lib/weather-utils"
+import { getTimeOfDay } from "@/lib/weather-background"
 import type { WeatherType, TimeOfDay } from "@/lib/weather-background"
 import { WEATHER_TYPES, TIME_OF_DAY_OPTIONS, WEATHER_TYPE_LABELS } from "@/lib/constants"
 import {
@@ -37,18 +38,32 @@ export default function WeatherTestPanel() {
   const [localTimeOfDay, setLocalTimeOfDay] = useState<TimeOfDay>(
     testTimeOfDay || "day"
   )
+  const [localPlaylistAutoUpdate, setLocalPlaylistAutoUpdate] = useState(playlistAutoUpdate)
 
+  /** パネルを開いたときにローカル状態をContextの現在値で同期 */
+  useEffect(() => {
+    if (!isOpen) return
+    setTestWeatherType(weatherType ? normalizeWeatherType(weatherType) : "Clear")
+    setLocalTimeOfDay(testTimeOfDay ?? (getTimeOfDay(new Date().getHours()) as TimeOfDay))
+    setLocalPlaylistAutoUpdate(playlistAutoUpdate)
+  }, [isOpen])
+
+  /** 雰囲気・時間帯はパネル内のローカルのみ更新（閉じたときに適用） */
   const handleWeatherTypeChange = (type: WeatherType) => {
     setTestWeatherType(type)
-    setWeatherType(type)
-    setTestTimeOfDay(localTimeOfDay)
-    setIsTestMode(true)
   }
 
   const handleTimeOfDayChange = (timeOfDay: TimeOfDay) => {
     setLocalTimeOfDay(timeOfDay)
-    setTestTimeOfDay(timeOfDay)
+  }
+
+  /** パネルを閉じたタイミングで設定をContextに反映 */
+  const handleClosePanel = () => {
+    setWeatherType(testWeatherType)
+    setTestTimeOfDay(localTimeOfDay)
+    setPlaylistAutoUpdate(localPlaylistAutoUpdate)
     setIsTestMode(true)
+    setIsOpen(false)
   }
 
   const handleReset = () => {
@@ -67,9 +82,19 @@ export default function WeatherTestPanel() {
     setLocalTimeOfDay("day")
   }
 
-  const currentWeatherType = isTestMode
+  /** 表示用: パネル内ではローカル状態、パネル外ではContext */
+  const currentWeatherType = isOpen
     ? testWeatherType
-    : weatherType ? normalizeWeatherType(weatherType) : "Clear"
+    : isTestMode
+      ? testWeatherType
+      : weatherType
+        ? normalizeWeatherType(weatherType)
+        : "Clear"
+  const currentTimeOfDayLabel = isOpen
+    ? TIME_OF_DAY_OPTIONS.find((opt) => opt.value === localTimeOfDay)?.label
+    : testTimeOfDay || localTimeOfDay
+      ? TIME_OF_DAY_OPTIONS.find((opt) => opt.value === (testTimeOfDay || localTimeOfDay))?.label
+      : "-"
 
   return (
     <>
@@ -95,7 +120,7 @@ export default function WeatherTestPanel() {
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6"
-                onClick={() => setIsOpen(false)}
+                onClick={handleClosePanel}
                 aria-label="閉じる"
               >
                 <X className="h-4 w-4" />
@@ -171,12 +196,12 @@ export default function WeatherTestPanel() {
             <div className="flex items-center justify-between gap-2 pt-2 border-t">
               <Label className="text-sm">自動更新</Label>
               <Button
-                variant={playlistAutoUpdate ? "default" : "outline"}
+                variant={localPlaylistAutoUpdate ? "default" : "outline"}
                 size="sm"
                 className="min-w-16"
-                onClick={() => setPlaylistAutoUpdate(!playlistAutoUpdate)}
+                onClick={() => setLocalPlaylistAutoUpdate(!localPlaylistAutoUpdate)}
               >
-                {playlistAutoUpdate ? "ON" : "OFF"}
+                {localPlaylistAutoUpdate ? "ON" : "OFF"}
               </Button>
             </div>
             <p className="text-[10px] text-muted-foreground -mt-1">
@@ -195,7 +220,7 @@ export default function WeatherTestPanel() {
                 </Button>
                 <div className="pt-2 border-t text-xs text-muted-foreground space-y-1">
                   <div>
-                    現在の設定: <span className="font-mono">{currentWeatherType ? WEATHER_TYPE_LABELS[currentWeatherType] : "-"}</span> / {testTimeOfDay || localTimeOfDay ? TIME_OF_DAY_OPTIONS.find(opt => opt.value === (testTimeOfDay || localTimeOfDay))?.label : "-"}
+                    現在の設定: <span className="font-mono">{currentWeatherType ? WEATHER_TYPE_LABELS[currentWeatherType] : "-"}</span> / {currentTimeOfDayLabel}
                   </div>
                 </div>
               </div>
