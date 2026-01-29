@@ -12,10 +12,19 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Check, Music } from "lucide-react"
 
+/** localStorage から読み込んだ値が Genre[] として妥当かバリデーション */
+function isValidGenreArray(value: unknown): value is Genre[] {
+  if (!Array.isArray(value)) return false
+  if (value.length === 0) return false
+  if (value.length > MAX_SELECTED_GENRES) return false
+  return value.every((v) => typeof v === "string" && AVAILABLE_GENRES.includes(v as Genre))
+}
+
 export default function GenreSelector() {
   const [selectedGenres, setSelectedGenres] = useLocalStorage<Genre[]>(
     GENRE_STORAGE_KEY,
-    DEFAULT_SELECTED_GENRES
+    DEFAULT_SELECTED_GENRES,
+    { validate: isValidGenreArray }
   )
 
   const toggleGenre = (genre: Genre) => {
@@ -100,7 +109,8 @@ export default function GenreSelector() {
 export function useSelectedGenres(): [Genre[], boolean] {
   const [selectedGenres, , isInitialized] = useLocalStorage<Genre[]>(
     GENRE_STORAGE_KEY,
-    DEFAULT_SELECTED_GENRES
+    DEFAULT_SELECTED_GENRES,
+    { validate: isValidGenreArray }
   )
   return [selectedGenres, isInitialized]
 }

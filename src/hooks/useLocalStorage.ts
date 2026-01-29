@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 
 // カスタムイベント名（同一ページ内でのlocalStorage変更を通知）
 const STORAGE_CHANGE_EVENT = "local-storage-change"
@@ -14,32 +14,55 @@ function dispatchStorageChange(key: string) {
   }
 }
 
+export interface UseLocalStorageOptions<T> {
+  /** 値のバリデーション。false を返すと initialValue にフォールバック */
+  validate?: (value: unknown) => value is T
+}
+
 /**
  * localStorage を使った永続化フック（同一ページ内での変更も検知可能）
  * @param key ストレージのキー
  * @param initialValue 初期値
+ * @param options バリデーション等のオプション
  * @returns [値, 値を更新する関数, 初期化完了フラグ]
  */
 export function useLocalStorage<T>(
   key: string,
-  initialValue: T
+  initialValue: T,
+  options?: UseLocalStorageOptions<T>
 ): [T, (value: T | ((prev: T) => T)) => void, boolean] {
   const [storedValue, setStoredValue] = useState<T>(initialValue)
   const [isInitialized, setIsInitialized] = useState(false)
+  /** initialValue を参照用に保持（削除時のフォールバック用） */
+  const initialValueRef = useRef(initialValue)
+  initialValueRef.current = initialValue
+  const validateRef = useRef(options?.validate)
+  validateRef.current = options?.validate
+
+  /** localStorage から読み込み、バリデーションを通す */
+  const parseAndValidate = useCallback((raw: string | null): T | null => {
+    if (raw === null) return null
+    try {
+      const parsed = JSON.parse(raw)
+      if (validateRef.current) {
+        return validateRef.current(parsed) ? parsed : null
+      }
+      return parsed as T
+    } catch {
+      return null
+    }
+  }, [])
 
   useEffect(() => {
     if (typeof window === "undefined") return
 
-    try {
-      const item = window.localStorage.getItem(key)
-      if (item) {
-        setStoredValue(JSON.parse(item))
-      }
-    } catch (error) {
-      console.warn(`localStorage の読み込みに失敗しました (key: ${key}):`, error)
+    const raw = window.localStorage.getItem(key)
+    const parsed = parseAndValidate(raw)
+    if (parsed !== null) {
+      setStoredValue(parsed)
     }
     setIsInitialized(true)
-  }, [key])
+  }, [key, parseAndValidate])
 
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -47,24 +70,18 @@ export function useLocalStorage<T>(
     const handleStorageChange = (e: Event) => {
       const customEvent = e as CustomEvent<{ key: string }>
       if (customEvent.detail.key === key) {
-        try {
-          const item = window.localStorage.getItem(key)
-          if (item) {
-            setStoredValue(JSON.parse(item))
-          }
-        } catch (error) {
-          console.warn(`localStorage の読み込みに失敗しました (key: ${key}):`, error)
-        }
+        const raw = window.localStorage.getItem(key)
+        const parsed = parseAndValidate(raw)
+        // 削除された or バリデーション失敗時は initialValue にフォールバック
+        setStoredValue(parsed ?? initialValueRef.current)
       }
     }
 
     const handleNativeStorageChange = (e: StorageEvent) => {
-      if (e.key === key && e.newValue) {
-        try {
-          setStoredValue(JSON.parse(e.newValue))
-        } catch (error) {
-          console.warn(`localStorage の読み込みに失敗しました (key: ${key}):`, error)
-        }
+      if (e.key === key) {
+        const parsed = parseAndValidate(e.newValue)
+        // 削除された or バリデーション失敗時は initialValue にフォールバック
+        setStoredValue(parsed ?? initialValueRef.current)
       }
     }
 
@@ -75,7 +92,7 @@ export function useLocalStorage<T>(
       window.removeEventListener(STORAGE_CHANGE_EVENT, handleStorageChange)
       window.removeEventListener("storage", handleNativeStorageChange)
     }
-  }, [key])
+  }, [key, parseAndValidate])
 
   const setValue = useCallback(
     (value: T | ((prev: T) => T)) => {

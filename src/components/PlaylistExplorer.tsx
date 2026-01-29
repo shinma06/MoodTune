@@ -82,9 +82,14 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     ? REALISTIC_VINYL_THEME
     : getGenreThemeColors(currentPlaylist.genre)
   
+  /** ローディング中かどうかを ref で保持（useCallback 内で最新値を参照するため） */
+  const isLoadingRef = useRef(false)
+  isLoadingRef.current = isLoading
+
   /** 現在の天気・時間帯・ジャンルでプレイリストを全件再生成 */
   const refreshPlaylists = useCallback(async () => {
     if (selectedGenres.length === 0) return
+    if (isLoadingRef.current) return // ローディング中は無視
     setLoadingMode("all")
     setIsLoading(true)
     try {
@@ -105,6 +110,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
   /** 表示中の1ジャンルだけ現在の天気・時間で再生成（レコード右3周で発火） */
   const refreshPlaylistByGenre = useCallback(async (genre: Genre) => {
     if (!selectedGenres.includes(genre)) return
+    if (isLoadingRef.current) return // ローディング中は無視
     setLoadingMode("single")
     setIsLoading(true)
     try {
@@ -134,6 +140,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     isInitialSync = false
   ) => {
     if (currentGenres.length === 0) return
+    if (isLoadingRef.current) return // ローディング中は無視
 
     setLoadingMode(isInitialSync ? "initial" : "added")
     setIsLoading(true)
