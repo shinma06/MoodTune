@@ -344,7 +344,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                     >
                         {/* Vinyl Disc */}
                         <div className="absolute inset-0 rounded-full overflow-hidden">
-                            <div className={`absolute inset-0 bg-gradient-to-br ${vinylColors.vinylColor} opacity-90`} />
+                            <div className={`absolute inset-0 bg-gradient-to-br ${vinylColors.vinylColor} opacity-85`} />
                             {[...Array(20)].map((_, i) => (
                                 <div
                                     key={i}
