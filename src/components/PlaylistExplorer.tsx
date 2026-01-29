@@ -9,7 +9,11 @@ import { useWeather } from "@/contexts/WeatherContext"
 import { getWeatherBackground, getTimeOfDay, type WeatherType, isDarkBackground } from "@/lib/weather-background"
 import { normalizeWeatherType } from "@/lib/weather-utils"
 import { formatGradientBackground } from "@/lib/weather-background-utils"
-import { useVinylRotation } from "@/hooks/useVinylRotation"
+import {
+  useVinylRotation,
+  REGENERATE_THRESHOLD_DEG,
+  REGENERATE_ZONE_ENTRY_DEG,
+} from "@/hooks/useVinylRotation"
 import { getGenreThemeColors, REALISTIC_VINYL_THEME } from "@/lib/constants"
 import { Music } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -270,6 +274,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
   const {
     rotation,
     isDragging,
+    cumulativeRotation,
     snapBackDurationMs,
     vinylRef,
     handleMouseDown,
@@ -295,6 +300,27 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     onRegenerateAll:
       selectedGenres.length > 0 ? refreshPlaylists : undefined,
   })
+
+  /** 3周フィードバック表示: ドラッグ中・戻り演出でない・1周超 */
+  const showRegenerateFeedback =
+    isDragging &&
+    snapBackDurationMs === null &&
+    Math.abs(cumulativeRotation) > REGENERATE_ZONE_ENTRY_DEG
+  /** 3周までの進捗 0〜1（エフェクト強度用） */
+  const regenerateProgress = showRegenerateFeedback
+    ? Math.min(1, Math.abs(cumulativeRotation) / REGENERATE_THRESHOLD_DEG)
+    : 0
+  /** 3周フィードバックの文言 */
+  const regenerateMessage = (() => {
+    if (!showRegenerateFeedback) return null
+    const abs = Math.abs(cumulativeRotation)
+    if (cumulativeRotation >= REGENERATE_THRESHOLD_DEG) return "離すと再生成"
+    if (cumulativeRotation <= -REGENERATE_THRESHOLD_DEG) return "離すと全件再生成"
+    const remainingTurns = Math.ceil((REGENERATE_THRESHOLD_DEG - abs) / 360)
+    return cumulativeRotation > 0
+      ? `あと${remainingTurns}周で再生成`
+      : `あと${remainingTurns}周で全件再生成`
+  })()
 
     return (
         <div
@@ -338,7 +364,16 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                     左右にスピンして他のプレイリストへ
                 </p>
 
-                <div className="relative w-72 h-72">
+                <div
+                    className="relative w-72 h-72 rounded-full transition-shadow duration-200"
+                    style={
+                        showRegenerateFeedback
+                          ? {
+                              boxShadow: `0 0 ${24 + regenerateProgress * 48}px ${vinylColors.accentColor}50, 0 0 ${12 + regenerateProgress * 24}px ${vinylColors.accentColor}30`,
+                            }
+                          : undefined
+                    }
+                >
                     {/* 固定された影（回転しない） */}
                     <div className="absolute inset-0 rounded-full shadow-2xl pointer-events-none" />
                     
@@ -393,6 +428,24 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                             </div>
                         </div>
                     </div>
+
+                    {/* 3周フィードバック文言（1周超で表示、3周に近づくほど強調） */}
+                    {regenerateMessage && (
+                        <div
+                            className="absolute left-1/2 -translate-x-1/2 -bottom-9 w-full text-center pointer-events-none transition-opacity duration-150"
+                            style={{
+                                opacity: 0.7 + regenerateProgress * 0.3,
+                            }}
+                        >
+                            <span
+                                className={`text-xs font-medium whitespace-nowrap ${
+                                    isDark ? "text-white/90" : "text-foreground/90"
+                                }`}
+                            >
+                                {regenerateMessage}
+                            </span>
+                        </div>
+                    )}
 
                     {/* Indicator dots（ジャンルごとのテーマカラー。現実のレコード色表示時はアクティブをそれに合わせる） */}
                     <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 flex gap-1.5">

@@ -1,9 +1,9 @@
 import { useState, useRef, useCallback, useEffect } from "react"
 
 /** 3周 = 1080°（右回転で個別再生成の閾値） */
-const REGENERATE_THRESHOLD_DEG = 3 * 360
+export const REGENERATE_THRESHOLD_DEG = 3 * 360
 /** 1周 = 360°（この角度を超えると「個別再生成の域」に入り、3周未満で離したら戻り演出） */
-const REGENERATE_ZONE_ENTRY_DEG = 360
+export const REGENERATE_ZONE_ENTRY_DEG = 360
 /** 戻り演出の基準時間（1周あたりの目安 ms）。回転量に比例して延長し角速度を一定にする */
 const SNAPBACK_DURATION_PER_TURN_MS = 240
 
@@ -35,6 +35,8 @@ export function useVinylRotation({
   const [startY, setStartY] = useState(0)
   const [startRotation, setStartRotation] = useState(0)
   const [totalRotation, setTotalRotation] = useState(0)
+  /** 1ジェスチャー内の累積回転（度）。右プラス・左マイナス。3周フィードバック表示用 */
+  const [cumulativeRotation, setCumulativeRotation] = useState(0)
   /** 戻り演出中の transition 時間（ms）。null のときは通常の transition を使用 */
   const [snapBackDurationMs, setSnapBackDurationMs] = useState<number | null>(null)
   const vinylRef = useRef<HTMLDivElement>(null)
@@ -87,6 +89,7 @@ export function useVinylRotation({
     setRotation(0)
     setStartRotation(0)
     setTotalRotation(0)
+    setCumulativeRotation(0)
     cumulativeRotationRef.current = 0
   }, [])
 
@@ -179,6 +182,7 @@ export function useVinylRotation({
       setStartY(clientY)
       setStartRotation(rotation)
       setTotalRotation(0)
+      setCumulativeRotation(0)
       cumulativeRotationRef.current = 0
       lastAngleRef.current = getAngleFromCenter(clientX, clientY)
     },
@@ -193,6 +197,7 @@ export function useVinylRotation({
       const delta = getAngleDifference(lastAngleRef.current, currentAngle)
       cumulativeRotationRef.current += delta
       lastAngleRef.current = currentAngle
+      setCumulativeRotation(cumulativeRotationRef.current)
       // 表示は累積回転で更新（何周しても正しく追従し、戻り演出で「回した角度分」逆回転できる）
       setRotation(startRotation + cumulativeRotationRef.current)
       setTotalRotation(angleDiff)
@@ -250,6 +255,7 @@ export function useVinylRotation({
   return {
     rotation,
     isDragging,
+    cumulativeRotation,
     snapBackDurationMs,
     vinylRef,
     handleMouseDown,
