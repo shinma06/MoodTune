@@ -236,12 +236,12 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         if (isLoading) setOpenPanel(null)
     }, [isLoading])
 
-    /** パネル閉時のみ再生成。ジャンルパネル開中は選択変更で発火しないよう openPanel === "genre" でガード。ref 使用で refreshPlaylists を依存から除外。 */
+    /** Mood Tuning パネル閉時のみ: トリガーがインクリメントされたときだけ再生成。openPanel を依存に含めない＝パネル開閉で再実行されない（開くだけで全件再生成・Favorite Music 閉じで上書きするバグを防止）。ジャンルパネル開中は選択変更で発火しないよう openPanel === "genre" でガード。 */
     useEffect(() => {
         if (openPanel === "genre") return
         if (playlistRefreshTrigger === 0 || !isGenresInitialized || selectedGenres.length === 0) return
         refreshPlaylistsRef.current()
-    }, [playlistRefreshTrigger, isGenresInitialized, selectedGenres.length, openPanel])
+    }, [playlistRefreshTrigger, isGenresInitialized, selectedGenres.length])
 
     /** APIが天気の変更を示したタイミングでプレイリストを自動更新（手動設定中は対象外） */
     useEffect(() => {
