@@ -89,7 +89,8 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     /** 現在の天気・時間帯・ジャンルでプレイリストを全件再生成 */
     const refreshPlaylists = useCallback(async () => {
         if (selectedGenres.length === 0) return
-        if (isLoadingRef.current) return // ローディング中は無視
+        if (isLoadingRef.current) return // ローディング中は無視（同一ティックの二重実行も防止）
+        isLoadingRef.current = true
         setLoadingMode("all")
         setIsLoading(true)
         try {
@@ -102,6 +103,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         } catch (error) {
             console.error("Failed to refresh playlists:", error)
         } finally {
+            isLoadingRef.current = false
             setIsLoading(false)
             setLoadingMode(null)
         }
@@ -110,7 +112,8 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     /** 表示中の1ジャンルだけ現在の天気・時間で再生成（レコード右3周で発火） */
     const refreshPlaylistByGenre = useCallback(async (genre: Genre) => {
         if (!selectedGenres.includes(genre)) return
-        if (isLoadingRef.current) return // ローディング中は無視
+        if (isLoadingRef.current) return // ローディング中は無視（同一ティックの二重実行も防止）
+        isLoadingRef.current = true
         setLoadingMode("single")
         setIsLoading(true)
         try {
@@ -127,6 +130,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         } catch (error) {
             console.error("Failed to refresh playlist by genre:", error)
         } finally {
+            isLoadingRef.current = false
             setIsLoading(false)
             setLoadingMode(null)
         }
@@ -140,8 +144,8 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         isInitialSync = false
     ) => {
         if (currentGenres.length === 0) return
-        if (isLoadingRef.current) return // ローディング中は無視
-
+        if (isLoadingRef.current) return // ローディング中は無視（同一ティックの二重実行も防止）
+        isLoadingRef.current = true
         setLoadingMode(isInitialSync ? "initial" : "added")
         setIsLoading(true)
         try {
@@ -180,6 +184,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         } catch (error) {
             console.error("Failed to generate dashboard:", error)
         } finally {
+            isLoadingRef.current = false
             setIsLoading(false)
             setLoadingMode(null)
         }
