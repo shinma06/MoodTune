@@ -10,12 +10,11 @@ import {
 } from "@/lib/constants"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Check, Music } from "lucide-react"
+import { Check, Music, XCircle } from "lucide-react"
 
-/** localStorage から読み込んだ値が Genre[] として妥当かバリデーション */
+/** localStorage から読み込んだ値が Genre[] として妥当かバリデーション（空配列は全解除状態として許可） */
 function isValidGenreArray(value: unknown): value is Genre[] {
   if (!Array.isArray(value)) return false
-  if (value.length === 0) return false
   if (value.length > MAX_SELECTED_GENRES) return false
   return value.every((v) => typeof v === "string" && AVAILABLE_GENRES.includes(v as Genre))
 }
@@ -49,21 +48,44 @@ export default function GenreSelector() {
     })
   }
 
+  const clearAll = () => {
+    setSelectedGenres([])
+  }
+
   const isSelected = (genre: Genre) => selectedGenres.includes(genre)
   const isMaxReached = selectedGenres.length >= MAX_SELECTED_GENRES
+  const isEmpty = selectedGenres.length === 0
 
   return (
     <Card className="w-full bg-background/80 backdrop-blur-sm border-border/50">
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <Music className="w-4 h-4" />
-          ジャンル選択
-          <span className="ml-auto text-xs font-normal text-muted-foreground">
-            {selectedGenres.length}/{MAX_SELECTED_GENRES}
-          </span>
-        </CardTitle>
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Music className="w-4 h-4" />
+            Favorite Music
+            <span className="text-xs font-normal text-muted-foreground">
+              {selectedGenres.length}/{MAX_SELECTED_GENRES}
+            </span>
+          </CardTitle>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearAll}
+            disabled={isEmpty}
+            className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
+            aria-label="すべて解除"
+          >
+            <XCircle className="w-3.5 h-3.5 mr-1" />
+            選択解除
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="pt-0">
+        {isEmpty && (
+          <p className="mb-3 text-xs text-amber-600 dark:text-amber-500">
+            好みのジャンルを1つ以上選択してください
+          </p>
+        )}
         <div className="flex flex-wrap gap-2">
           {AVAILABLE_GENRES.map((genre) => {
             const selected = isSelected(genre)
