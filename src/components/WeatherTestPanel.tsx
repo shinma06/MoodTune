@@ -247,7 +247,7 @@ export default function WeatherTestPanel({
                   className="w-full"
                   size="sm"
                 >
-                  現在の天気、時間に戻す
+                  実際の天気・時間に戻す
                 </Button>
                 <div className="pt-2 border-t text-xs text-muted-foreground space-y-1">
                   <div>
