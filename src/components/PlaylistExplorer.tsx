@@ -339,12 +339,13 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                     onClick={handleToggleSettings}
                     disabled={openPanel === "genre" && selectedGenres.length === 0}
                     className={`
-                    fixed bottom-4 right-4 z-50 size-14 bg-background/80 backdrop-blur-sm
+                    fixed bottom-4 right-4 z-50 size-[2.8rem] rounded-[1.1rem] bg-background/80 backdrop-blur-sm
+                    [&_svg]:size-5
                     ${openPanel === "genre" ? "bg-primary text-primary-foreground" : ""}
                 `}
                 aria-label={openPanel === "genre" && selectedGenres.length === 0 ? "1つ以上ジャンルを選択すると閉じられます" : openPanel === "genre" ? "Favorite Musicパネルを閉じる" : "Favorite Musicパネルを開く"}
                 >
-                    <Music className="h-6 w-6" />
+                    <Music className="size-5" />
                 </Button>
             )}
 
