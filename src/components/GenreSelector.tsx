@@ -12,9 +12,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Check, Music, XCircle } from "lucide-react"
 
-/** localStorage から読み込んだ値が Genre[] として妥当かバリデーション（空配列は全解除状態として許可） */
+/** localStorage から読み込んだ値が Genre[] として妥当かバリデーション。空配列は永続化として無効（読み込み時にデフォルトへ） */
 function isValidGenreArray(value: unknown): value is Genre[] {
   if (!Array.isArray(value)) return false
+  if (value.length === 0) return false
   if (value.length > MAX_SELECTED_GENRES) return false
   return value.every((v) => typeof v === "string" && AVAILABLE_GENRES.includes(v as Genre))
 }
@@ -31,10 +32,7 @@ export default function GenreSelector() {
       let newGenres: Genre[]
       
       if (prev.includes(genre)) {
-        // 選択解除（少なくとも1つは選択されている必要がある）
-        if (prev.length === 1) {
-          return prev // 1つしか選択されていない場合は解除できない
-        }
+        // 選択解除（0件も許可。0件時は警告表示・パネル閉じ不可）
         newGenres = prev.filter((g) => g !== genre)
       } else {
         // 選択（最大数チェック）
@@ -89,8 +87,7 @@ export default function GenreSelector() {
         <div className="flex flex-wrap gap-2">
           {AVAILABLE_GENRES.map((genre) => {
             const selected = isSelected(genre)
-            const isOnlyOneSelected = selectedGenres.length === 1 && selected
-            const disabled = (!selected && isMaxReached) || isOnlyOneSelected
+            const disabled = !selected && isMaxReached
             
             return (
               <Button
