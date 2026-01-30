@@ -72,8 +72,18 @@ export function useLocalStorage<T>(
       if (customEvent.detail.key === key) {
         const raw = window.localStorage.getItem(key)
         const parsed = parseAndValidate(raw)
-        // 削除された or バリデーション失敗時は initialValue にフォールバック
-        setStoredValue(parsed ?? initialValueRef.current)
+        if (parsed !== null) {
+          setStoredValue(parsed)
+        } else if (raw !== null) {
+          // 同一ページ内での書き込み: バリデーションに失敗する値（例: []）もそのまま反映（修復しない）
+          try {
+            setStoredValue(JSON.parse(raw) as T)
+          } catch {
+            setStoredValue(initialValueRef.current)
+          }
+        } else {
+          setStoredValue(initialValueRef.current)
+        }
       }
     }
 

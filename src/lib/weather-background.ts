@@ -54,9 +54,16 @@ function getTopColor(weather: WeatherType, timeOfDay: TimeOfDay): string {
         return "#1C1C1C" // デフォルトの暗いグレー
     }
 
-    // 夕方の暗い天気も暗いtop色
+    // 夕方の暗い天気も暗いtop色（グラデーション下部の視認性を確保）
+    // Clouds/Drizzle/Mist/Haze の dusk もグレー系グラデーションで暗くなるため追加
     if (timeOfDay === "dusk") {
-        const isDarkWeatherAtDusk = weather === "Rain" || weather === "Fog"
+        const isDarkWeatherAtDusk =
+            weather === "Rain" ||
+            weather === "Fog" ||
+            weather === "Clouds" ||
+            weather === "Drizzle" ||
+            weather === "Mist" ||
+            weather === "Haze"
         if (isDarkWeatherAtDusk) {
             return "#2F2F2F" // 暗いグレー
         }

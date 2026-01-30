@@ -5,7 +5,7 @@ import { useWeather } from "@/contexts/WeatherContext"
 import { getWeatherIcon, getWeatherThemeColor, normalizeWeatherType } from "@/lib/weather-utils"
 import { getTimeOfDay } from "@/lib/weather-background"
 import type { WeatherType, TimeOfDay } from "@/lib/weather-background"
-import { WEATHER_TYPES, TIME_OF_DAY_OPTIONS, WEATHER_TYPE_LABELS } from "@/lib/constants"
+import { WEATHER_TYPES, TIME_OF_DAY_OPTIONS, TIME_OF_DAY_LABELS, WEATHER_TYPE_LABELS } from "@/lib/constants"
 import {
   Card,
   CardContent,
@@ -33,6 +33,9 @@ export default function WeatherTestPanel({
   hideToggleButton = false,
 }: WeatherTestPanelProps = {}) {
   const {
+    displayHour,
+    effectiveTimeOfDay,
+    effectiveWeather,
     weatherType,
     setWeatherType,
     actualWeatherType,
@@ -51,16 +54,21 @@ export default function WeatherTestPanel({
   /** パネルを開いた時点の天気・時間（閉じたときに「開いた時点と変わっているか」の判定用） */
   const openedWeatherTypeRef = useRef<string | null>(null)
   const openedTimeOfDayRef = useRef<TimeOfDay | null>(null)
+  /** パネルを開いた時点の「現在の天気・時間」（リセットボタン表示判定用） */
+  const actualWeatherAtOpenRef = useRef<string | null>(null)
+  const actualTimeOfDayAtOpenRef = useRef<TimeOfDay | null>(null)
 
-  /** パネルを開く: この時点の天気・時間をスナップショットしてから開く */
+  /** パネルを開く: この時点の天気・時間と「現在の天気・時間」をスナップショットしてから開く */
   const handleOpenPanel = () => {
     openedWeatherTypeRef.current = weatherType
     openedTimeOfDayRef.current = testTimeOfDay
+    actualWeatherAtOpenRef.current = actualWeatherType
+    actualTimeOfDayAtOpenRef.current = getTimeOfDay(displayHour)
     if (onOpenProp) onOpenProp()
     else setInternalOpen(true)
   }
 
-  /** 雰囲気（天気）・時間帯は即時Contextに反映（UIのみ。プレイリストは閉じたときのみ更新） */
+  /** 天気・時間帯は即時Contextに反映（UIのみ。プレイリストは閉じたときのみ更新） */
   const handleWeatherTypeChange = (type: WeatherType) => {
     setWeatherType(type)
     setIsTestMode(true)
@@ -104,13 +112,22 @@ export default function WeatherTestPanel({
     setIsTestMode(false)
   }
 
-  /** 表示用: Contextの現在値（即時反映のためパネル内外で同一） */
-  const currentWeatherType = weatherType ? normalizeWeatherType(weatherType) : "Clear"
-  const timeOfDayForDisplay: TimeOfDay = testTimeOfDay ?? (getTimeOfDay(new Date().getHours()) as TimeOfDay)
-  const currentTimeOfDayLabel = TIME_OF_DAY_OPTIONS.find((opt) => opt.value === timeOfDayForDisplay)?.label ?? "-"
-  /** 実際の天気・時間帯（API・実時刻。選択肢の「現在」強調用） */
+  /** 表示用: Context の単一ソースを使用（背景と常に一致） */
+  const currentWeatherType = effectiveWeather
+  const currentTimeOfDayLabel = TIME_OF_DAY_OPTIONS.find((opt) => opt.value === effectiveTimeOfDay)?.label ?? "-"
+  /** 実際の天気・時間帯（API・displayHour。選択肢の「現在」強調用） */
   const actualWeatherTypeNormalized = actualWeatherType ? normalizeWeatherType(actualWeatherType) : null
-  const actualTimeOfDay = getTimeOfDay(new Date().getHours()) as TimeOfDay
+  const actualTimeOfDay = getTimeOfDay(displayHour)
+
+  /** パネルを開いた時点で「現在の天気・時間」と違う状態を設定していた場合のみリセットボタンを表示 */
+  const actualWeatherAtOpenNorm = normalizeWeatherType(actualWeatherAtOpenRef.current ?? "Clear")
+  const actualTimeAtOpen = actualTimeOfDayAtOpenRef.current ?? actualTimeOfDay
+  const effectiveWeatherAtOpen =
+    openedWeatherTypeRef.current != null ? normalizeWeatherType(openedWeatherTypeRef.current) : actualWeatherAtOpenNorm
+  const effectiveTimeOfDayAtOpen = openedTimeOfDayRef.current ?? actualTimeAtOpen
+  const showResetButton =
+    isOpen &&
+    (effectiveWeatherAtOpen !== actualWeatherAtOpenNorm || effectiveTimeOfDayAtOpen !== actualTimeAtOpen)
 
   return (
     <>
@@ -120,13 +137,14 @@ export default function WeatherTestPanel({
         variant="outline"
         size="icon"
         className={`
-          fixed bottom-4 left-4 z-50 bg-background/80 backdrop-blur-sm
+          fixed bottom-4 left-4 z-50 size-[2.8rem] rounded-[1.1rem] bg-background/80 backdrop-blur-sm
+          [&_svg]:size-5
           ${isOpen ? "bg-primary text-primary-foreground" : ""}
         `}
         onClick={handleTogglePanel}
-        aria-label={isOpen ? "気分に合わせるパネルを閉じる" : "気分に合わせるパネルを開く"}
+        aria-label={isOpen ? "Mood Tuningパネルを閉じる" : "Mood Tuningパネルを開く"}
       >
-        <Sparkles className="h-4 w-4" />
+        <Sparkles className="size-5" />
       </Button>
       )}
 
@@ -136,15 +154,15 @@ export default function WeatherTestPanel({
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Sparkles className="w-4 h-4" />
-                気分に合わせる
+                Mood Tuning
               </CardTitle>
               <CardDescription className="text-xs">
-                雰囲気や時間帯を選んで、今の気分に合わせたプレイリストを再生成できます
+                天気や時間帯を選んで、今の気分に合わせたプレイリストを作成
               </CardDescription>
             </CardHeader>
           <CardContent className="pt-0 space-y-4">
             <div className="space-y-2">
-              <Label className="text-sm">雰囲気（天気）</Label>
+              <Label className="text-sm">天気</Label>
               <div className="grid grid-cols-3 gap-2">
                 {WEATHER_TYPES.map((type) => {
                   const Icon = getWeatherIcon(type)
@@ -179,12 +197,12 @@ export default function WeatherTestPanel({
               <Label className="text-sm">時間帯</Label>
               <div className="grid grid-cols-4 gap-2">
                 {TIME_OF_DAY_OPTIONS.map((option) => {
-                  const isSelected = timeOfDayForDisplay === option.value
+                  const isSelected = effectiveTimeOfDay === option.value
                   const isActualTime = actualTimeOfDay === option.value
                   return (
                     <button
                       key={option.value}
-                      className={`relative flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all text-xs ${
+                      className={`relative flex flex-col items-center gap-0.5 p-2 rounded-lg border-2 transition-all text-xs ${
                         isSelected
                           ? "border-primary bg-primary/10 ring-2 ring-primary/30 ring-offset-2 ring-offset-background"
                           : "border-border hover:bg-muted/50"
@@ -196,8 +214,9 @@ export default function WeatherTestPanel({
                           現在
                         </span>
                       )}
-                      <span className={isSelected ? "text-primary font-medium" : ""}>
-                        {option.label}
+                      <span className={`block leading-tight ${isSelected ? "text-primary font-medium" : ""}`}>
+                        <span className="block">{TIME_OF_DAY_LABELS[option.value]}</span>
+                        <span className="block text-[10px] opacity-90">{option.timeRange}</span>
                       </span>
                     </button>
                   )
@@ -220,7 +239,7 @@ export default function WeatherTestPanel({
               実際の時間・天気の変化でプレイリストを自動で再生成します
             </p>
 
-            {isTestMode && (
+            {showResetButton && (
               <div className="pt-2 flex flex-col gap-2">
                 <Button
                   onClick={handleReset}

@@ -31,19 +31,19 @@ export function getImageUrl(url: string | undefined | null): string {
 /** ローディング種別 */
 export type LoadingMode = "initial" | "all" | "single" | "added" | null
 
-/** ローディング中のジャンル表示文言 */
+/** ローディング中のジャンル表示文言（initial=生成、single=再生成の区別を getLoadingTitleText と揃える） */
 export function getLoadingGenreText(mode: LoadingMode): string {
   switch (mode) {
     case "initial":
-      return "生成中..."
+      return "プレイリスト生成中..."
     case "all":
-      return "全件再生成中..."
+      return "プレイリスト一括生成中..."
     case "single":
-      return "再生成中..."
+      return "プレイリストを再生成中..."
     case "added":
-      return "追加ジャンルを生成中..."
+      return "追加ジャンルのプレイリストを生成中..."
     default:
-      return "読み込み中..."
+      return "プレイリストを読み込み中..."
   }
 }
 
