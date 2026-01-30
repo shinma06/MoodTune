@@ -33,6 +33,9 @@ export default function WeatherTestPanel({
   hideToggleButton = false,
 }: WeatherTestPanelProps = {}) {
   const {
+    displayHour,
+    effectiveTimeOfDay,
+    effectiveWeather,
     weatherType,
     setWeatherType,
     actualWeatherType,
@@ -104,13 +107,12 @@ export default function WeatherTestPanel({
     setIsTestMode(false)
   }
 
-  /** 表示用: Contextの現在値（即時反映のためパネル内外で同一） */
-  const currentWeatherType = weatherType ? normalizeWeatherType(weatherType) : "Clear"
-  const timeOfDayForDisplay: TimeOfDay = testTimeOfDay ?? (getTimeOfDay(new Date().getHours()) as TimeOfDay)
-  const currentTimeOfDayLabel = TIME_OF_DAY_OPTIONS.find((opt) => opt.value === timeOfDayForDisplay)?.label ?? "-"
-  /** 実際の天気・時間帯（API・実時刻。選択肢の「現在」強調用） */
+  /** 表示用: Context の単一ソースを使用（背景と常に一致） */
+  const currentWeatherType = effectiveWeather
+  const currentTimeOfDayLabel = TIME_OF_DAY_OPTIONS.find((opt) => opt.value === effectiveTimeOfDay)?.label ?? "-"
+  /** 実際の天気・時間帯（API・displayHour。選択肢の「現在」強調用） */
   const actualWeatherTypeNormalized = actualWeatherType ? normalizeWeatherType(actualWeatherType) : null
-  const actualTimeOfDay = getTimeOfDay(new Date().getHours()) as TimeOfDay
+  const actualTimeOfDay = getTimeOfDay(displayHour)
 
   return (
     <>
@@ -179,7 +181,7 @@ export default function WeatherTestPanel({
               <Label className="text-sm">時間帯</Label>
               <div className="grid grid-cols-4 gap-2">
                 {TIME_OF_DAY_OPTIONS.map((option) => {
-                  const isSelected = timeOfDayForDisplay === option.value
+                  const isSelected = effectiveTimeOfDay === option.value
                   const isActualTime = actualTimeOfDay === option.value
                   return (
                     <button

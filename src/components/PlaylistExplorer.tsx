@@ -6,8 +6,7 @@ import WeatherAnimation from "./WeatherAnimation"
 import WeatherTestPanel from "./WeatherTestPanel"
 import GenreSelector, { useSelectedGenres } from "./GenreSelector"
 import { useWeather } from "@/contexts/WeatherContext"
-import { getWeatherBackground, getTimeOfDay, type WeatherType, isDarkBackground } from "@/lib/weather-background"
-import { normalizeWeatherType } from "@/lib/weather-utils"
+import { getWeatherBackground, getTimeOfDay } from "@/lib/weather-background"
 import { formatGradientBackground } from "@/lib/weather-background-utils"
 import {
     useVinylRotation,
@@ -37,7 +36,7 @@ interface PlaylistExplorerProps {
 
 export default function PlaylistExplorer({ playlists: initialPlaylists }: PlaylistExplorerProps) {
     const [currentIndex, setCurrentIndex] = useState(0)
-    const { displayHour, weatherType, actualWeatherType, testTimeOfDay, isTestMode, playlistAutoUpdate, playlistRefreshTrigger } = useWeather()
+    const { displayHour, effectiveTimeOfDay, effectiveWeather, isDark, actualWeatherType, isTestMode, playlistAutoUpdate, playlistRefreshTrigger } = useWeather()
     /** 開いているパネル（null = 両方閉じている）。同時に1つだけ開く */
     const [openPanel, setOpenPanel] = useState<null | "mood" | "genre">(null)
     const [selectedGenres, isGenresInitialized] = useSelectedGenres()
@@ -93,10 +92,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         setLoadingMode("all")
         setIsLoading(true)
         try {
-            const weather = normalizeWeatherType(weatherType ?? "Clear") as WeatherType
-            const calculatedTimeOfDay = getTimeOfDay(displayHour)
-            const time = (isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay) as TimeOfDay
-            const generated = await generateDashboard(weather, time, selectedGenres as Genre[])
+            const generated = await generateDashboard(effectiveWeather, effectiveTimeOfDay, selectedGenres as Genre[])
             setPlaylists(generated)
             setCurrentIndex((prev) => Math.min(prev, Math.max(0, generated.length - 1)))
         } catch (error) {
@@ -105,7 +101,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
             setIsLoading(false)
             setLoadingMode(null)
         }
-    }, [weatherType, displayHour, isTestMode, testTimeOfDay, selectedGenres])
+    }, [effectiveWeather, effectiveTimeOfDay, selectedGenres])
 
     /** 表示中の1ジャンルだけ現在の天気・時間で再生成（レコード右3周で発火） */
     const refreshPlaylistByGenre = useCallback(async (genre: Genre) => {
@@ -114,10 +110,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         setLoadingMode("single")
         setIsLoading(true)
         try {
-            const weather = normalizeWeatherType(weatherType ?? "Clear") as WeatherType
-            const calculatedTimeOfDay = getTimeOfDay(displayHour)
-            const time = (isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay) as TimeOfDay
-            const generated = await generateDashboard(weather, time, [genre])
+            const generated = await generateDashboard(effectiveWeather, effectiveTimeOfDay, [genre])
             const newItem = generated[0]
             if (!newItem) return
             setPlaylists((prev) => {
@@ -130,7 +123,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
             setIsLoading(false)
             setLoadingMode(null)
         }
-    }, [weatherType, displayHour, isTestMode, testTimeOfDay, selectedGenres])
+    }, [effectiveWeather, effectiveTimeOfDay, selectedGenres])
 
     /** ジャンル差分に応じてプレイリストを更新（追加ジャンルのみAPI呼び出し。既存は currentPlaylists を再利用） */
     const updatePlaylistsWithDiff = useCallback(async (
@@ -145,10 +138,6 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         setLoadingMode(isInitialSync ? "initial" : "added")
         setIsLoading(true)
         try {
-            const weather = normalizeWeatherType(weatherType ?? "Clear") as WeatherType
-            const calculatedTimeOfDay = getTimeOfDay(displayHour)
-            const time = (isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay) as TimeOfDay
-
             const existingMap = new Map<string, DashboardItem>()
             if (currentPlaylists) {
                 currentPlaylists.forEach(p => existingMap.set(p.genre, p))
@@ -161,8 +150,8 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
             let newPlaylists: DashboardItem[] = []
             if (diff.added.length > 0) {
                 newPlaylists = await generateDashboard(
-                    weather,
-                    time,
+                    effectiveWeather,
+                    effectiveTimeOfDay,
                     diff.added as Genre[]
                 )
             }
@@ -180,11 +169,10 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         } catch (error) {
             console.error("Failed to generate dashboard:", error)
         } finally {
-            isLoadingRef.current = false
             setIsLoading(false)
             setLoadingMode(null)
         }
-    }, [weatherType, displayHour, isTestMode, testTimeOfDay])
+    }, [effectiveWeather, effectiveTimeOfDay])
 
     /** ジャンル選択パネルの開閉（閉じたときにジャンル変更があればプレイリスト再生成） */
     const handleToggleSettings = useCallback(() => {
@@ -245,11 +233,8 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         }
     }, [actualWeatherType, playlistAutoUpdate, isTestMode, isGenresInitialized, selectedGenres.length, refreshPlaylists])
 
-    const calculatedTimeOfDay = getTimeOfDay(displayHour)
-    const timeOfDay = isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay
-    const weather = normalizeWeatherType(weatherType ?? "Clear")
-    const background = getWeatherBackground(weather, timeOfDay)
-    const isDark = isDarkBackground(weather, timeOfDay)
+    // Context の単一ソースから背景とテキスト色を決定
+    const background = getWeatherBackground(effectiveWeather, effectiveTimeOfDay)
     const genreColorClass = isDark ? "text-white/80" : "text-muted-foreground"
     const titleColorClass = isDark ? "text-white" : "text-foreground"
 
@@ -312,7 +297,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
             }}
         >
             {/* Weather Animation */}
-            <WeatherAnimation weatherType={weatherType ? normalizeWeatherType(weatherType) : null} />
+            <WeatherAnimation />
 
             {/* Weather Test Panel（気分に合わせる）。ジャンルパネル開時または生成中はボタン非表示・生成中はパネルも閉じる */}
             <WeatherTestPanel

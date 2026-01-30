@@ -6,10 +6,17 @@ UI/UX 改善とコードベースのリファクタリング
 
 ## 最近の変更履歴
 
+- Context による単一ソース化（背景・テキスト色・天気・時間帯）:
+  - `WeatherContext` に `effectiveTimeOfDay`, `effectiveWeather`, `isDark` を追加
+  - `effectiveTimeOfDay`: `testTimeOfDay` を考慮した表示用時間帯
+  - `effectiveWeather`: `normalizeWeatherType` を適用した表示用天気
+  - `isDark`: 背景が暗いかどうか（`isDarkBackground` の結果）
+  - 全コンポーネント（`PlaylistExplorer`, `WeatherMonitor`, `WeatherTestPanel`, `WeatherAnimation`）が Context から取得し、常に一致
+- テキスト色の視認性を堅牢化:
+  - `getTopColor` で dusk 時に暗い扱いにする天気を拡張（Clouds/Drizzle/Mist/Haze を追加し、グラデーション下部の視認性を確保）
 - 表示用時刻の単一ソース（displayHour）:
   - `WeatherContext` に `displayHour` を追加し、背景・テキスト色・アニメーションの時間帯判定を一括管理
   - Provider の `useEffect` でマウント時と1分ごとにクライアント現地時刻を更新（SSR/ハイドレーション・コンポーネント間のずれを防止）
-  - `PlaylistExplorer` / `WeatherAnimation` / `WeatherMonitor` はすべて `displayHour` を参照し、`isDark` と背景が常に同期
 - レコード自動回転:
   - アイドル時は 12 秒/周で常に回転（`useVinylRotation`）
   - ユーザーがドラッグすると自動回転を停止、離すと再開

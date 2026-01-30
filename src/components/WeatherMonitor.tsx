@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { useWeather } from "@/contexts/WeatherContext"
 import type { WeatherState } from "@/types/weather"
 import { formatDateTime, getWeatherIcon, getWeatherThemeColor, getWeatherThemeColorForDark, normalizeWeatherType } from "@/lib/weather-utils"
-import { getTimeOfDay, type WeatherType, isDarkBackground } from "@/lib/weather-background"
 import { fetchWeatherData } from "@/lib/weather-api"
 import { useGeolocation } from "@/hooks/useGeolocation"
 
@@ -16,7 +15,7 @@ export default function WeatherMonitor() {
         status: "loading",
         message: "位置情報を取得中...",
     })
-    const { displayHour, setWeatherType, setActualWeatherType, weatherType, testTimeOfDay, isTestMode } = useWeather()
+    const { effectiveTimeOfDay, isDark, setWeatherType, setActualWeatherType, weatherType, isTestMode } = useWeather()
     
     const isTestModeRef = useRef(isTestMode)
     useEffect(() => {
@@ -69,10 +68,7 @@ export default function WeatherMonitor() {
     const dateTime = currentTime ? formatDateTime(currentTime) : { dateString: "--/--/--/---", timeString: "--:--" }
     const { dateString, timeString } = dateTime
 
-    /** 時間帯は Context の displayHour を使用（背景・テキスト色と同一ソースでずれを防止） */
-    const calculatedTimeOfDay = getTimeOfDay(displayHour)
-    const timeOfDay = isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay
-    
+    // アイコン・気温表示用（天気取得成功時のみ表示）
     const displayWeatherType = isTestMode && weatherType
         ? normalizeWeatherType(weatherType)
         : weatherState.status === "success"
@@ -80,17 +76,14 @@ export default function WeatherMonitor() {
         : null
     
     const WeatherIcon = displayWeatherType
-        ? getWeatherIcon(displayWeatherType, timeOfDay)
+        ? getWeatherIcon(displayWeatherType, effectiveTimeOfDay)
         : null
     
-    const isDark = displayWeatherType && timeOfDay
-        ? isDarkBackground(displayWeatherType, timeOfDay)
-        : false
-    
+    // isDark は Context の単一ソースから取得（背景と常に一致）
     const iconColor = displayWeatherType
         ? isDark
-            ? getWeatherThemeColorForDark(displayWeatherType, timeOfDay)
-            : getWeatherThemeColor(displayWeatherType, timeOfDay)
+            ? getWeatherThemeColorForDark(displayWeatherType, effectiveTimeOfDay)
+            : getWeatherThemeColor(displayWeatherType, effectiveTimeOfDay)
         : undefined
     
     const textColorClass = isDark ? "text-white" : ""

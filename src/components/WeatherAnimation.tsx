@@ -1,26 +1,18 @@
 "use client"
 
 import { useWeather } from "@/contexts/WeatherContext"
-import { getTimeOfDay } from "@/lib/weather-background"
-import type { WeatherType } from "@/lib/weather-background"
-import { normalizeWeatherType } from "@/lib/weather-utils"
 import { useEffect, useState } from "react"
 
-interface WeatherAnimationProps {
-  /** 開発用: propsで天気タイプを上書き可能 */
-  weatherType?: WeatherType | null
-}
-
-export default function WeatherAnimation({ weatherType: propWeatherType }: WeatherAnimationProps = {}) {
-  const { displayHour, weatherType: contextWeatherType } = useWeather()
+export default function WeatherAnimation() {
+  // Context の単一ソースを使用（背景と常に一致）
+  const { effectiveWeather, effectiveTimeOfDay, weatherType } = useWeather()
   const [showLightning, setShowLightning] = useState(false)
 
-  const weatherType = propWeatherType ?? contextWeatherType
-  const timeOfDay = getTimeOfDay(displayHour)
-  const weather = weatherType ? normalizeWeatherType(weatherType) : "Clear"
+  // effectiveTimeOfDay は将来的に時間帯に応じたアニメーションで使用可能
+  void effectiveTimeOfDay
 
   useEffect(() => {
-    if (weather === "Thunderstorm") {
+    if (effectiveWeather === "Thunderstorm") {
       const interval = setInterval(() => {
         setShowLightning(true)
         setTimeout(() => setShowLightning(false), 100)
@@ -29,22 +21,23 @@ export default function WeatherAnimation({ weatherType: propWeatherType }: Weath
     } else {
       setShowLightning(false)
     }
-  }, [weather])
+  }, [effectiveWeather])
 
-  if (!propWeatherType && !contextWeatherType) return null
+  // weatherType が null（天気未取得）の場合はアニメーションを表示しない
+  if (!weatherType) return null
 
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
       {/* 雷のフラッシュ */}
-      {weather === "Thunderstorm" && showLightning && (
+      {effectiveWeather === "Thunderstorm" && showLightning && (
         <div className="absolute inset-0 bg-white/20 animate-pulse" />
       )}
 
       {/* 雨のアニメーション */}
-      {(weather === "Rain" || weather === "Drizzle" || weather === "Thunderstorm") && (
+      {(effectiveWeather === "Rain" || effectiveWeather === "Drizzle" || effectiveWeather === "Thunderstorm") && (
         <div className="rain-container">
           {Array.from({
-            length: weather === "Thunderstorm" ? 100 : weather === "Rain" ? 50 : 30,
+            length: effectiveWeather === "Thunderstorm" ? 100 : effectiveWeather === "Rain" ? 50 : 30,
           }).map((_, i) => (
             <div
               key={i}
@@ -53,7 +46,7 @@ export default function WeatherAnimation({ weatherType: propWeatherType }: Weath
                 left: `${Math.random() * 100}%`,
                 animationDelay: `${Math.random() * 2}s`,
                 animationDuration: `${0.5 + Math.random() * 0.5}s`,
-                opacity: weather === "Drizzle" ? 0.4 : 0.6,
+                opacity: effectiveWeather === "Drizzle" ? 0.4 : 0.6,
               }}
             />
           ))}
@@ -61,7 +54,7 @@ export default function WeatherAnimation({ weatherType: propWeatherType }: Weath
       )}
 
       {/* 雪のアニメーション */}
-      {weather === "Snow" && (
+      {effectiveWeather === "Snow" && (
         <div className="snow-container">
           {Array.from({ length: 50 }).map((_, i) => (
             <div
@@ -80,7 +73,7 @@ export default function WeatherAnimation({ weatherType: propWeatherType }: Weath
       )}
 
       {/* 雲のアニメーション */}
-      {weather === "Clouds" && (
+      {effectiveWeather === "Clouds" && (
         <div className="clouds-container">
           {Array.from({ length: 3 }).map((_, i) => (
             <div
@@ -99,7 +92,7 @@ export default function WeatherAnimation({ weatherType: propWeatherType }: Weath
       )}
 
       {/* 霧/もやのアニメーション */}
-      {(weather === "Mist" || weather === "Fog" || weather === "Haze") && (
+      {(effectiveWeather === "Mist" || effectiveWeather === "Fog" || effectiveWeather === "Haze") && (
         <div className="fog-container">
           {Array.from({ length: 5 }).map((_, i) => (
             <div
@@ -115,7 +108,7 @@ export default function WeatherAnimation({ weatherType: propWeatherType }: Weath
       )}
 
       {/* 画面の水滴効果（雨の場合） */}
-      {(weather === "Rain" || weather === "Thunderstorm") && (
+      {(effectiveWeather === "Rain" || effectiveWeather === "Thunderstorm") && (
         <div className="water-drops">
           {Array.from({ length: 10 }).map((_, i) => (
             <div
