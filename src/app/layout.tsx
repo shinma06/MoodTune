@@ -13,7 +13,7 @@ const _cormorant = Cormorant_Garamond({
 })
 
 export const metadata: Metadata = {
-  title: "MoodTune - 季節×天気×時間でプレイリスト提案",
+  title: "MoodTune - 天気×時間でプレイリスト提案",
   description: "あなたの今にぴったりな音楽を",
   generator: "v0.app",
   icons: {
