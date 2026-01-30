@@ -77,12 +77,12 @@ export const WEATHER_TYPE_LABELS: Record<WeatherType, string> = {
   Haze: "もや",
 }
 
-// 時間帯オプション
-export const TIME_OF_DAY_OPTIONS: { value: TimeOfDay; label: string }[] = [
-  { value: "dawn", label: "朝 (6-9時)" },
-  { value: "day", label: "昼 (9-17時)" },
-  { value: "dusk", label: "夕方 (17-19時)" },
-  { value: "night", label: "夜 (19-6時)" },
+// 時間帯オプション（label: 1行表示用、timeRange: 2行表示の2行目用）
+export const TIME_OF_DAY_OPTIONS: { value: TimeOfDay; label: string; timeRange: string }[] = [
+  { value: "dawn", label: "朝 (6-9時)", timeRange: "6~9時" },
+  { value: "day", label: "昼 (9-17時)", timeRange: "9~17時" },
+  { value: "dusk", label: "夕方 (17-19時)", timeRange: "17~19時" },
+  { value: "night", label: "夜 (19-6時)", timeRange: "19~6時" },
 ]
 
 // 時間帯の日本語表記

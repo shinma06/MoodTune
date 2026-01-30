@@ -5,7 +5,7 @@ import { useWeather } from "@/contexts/WeatherContext"
 import { getWeatherIcon, getWeatherThemeColor, normalizeWeatherType } from "@/lib/weather-utils"
 import { getTimeOfDay } from "@/lib/weather-background"
 import type { WeatherType, TimeOfDay } from "@/lib/weather-background"
-import { WEATHER_TYPES, TIME_OF_DAY_OPTIONS, WEATHER_TYPE_LABELS } from "@/lib/constants"
+import { WEATHER_TYPES, TIME_OF_DAY_OPTIONS, TIME_OF_DAY_LABELS, WEATHER_TYPE_LABELS } from "@/lib/constants"
 import {
   Card,
   CardContent,
@@ -63,7 +63,7 @@ export default function WeatherTestPanel({
     else setInternalOpen(true)
   }
 
-  /** 雰囲気（天気）・時間帯は即時Contextに反映（UIのみ。プレイリストは閉じたときのみ更新） */
+  /** 天気・時間帯は即時Contextに反映（UIのみ。プレイリストは閉じたときのみ更新） */
   const handleWeatherTypeChange = (type: WeatherType) => {
     setWeatherType(type)
     setIsTestMode(true)
@@ -126,7 +126,7 @@ export default function WeatherTestPanel({
           ${isOpen ? "bg-primary text-primary-foreground" : ""}
         `}
         onClick={handleTogglePanel}
-        aria-label={isOpen ? "気分に合わせるパネルを閉じる" : "気分に合わせるパネルを開く"}
+        aria-label={isOpen ? "Mood Tuningパネルを閉じる" : "Mood Tuningパネルを開く"}
       >
         <Sparkles className="h-4 w-4" />
       </Button>
@@ -138,15 +138,15 @@ export default function WeatherTestPanel({
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Sparkles className="w-4 h-4" />
-                気分に合わせる
+                Mood Tuning
               </CardTitle>
               <CardDescription className="text-xs">
-                雰囲気や時間帯を選んで、今の気分に合わせたプレイリストを再生成できます
+                天気や時間帯を選んで、今の気分に合わせたプレイリストを作成
               </CardDescription>
             </CardHeader>
           <CardContent className="pt-0 space-y-4">
             <div className="space-y-2">
-              <Label className="text-sm">雰囲気（天気）</Label>
+              <Label className="text-sm">天気</Label>
               <div className="grid grid-cols-3 gap-2">
                 {WEATHER_TYPES.map((type) => {
                   const Icon = getWeatherIcon(type)
@@ -186,7 +186,7 @@ export default function WeatherTestPanel({
                   return (
                     <button
                       key={option.value}
-                      className={`relative flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all text-xs ${
+                      className={`relative flex flex-col items-center gap-0.5 p-2 rounded-lg border-2 transition-all text-xs ${
                         isSelected
                           ? "border-primary bg-primary/10 ring-2 ring-primary/30 ring-offset-2 ring-offset-background"
                           : "border-border hover:bg-muted/50"
@@ -198,8 +198,9 @@ export default function WeatherTestPanel({
                           現在
                         </span>
                       )}
-                      <span className={isSelected ? "text-primary font-medium" : ""}>
-                        {option.label}
+                      <span className={`block leading-tight ${isSelected ? "text-primary font-medium" : ""}`}>
+                        <span className="block">{TIME_OF_DAY_LABELS[option.value]}</span>
+                        <span className="block text-[10px] opacity-90">{option.timeRange}</span>
                       </span>
                     </button>
                   )
