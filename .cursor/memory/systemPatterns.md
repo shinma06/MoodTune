@@ -10,22 +10,25 @@ src/
 │   ├── actions/      # Server Actions
 │   │   └── generateDashboard.ts
 │   ├── api/          # API Routes
+│   │   ├── auth/[...nextauth]/  # NextAuth (Spotify)
+│   │   └── weather/  # 天気APIプロキシ
 │   ├── page.tsx      # メインページ
 │   └── layout.tsx    # ルートレイアウト
+├── auth.ts           # NextAuth 設定
 ├── components/       # Reactコンポーネント
 │   ├── ui/           # shadcn/uiコンポーネント
-│   ├── GenreSelector.tsx
+│   ├── GenreSelector.tsx   # Favorite Music パネル
 │   ├── PlaylistExplorer.tsx
 │   ├── WeatherMonitor.tsx
 │   ├── WeatherAnimation.tsx
-│   └── WeatherTestPanel.tsx
+│   └── WeatherTestPanel.tsx  # Mood Tuning パネル
 ├── contexts/         # React Context
 │   └── WeatherContext.tsx
 ├── hooks/            # カスタムフック
 │   ├── useGeolocation.ts
-│   ├── useLocalStorage.ts
-│   └── useVinylRotation.ts
-├── lib/              # ユーティリティ関数
+│   ├── useLocalStorage.ts   # ジャンル選択の永続化（バリデーション・修復あり）
+│   └── useVinylRotation.ts # レコード回転・3周で再生成
+├── lib/              # ユーティリティ・APIクライアント
 │   ├── constants.ts        # 定数・ジャンル定義
 │   ├── playlist-utils.ts   # プレイリスト関連ユーティリティ
 │   ├── spotify-server.ts   # Spotify API クライアント
@@ -35,15 +38,18 @@ src/
 │   └── weather-utils.ts
 └── types/            # TypeScript型定義
     ├── dashboard.ts  # DashboardItem
+    ├── next-auth.d.ts
     └── weather.ts    # WeatherApiResponse, WeatherData
 ```
 
 ### データフロー
 
-1. **WeatherMonitor**: 位置情報取得 → API呼び出し → WeatherContext更新
-2. **PlaylistExplorer**: WeatherContextから天気取得 → 背景色計算 → 表示
-3. **WeatherAnimation**: WeatherContextから天気取得 → アニメーション表示
-4. **WeatherTestPanel**: 手動設定 → WeatherContext更新 → 全コンポーネントに反映
+1. **WeatherMonitor**: 位置情報取得 → `/api/weather` 呼び出し → WeatherContext 更新（actualWeatherType 等）
+2. **PlaylistExplorer**: WeatherContext から effectiveWeather / effectiveTimeOfDay / isDark 取得 → 背景色計算 → 表示。useSelectedGenres（useLocalStorage）でジャンル取得
+3. **GenreSelector**: ジャンル選択 → useLocalStorage で localStorage 更新 → 同一ページ内にカスタムイベントで通知。パネル閉じ時は PlaylistExplorer がジャンル差分を計算し追加分のみ generateDashboard 呼び出し
+4. **WeatherAnimation**: WeatherContext から天気取得 → アニメーション表示
+5. **WeatherTestPanel**（Mood Tuning）: 手動設定 → WeatherContext 更新 → 全コンポーネントに反映。パネル閉じ時、開いた時点から変更があれば requestPlaylistRefresh で全件再生成
+6. **初回読み込み後**: PlaylistExplorer が isGenresInitialized 後に localStorage のジャンルと表示プレイリストを比較し、差異があれば updatePlaylistsWithDiff で同期
 
 ## 技術スタック
 
@@ -63,7 +69,8 @@ src/
 
 ### 状態管理
 
-- **React Context**: WeatherContext（天気データ、テストモード）
+- **React Context**: WeatherContext（天気データ、表示用 effectiveTimeOfDay / effectiveWeather / isDark、テストモード、playlistRefreshTrigger）
+- **useLocalStorage**: ジャンル選択の永続化（key: selected-genres）。バリデーション（空配列は無効）と初回/他タブ時の修復。同一ページ内の変更では無効値もそのまま state に反映
 - **Local State**: useState（各コンポーネントのローカル状態）
 
 ## デザインパターン

@@ -1,6 +1,6 @@
 This is a [Next.js](https://next.js.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-**MoodTune** — 天気と時間帯に合わせた音楽プレイリストを表示します。ジャンル選択・気分パネル（雰囲気・時間帯）でプレイリストを更新できます。Spotify 連携はオプション（未設定時はモックで動作）。
+**MoodTune** — 天気と時間帯に合わせた音楽プレイリストを表示します。**Favorite Music**（ジャンル選択）と **Mood Tuning**（天気・時間帯の手動設定）でプレイリストを更新できます。Spotify 連携はオプション（未設定時はモックで動作）。
 
 ## Getting Started
 

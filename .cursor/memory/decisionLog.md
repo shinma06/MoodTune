@@ -86,3 +86,53 @@
 
 **影響**: `getTimeOfDay`関数の実装
 
+---
+
+### ADR-009: WeatherContext の単一ソース化（表示用天気・時間帯・暗さ）
+**決定**: 背景・テキスト色・アニメーションの判定に使う値を Context で単一ソース化する
+**理由**:
+- 天気取得失敗/ローディング時や Mood Tuning 手動設定時の表示不整合を防ぐ
+- `effectiveTimeOfDay`, `effectiveWeather`, `isDark`, `displayHour` を一箇所で管理し、全コンポーネントが同じ値を参照する
+
+**影響**: `WeatherContext` に上記プロパティを追加。PlaylistExplorer, WeatherMonitor, WeatherTestPanel, WeatherAnimation が Context から取得
+
+---
+
+### ADR-010: Favorite Music パネルとジャンル選択の永続化
+**決定**: ジャンル選択を localStorage で永続化。空配列は「永続化として無効」とし、読み込み時はデフォルト（J-POP）に修復する
+**理由**:
+- パネルで全解除したままリロードしても意図せず 0 件で起動しない
+- セッション中は 0 件の選択も許可し、警告表示・パネル閉じ不可で UX を維持
+
+**影響**: `isValidGenreArray` で空配列を invalid に。初回読み込み・他タブ変更時のみ修復
+
+---
+
+### ADR-011: useLocalStorage の同一ページ内変更では無効値を修復しない
+**決定**: 同一ページ内のストレージ変更イベントでは、バリデーションに失敗する値（例: 空配列）もそのまま state に反映し、ストレージを上書き修復しない
+**理由**:
+- ユーザーが「選択解除」や最後の 1 つを外して 0 件にした直後に、修復で即座にデフォルトに戻ると UX が悪い
+- 初回読み込み・他タブ変更時のみ修復すれば、意図しない 0 件永続化は防げる
+
+**影響**: `useLocalStorage` の `handleStorageChange` で `parsed === null && raw !== null` のとき `JSON.parse(raw)` を state に設定
+
+---
+
+### ADR-012: ジャンル変更時のプレイリスト更新は差分のみ API 呼び出し
+**決定**: Favorite Music パネルを閉じたとき、追加されたジャンル分だけ `generateDashboard` を呼び、既存ジャンルは現在のプレイリストを再利用する
+**理由**:
+- 全件再生成だと不要な API 呼び出しとローディングが増える
+- 追加ジャンルのみ生成して既存とマージすれば効率的
+
+**影響**: `updatePlaylistsWithDiff`, `getGenresDiff` で差分計算。Mood Tuning 閉じ時は全件再生成（天気・時間が変わるため）
+
+---
+
+### ADR-013: レコード右 3 周・左 3 周で個別/全件再生成
+**決定**: レコードを右に 3 周以上回したら表示中ジャンル単体を再生成、左に 3 周以上で全件再生成。通常のスワイプ（45°）では next/prev のみ
+**理由**:
+- ジェスチャーで「このジャンルだけやり直したい」「全部やり直したい」を直感的に実行できる
+- 誤操作を防ぐため 3 周という閾値を設ける
+
+**影響**: `useVinylRotation` の `onRegenerateCurrent`, `onRegenerateAll`。PlaylistExplorer で `refreshPlaylistByGenre`, `refreshPlaylists` に接続
+
