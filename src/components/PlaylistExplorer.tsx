@@ -103,6 +103,10 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         }
     }, [effectiveWeather, effectiveTimeOfDay, selectedGenres])
 
+    /** パネル閉時トリガー用 effect が refreshPlaylists の参照変更で再実行されないよう ref に保持 */
+    const refreshPlaylistsRef = useRef(refreshPlaylists)
+    refreshPlaylistsRef.current = refreshPlaylists
+
     /** 表示中の1ジャンルだけ現在の天気・時間で再生成（レコード右3周で発火） */
     const refreshPlaylistByGenre = useCallback(async (genre: Genre) => {
         if (!selectedGenres.includes(genre)) return
@@ -216,11 +220,11 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         if (isLoading) setOpenPanel(null)
     }, [isLoading])
 
-    /** パネルから「プレイリストを再生成」が押されたときに手動で再生成 */
+    /** パネル閉時のみ: トリガーがインクリメントされたときだけ再生成（refreshPlaylists を依存に含めない＝パネル内で天気/時間を変えても再実行されない） */
     useEffect(() => {
         if (playlistRefreshTrigger === 0 || !isGenresInitialized || selectedGenres.length === 0) return
-        refreshPlaylists()
-    }, [playlistRefreshTrigger, isGenresInitialized, selectedGenres.length, refreshPlaylists])
+        refreshPlaylistsRef.current()
+    }, [playlistRefreshTrigger, isGenresInitialized, selectedGenres.length])
 
     /** APIが天気の変更を示したタイミングでプレイリストを自動更新（手動設定中は対象外） */
     useEffect(() => {
