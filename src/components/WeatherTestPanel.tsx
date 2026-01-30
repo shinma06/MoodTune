@@ -137,13 +137,13 @@ export default function WeatherTestPanel({
         variant="outline"
         size="icon"
         className={`
-          fixed bottom-4 left-4 z-50 bg-background/80 backdrop-blur-sm
+          fixed bottom-4 left-4 z-50 size-14 bg-background/80 backdrop-blur-sm
           ${isOpen ? "bg-primary text-primary-foreground" : ""}
         `}
         onClick={handleTogglePanel}
         aria-label={isOpen ? "Mood Tuningパネルを閉じる" : "Mood Tuningパネルを開く"}
       >
-        <Sparkles className="h-4 w-4" />
+        <Sparkles className="h-6 w-6" />
       </Button>
       )}
 
