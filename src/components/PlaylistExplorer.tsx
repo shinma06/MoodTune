@@ -10,19 +10,19 @@ import { getWeatherBackground, getTimeOfDay, type WeatherType, isDarkBackground 
 import { normalizeWeatherType } from "@/lib/weather-utils"
 import { formatGradientBackground } from "@/lib/weather-background-utils"
 import {
-  useVinylRotation,
-  REGENERATE_THRESHOLD_DEG,
-  REGENERATE_ZONE_ENTRY_DEG,
+    useVinylRotation,
+    REGENERATE_THRESHOLD_DEG,
+    REGENERATE_ZONE_ENTRY_DEG,
 } from "@/hooks/useVinylRotation"
 import { getGenreThemeColors, REALISTIC_VINYL_THEME } from "@/lib/constants"
 import {
-  hasGenresChanged,
-  getGenresDiff,
-  getImageUrl,
-  getLoadingGenreText,
-  getLoadingTitleText,
-  EMPTY_PLAYLIST,
-  type LoadingMode,
+    hasGenresChanged,
+    getGenresDiff,
+    getImageUrl,
+    getLoadingGenreText,
+    getLoadingTitleText,
+    EMPTY_PLAYLIST,
+    type LoadingMode,
 } from "@/lib/playlist-utils"
 import { Music } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -32,276 +32,276 @@ import type { TimeOfDay } from "@/lib/weather-background"
 import type { Genre } from "@/lib/constants"
 
 interface PlaylistExplorerProps {
-  playlists?: DashboardItem[]
+    playlists?: DashboardItem[]
 }
 
 export default function PlaylistExplorer({ playlists: initialPlaylists }: PlaylistExplorerProps) {
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const { displayHour, weatherType, actualWeatherType, testTimeOfDay, isTestMode, playlistAutoUpdate, playlistRefreshTrigger } = useWeather()
-  /** 開いているパネル（null = 両方閉じている）。同時に1つだけ開く */
-  const [openPanel, setOpenPanel] = useState<null | "mood" | "genre">(null)
-  const [selectedGenres, isGenresInitialized] = useSelectedGenres()
-  const [playlists, setPlaylists] = useState<DashboardItem[] | null>(initialPlaylists ?? null)
-  const [isLoading, setIsLoading] = useState(false)
-  /** 生成中の種別（初回 / 全件再生成 / 個別 / 追加ジャンルのみ）。表示文言の切り替え用 */
-  const [loadingMode, setLoadingMode] = useState<LoadingMode>(null)
-  
-  /** パネルを開いた時点のジャンル（閉じたときの差分計算用） */
-  const genresOnOpenRef = useRef<string[]>([])
-  /** リロード後の初回同期を1回だけ行うためのフラグ */
-  const hasPerformedInitialSyncRef = useRef(false)
-  /** 時間帯・天気の自動更新用の前回値 */
-  const prevTimeOfDayRef = useRef<TimeOfDay | null>(null)
-  const prevActualWeatherRef = useRef<string | null>(null)
-  
-  /** 生成失敗時は空のままローディング表示を継続（静的フォールバックは使わない） */
-  const displayPlaylists = useMemo(() => {
-    return playlists && playlists.length > 0 ? playlists : []
-  }, [playlists])
-  
-  /** ローディング表示を出す条件（生成中 or 未取得・失敗でプレイリストが空） */
-  const isLoadingOrEmpty = isLoading || displayPlaylists.length === 0
-  
-  /** 常に配列範囲内のインデックス */
-  const safeCurrentIndex = useMemo(() => {
-    if (displayPlaylists.length === 0) return 0
-    return Math.min(currentIndex, displayPlaylists.length - 1)
-  }, [currentIndex, displayPlaylists.length])
-  
-  const currentPlaylist = displayPlaylists[safeCurrentIndex] ?? EMPTY_PLAYLIST
-  /** 現実のレコード色を使うのは (1) 初期同期時の stale J-POP のみ (2) 空状態 のときのみ。それ以外は表示中のジャンルのテーマカラー */
-  const isInitialSyncStaleJPop =
-    isLoading &&
-    playlists?.length === 1 &&
-    currentPlaylist.genre === "J-POP" &&
-    selectedGenres.length > 0 &&
-    selectedGenres[0] !== "J-POP"
-  const isEmpty = displayPlaylists.length === 0 || currentPlaylist.genre === "---"
-  const useRealisticVinyl = isInitialSyncStaleJPop || isEmpty
-  const vinylColors = useRealisticVinyl
-    ? REALISTIC_VINYL_THEME
-    : getGenreThemeColors(currentPlaylist.genre)
-  
-  /** ローディング中かどうかを ref で保持（useCallback 内で最新値を参照するため） */
-  const isLoadingRef = useRef(false)
-  isLoadingRef.current = isLoading
+    const [currentIndex, setCurrentIndex] = useState(0)
+    const { displayHour, weatherType, actualWeatherType, testTimeOfDay, isTestMode, playlistAutoUpdate, playlistRefreshTrigger } = useWeather()
+    /** 開いているパネル（null = 両方閉じている）。同時に1つだけ開く */
+    const [openPanel, setOpenPanel] = useState<null | "mood" | "genre">(null)
+    const [selectedGenres, isGenresInitialized] = useSelectedGenres()
+    const [playlists, setPlaylists] = useState<DashboardItem[] | null>(initialPlaylists ?? null)
+    const [isLoading, setIsLoading] = useState(false)
+    /** 生成中の種別（初回 / 全件再生成 / 個別 / 追加ジャンルのみ）。表示文言の切り替え用 */
+    const [loadingMode, setLoadingMode] = useState<LoadingMode>(null)
 
-  /** 現在の天気・時間帯・ジャンルでプレイリストを全件再生成 */
-  const refreshPlaylists = useCallback(async () => {
-    if (selectedGenres.length === 0) return
-    if (isLoadingRef.current) return // ローディング中は無視
-    setLoadingMode("all")
-    setIsLoading(true)
-    try {
-      const weather = normalizeWeatherType(weatherType ?? "Clear") as WeatherType
-      const calculatedTimeOfDay = getTimeOfDay(displayHour)
-      const time = (isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay) as TimeOfDay
-      const generated = await generateDashboard(weather, time, selectedGenres as Genre[])
-      setPlaylists(generated)
-      setCurrentIndex((prev) => Math.min(prev, Math.max(0, generated.length - 1)))
-    } catch (error) {
-      console.error("Failed to refresh playlists:", error)
-    } finally {
-      setIsLoading(false)
-      setLoadingMode(null)
-    }
-  }, [weatherType, displayHour, isTestMode, testTimeOfDay, selectedGenres])
+    /** パネルを開いた時点のジャンル（閉じたときの差分計算用） */
+    const genresOnOpenRef = useRef<string[]>([])
+    /** リロード後の初回同期を1回だけ行うためのフラグ */
+    const hasPerformedInitialSyncRef = useRef(false)
+    /** 時間帯・天気の自動更新用の前回値 */
+    const prevTimeOfDayRef = useRef<TimeOfDay | null>(null)
+    const prevActualWeatherRef = useRef<string | null>(null)
 
-  /** 表示中の1ジャンルだけ現在の天気・時間で再生成（レコード右3周で発火） */
-  const refreshPlaylistByGenre = useCallback(async (genre: Genre) => {
-    if (!selectedGenres.includes(genre)) return
-    if (isLoadingRef.current) return // ローディング中は無視
-    setLoadingMode("single")
-    setIsLoading(true)
-    try {
-      const weather = normalizeWeatherType(weatherType ?? "Clear") as WeatherType
-      const calculatedTimeOfDay = getTimeOfDay(displayHour)
-      const time = (isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay) as TimeOfDay
-      const generated = await generateDashboard(weather, time, [genre])
-      const newItem = generated[0]
-      if (!newItem) return
-      setPlaylists((prev) => {
-        if (!prev) return [newItem]
-        return prev.map((p) => (p.genre === genre ? newItem : p))
-      })
-    } catch (error) {
-      console.error("Failed to refresh playlist by genre:", error)
-    } finally {
-      setIsLoading(false)
-      setLoadingMode(null)
-    }
-  }, [weatherType, displayHour, isTestMode, testTimeOfDay, selectedGenres])
+    /** 生成失敗時は空のままローディング表示を継続（静的フォールバックは使わない） */
+    const displayPlaylists = useMemo(() => {
+        return playlists && playlists.length > 0 ? playlists : []
+    }, [playlists])
 
-  /** ジャンル差分に応じてプレイリストを更新（追加ジャンルのみAPI呼び出し。既存は currentPlaylists を再利用） */
-  const updatePlaylistsWithDiff = useCallback(async (
-    currentGenres: string[],
-    diff: { added: string[], removed: string[], unchanged: string[] },
-    currentPlaylists: DashboardItem[] | null,
-    isInitialSync = false
-  ) => {
-    if (currentGenres.length === 0) return
-    if (isLoadingRef.current) return // ローディング中は無視
+    /** ローディング表示を出す条件（生成中 or 未取得・失敗でプレイリストが空） */
+    const isLoadingOrEmpty = isLoading || displayPlaylists.length === 0
 
-    setLoadingMode(isInitialSync ? "initial" : "added")
-    setIsLoading(true)
-    try {
-      const weather = normalizeWeatherType(weatherType ?? "Clear") as WeatherType
-      const calculatedTimeOfDay = getTimeOfDay(displayHour)
-      const time = (isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay) as TimeOfDay
-      
-      const existingMap = new Map<string, DashboardItem>()
-      if (currentPlaylists) {
-        currentPlaylists.forEach(p => existingMap.set(p.genre, p))
-      }
-      
-      const unchangedPlaylists = diff.unchanged
-        .map(genre => existingMap.get(genre))
-        .filter((p): p is DashboardItem => p !== undefined)
-      
-      let newPlaylists: DashboardItem[] = []
-      if (diff.added.length > 0) {
-        newPlaylists = await generateDashboard(
-          weather,
-          time,
-          diff.added as Genre[]
-        )
-      }
-      
-      const allMap = new Map<string, DashboardItem>()
-      unchangedPlaylists.forEach(p => allMap.set(p.genre, p))
-      newPlaylists.forEach(p => allMap.set(p.genre, p))
-      
-      const finalPlaylists = currentGenres
-        .map(genre => allMap.get(genre))
-        .filter((p): p is DashboardItem => p !== undefined)
-      
-      setPlaylists(finalPlaylists)
-      setCurrentIndex(0)
-    } catch (error) {
-      console.error("Failed to generate dashboard:", error)
-    } finally {
-      setIsLoading(false)
-      setLoadingMode(null)
-    }
-  }, [weatherType, displayHour, isTestMode, testTimeOfDay])
-  
-  /** ジャンル選択パネルの開閉（閉じたときにジャンル変更があればプレイリスト再生成） */
-  const handleToggleSettings = useCallback(() => {
-    if (openPanel !== "genre") {
-      genresOnOpenRef.current = [...selectedGenres]
-      setOpenPanel("genre")
-    } else {
-      setOpenPanel(null)
-      if (hasGenresChanged(genresOnOpenRef.current, selectedGenres)) {
-        const diff = getGenresDiff(genresOnOpenRef.current, selectedGenres)
-        updatePlaylistsWithDiff(selectedGenres, diff, playlists)
-      }
-    }
-  }, [openPanel, selectedGenres, playlists, updatePlaylistsWithDiff])
+    /** 常に配列範囲内のインデックス */
+    const safeCurrentIndex = useMemo(() => {
+        if (displayPlaylists.length === 0) return 0
+        return Math.min(currentIndex, displayPlaylists.length - 1)
+    }, [currentIndex, displayPlaylists.length])
 
-  /** localStorage のジャンル読み込み完了後、保存値と表示プレイリストが食い違っていれば同期 */
-  useEffect(() => {
-    if (!isGenresInitialized || hasPerformedInitialSyncRef.current) return
-    hasPerformedInitialSyncRef.current = true
-    
-    const currentPlaylistGenres = playlists?.map(p => p.genre) ?? []
-    if (hasGenresChanged(currentPlaylistGenres, selectedGenres)) {
-      const diff = getGenresDiff(currentPlaylistGenres, selectedGenres)
-      updatePlaylistsWithDiff(selectedGenres, diff, playlists, true)
-    }
-  }, [isGenresInitialized, selectedGenres, playlists, updatePlaylistsWithDiff])
+    const currentPlaylist = displayPlaylists[safeCurrentIndex] ?? EMPTY_PLAYLIST
+    /** 現実のレコード色を使うのは (1) 初期同期時の stale J-POP のみ (2) 空状態 のときのみ。それ以外は表示中のジャンルのテーマカラー */
+    const isInitialSyncStaleJPop =
+        isLoading &&
+        playlists?.length === 1 &&
+        currentPlaylist.genre === "J-POP" &&
+        selectedGenres.length > 0 &&
+        selectedGenres[0] !== "J-POP"
+    const isEmpty = displayPlaylists.length === 0 || currentPlaylist.genre === "---"
+    const useRealisticVinyl = isInitialSyncStaleJPop || isEmpty
+    const vinylColors = useRealisticVinyl
+        ? REALISTIC_VINYL_THEME
+        : getGenreThemeColors(currentPlaylist.genre)
 
-  /** 実時刻の時間帯（朝・昼・夕方・夜）が変わったタイミングでプレイリストを自動更新（手動設定中は行わない） */
-  const calculatedTimeOfDayForEffect = getTimeOfDay(displayHour)
-  useEffect(() => {
-    if (!playlistAutoUpdate || isTestMode || !isGenresInitialized || selectedGenres.length === 0) return
-    const prev = prevTimeOfDayRef.current
-    prevTimeOfDayRef.current = calculatedTimeOfDayForEffect
-    if (prev !== null && prev !== calculatedTimeOfDayForEffect) {
-      refreshPlaylists()
-    }
-  }, [calculatedTimeOfDayForEffect, playlistAutoUpdate, isTestMode, isGenresInitialized, selectedGenres.length, refreshPlaylists])
+    /** ローディング中かどうかを ref で保持（useCallback 内で最新値を参照するため） */
+    const isLoadingRef = useRef(false)
+    isLoadingRef.current = isLoading
 
-  /** プレイリスト生成中はパネルを閉じ、値変更を防ぐ（同期ずれ防止） */
-  useEffect(() => {
-    if (isLoading) setOpenPanel(null)
-  }, [isLoading])
+    /** 現在の天気・時間帯・ジャンルでプレイリストを全件再生成 */
+    const refreshPlaylists = useCallback(async () => {
+        if (selectedGenres.length === 0) return
+        if (isLoadingRef.current) return // ローディング中は無視
+        setLoadingMode("all")
+        setIsLoading(true)
+        try {
+            const weather = normalizeWeatherType(weatherType ?? "Clear") as WeatherType
+            const calculatedTimeOfDay = getTimeOfDay(displayHour)
+            const time = (isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay) as TimeOfDay
+            const generated = await generateDashboard(weather, time, selectedGenres as Genre[])
+            setPlaylists(generated)
+            setCurrentIndex((prev) => Math.min(prev, Math.max(0, generated.length - 1)))
+        } catch (error) {
+            console.error("Failed to refresh playlists:", error)
+        } finally {
+            setIsLoading(false)
+            setLoadingMode(null)
+        }
+    }, [weatherType, displayHour, isTestMode, testTimeOfDay, selectedGenres])
 
-  /** パネルから「プレイリストを再生成」が押されたときに手動で再生成 */
-  useEffect(() => {
-    if (playlistRefreshTrigger === 0 || !isGenresInitialized || selectedGenres.length === 0) return
-    refreshPlaylists()
-  }, [playlistRefreshTrigger, isGenresInitialized, selectedGenres.length, refreshPlaylists])
+    /** 表示中の1ジャンルだけ現在の天気・時間で再生成（レコード右3周で発火） */
+    const refreshPlaylistByGenre = useCallback(async (genre: Genre) => {
+        if (!selectedGenres.includes(genre)) return
+        if (isLoadingRef.current) return // ローディング中は無視
+        setLoadingMode("single")
+        setIsLoading(true)
+        try {
+            const weather = normalizeWeatherType(weatherType ?? "Clear") as WeatherType
+            const calculatedTimeOfDay = getTimeOfDay(displayHour)
+            const time = (isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay) as TimeOfDay
+            const generated = await generateDashboard(weather, time, [genre])
+            const newItem = generated[0]
+            if (!newItem) return
+            setPlaylists((prev) => {
+                if (!prev) return [newItem]
+                return prev.map((p) => (p.genre === genre ? newItem : p))
+            })
+        } catch (error) {
+            console.error("Failed to refresh playlist by genre:", error)
+        } finally {
+            setIsLoading(false)
+            setLoadingMode(null)
+        }
+    }, [weatherType, displayHour, isTestMode, testTimeOfDay, selectedGenres])
 
-  /** APIが天気の変更を示したタイミングでプレイリストを自動更新（手動設定中は対象外） */
-  useEffect(() => {
-    if (!playlistAutoUpdate || isTestMode || !isGenresInitialized || selectedGenres.length === 0) return
-    const current = actualWeatherType ?? null
-    const prev = prevActualWeatherRef.current
-    prevActualWeatherRef.current = current
-    if (prev !== null && prev !== current) {
-      refreshPlaylists()
-    }
-  }, [actualWeatherType, playlistAutoUpdate, isTestMode, isGenresInitialized, selectedGenres.length, refreshPlaylists])
+    /** ジャンル差分に応じてプレイリストを更新（追加ジャンルのみAPI呼び出し。既存は currentPlaylists を再利用） */
+    const updatePlaylistsWithDiff = useCallback(async (
+        currentGenres: string[],
+        diff: { added: string[], removed: string[], unchanged: string[] },
+        currentPlaylists: DashboardItem[] | null,
+        isInitialSync = false
+    ) => {
+        if (currentGenres.length === 0) return
+        if (isLoadingRef.current) return // ローディング中は無視
 
-  const calculatedTimeOfDay = getTimeOfDay(displayHour)
-  const timeOfDay = isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay
-  const weather = normalizeWeatherType(weatherType ?? "Clear")
-  const background = getWeatherBackground(weather, timeOfDay)
-  const isDark = isDarkBackground(weather, timeOfDay)
-  const genreColorClass = isDark ? "text-white/80" : "text-muted-foreground"
-  const titleColorClass = isDark ? "text-white" : "text-foreground"
+        setLoadingMode(isInitialSync ? "initial" : "added")
+        setIsLoading(true)
+        try {
+            const weather = normalizeWeatherType(weatherType ?? "Clear") as WeatherType
+            const calculatedTimeOfDay = getTimeOfDay(displayHour)
+            const time = (isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay) as TimeOfDay
 
-  const {
-    rotation,
-    isDragging,
-    cumulativeRotation,
-    snapBackDurationMs,
-    vinylRef,
-    handleMouseDown,
-    handleMouseUp,
-    handleTouchStart,
-    handleTouchMove,
-    handleTouchEnd,
-  } = useVinylRotation({
-    onRotationComplete: (direction) => {
-      const length = displayPlaylists.length
-      if (length === 0) return
-      
-      if (direction === "next") {
-        setCurrentIndex((prev) => (prev + 1) % length)
-      } else {
-        setCurrentIndex((prev) => (prev - 1 + length) % length)
-      }
-    },
-    onRegenerateCurrent:
-      displayPlaylists.length > 0 && currentPlaylist.genre !== "---"
-        ? () => refreshPlaylistByGenre(currentPlaylist.genre as Genre)
-        : undefined,
-    onRegenerateAll:
-      selectedGenres.length > 0 ? refreshPlaylists : undefined,
-  })
+            const existingMap = new Map<string, DashboardItem>()
+            if (currentPlaylists) {
+                currentPlaylists.forEach(p => existingMap.set(p.genre, p))
+            }
 
-  /** 3周フィードバック表示: ドラッグ中・戻り演出でない・1周超 */
-  const showRegenerateFeedback =
-    isDragging &&
-    snapBackDurationMs === null &&
-    Math.abs(cumulativeRotation) > REGENERATE_ZONE_ENTRY_DEG
-  /** 3周までの進捗 0〜1（エフェクト強度用） */
-  const regenerateProgress = showRegenerateFeedback
-    ? Math.min(1, Math.abs(cumulativeRotation) / REGENERATE_THRESHOLD_DEG)
-    : 0
-  /** 3周フィードバックの文言 */
-  const regenerateMessage = (() => {
-    if (!showRegenerateFeedback) return null
-    const abs = Math.abs(cumulativeRotation)
-    if (cumulativeRotation >= REGENERATE_THRESHOLD_DEG) return "離すと再生成"
-    if (cumulativeRotation <= -REGENERATE_THRESHOLD_DEG) return "離すと全件再生成"
-    const remainingTurns = Math.ceil((REGENERATE_THRESHOLD_DEG - abs) / 360)
-    return cumulativeRotation > 0
-      ? `あと${remainingTurns}周で再生成`
-      : `あと${remainingTurns}周で全件再生成`
-  })()
+            const unchangedPlaylists = diff.unchanged
+                .map(genre => existingMap.get(genre))
+                .filter((p): p is DashboardItem => p !== undefined)
+
+            let newPlaylists: DashboardItem[] = []
+            if (diff.added.length > 0) {
+                newPlaylists = await generateDashboard(
+                    weather,
+                    time,
+                    diff.added as Genre[]
+                )
+            }
+
+            const allMap = new Map<string, DashboardItem>()
+            unchangedPlaylists.forEach(p => allMap.set(p.genre, p))
+            newPlaylists.forEach(p => allMap.set(p.genre, p))
+
+            const finalPlaylists = currentGenres
+                .map(genre => allMap.get(genre))
+                .filter((p): p is DashboardItem => p !== undefined)
+
+            setPlaylists(finalPlaylists)
+            setCurrentIndex(0)
+        } catch (error) {
+            console.error("Failed to generate dashboard:", error)
+        } finally {
+            setIsLoading(false)
+            setLoadingMode(null)
+        }
+    }, [weatherType, displayHour, isTestMode, testTimeOfDay])
+
+    /** ジャンル選択パネルの開閉（閉じたときにジャンル変更があればプレイリスト再生成） */
+    const handleToggleSettings = useCallback(() => {
+        if (openPanel !== "genre") {
+            genresOnOpenRef.current = [...selectedGenres]
+            setOpenPanel("genre")
+        } else {
+            setOpenPanel(null)
+            if (hasGenresChanged(genresOnOpenRef.current, selectedGenres)) {
+                const diff = getGenresDiff(genresOnOpenRef.current, selectedGenres)
+                updatePlaylistsWithDiff(selectedGenres, diff, playlists)
+            }
+        }
+    }, [openPanel, selectedGenres, playlists, updatePlaylistsWithDiff])
+
+    /** localStorage のジャンル読み込み完了後、保存値と表示プレイリストが食い違っていれば同期 */
+    useEffect(() => {
+        if (!isGenresInitialized || hasPerformedInitialSyncRef.current) return
+        hasPerformedInitialSyncRef.current = true
+
+        const currentPlaylistGenres = playlists?.map(p => p.genre) ?? []
+        if (hasGenresChanged(currentPlaylistGenres, selectedGenres)) {
+            const diff = getGenresDiff(currentPlaylistGenres, selectedGenres)
+            updatePlaylistsWithDiff(selectedGenres, diff, playlists, true)
+        }
+    }, [isGenresInitialized, selectedGenres, playlists, updatePlaylistsWithDiff])
+
+    /** 実時刻の時間帯（朝・昼・夕方・夜）が変わったタイミングでプレイリストを自動更新（手動設定中は行わない） */
+    const calculatedTimeOfDayForEffect = getTimeOfDay(displayHour)
+    useEffect(() => {
+        if (!playlistAutoUpdate || isTestMode || !isGenresInitialized || selectedGenres.length === 0) return
+        const prev = prevTimeOfDayRef.current
+        prevTimeOfDayRef.current = calculatedTimeOfDayForEffect
+        if (prev !== null && prev !== calculatedTimeOfDayForEffect) {
+            refreshPlaylists()
+        }
+    }, [calculatedTimeOfDayForEffect, playlistAutoUpdate, isTestMode, isGenresInitialized, selectedGenres.length, refreshPlaylists])
+
+    /** プレイリスト生成中はパネルを閉じ、値変更を防ぐ（同期ずれ防止） */
+    useEffect(() => {
+        if (isLoading) setOpenPanel(null)
+    }, [isLoading])
+
+    /** パネルから「プレイリストを再生成」が押されたときに手動で再生成 */
+    useEffect(() => {
+        if (playlistRefreshTrigger === 0 || !isGenresInitialized || selectedGenres.length === 0) return
+        refreshPlaylists()
+    }, [playlistRefreshTrigger, isGenresInitialized, selectedGenres.length, refreshPlaylists])
+
+    /** APIが天気の変更を示したタイミングでプレイリストを自動更新（手動設定中は対象外） */
+    useEffect(() => {
+        if (!playlistAutoUpdate || isTestMode || !isGenresInitialized || selectedGenres.length === 0) return
+        const current = actualWeatherType ?? null
+        const prev = prevActualWeatherRef.current
+        prevActualWeatherRef.current = current
+        if (prev !== null && prev !== current) {
+            refreshPlaylists()
+        }
+    }, [actualWeatherType, playlistAutoUpdate, isTestMode, isGenresInitialized, selectedGenres.length, refreshPlaylists])
+
+    const calculatedTimeOfDay = getTimeOfDay(displayHour)
+    const timeOfDay = isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay
+    const weather = normalizeWeatherType(weatherType ?? "Clear")
+    const background = getWeatherBackground(weather, timeOfDay)
+    const isDark = isDarkBackground(weather, timeOfDay)
+    const genreColorClass = isDark ? "text-white/80" : "text-muted-foreground"
+    const titleColorClass = isDark ? "text-white" : "text-foreground"
+
+    const {
+        rotation,
+        isDragging,
+        cumulativeRotation,
+        snapBackDurationMs,
+        vinylRef,
+        handleMouseDown,
+        handleMouseUp,
+        handleTouchStart,
+        handleTouchMove,
+        handleTouchEnd,
+    } = useVinylRotation({
+        onRotationComplete: (direction) => {
+            const length = displayPlaylists.length
+            if (length === 0) return
+
+            if (direction === "next") {
+                setCurrentIndex((prev) => (prev + 1) % length)
+            } else {
+                setCurrentIndex((prev) => (prev - 1 + length) % length)
+            }
+        },
+        onRegenerateCurrent:
+            displayPlaylists.length > 0 && currentPlaylist.genre !== "---"
+                ? () => refreshPlaylistByGenre(currentPlaylist.genre as Genre)
+                : undefined,
+        onRegenerateAll:
+            selectedGenres.length > 0 ? refreshPlaylists : undefined,
+    })
+
+    /** 3周フィードバック表示: ドラッグ中・戻り演出でない・1周超 */
+    const showRegenerateFeedback =
+        isDragging &&
+        snapBackDurationMs === null &&
+        Math.abs(cumulativeRotation) > REGENERATE_ZONE_ENTRY_DEG
+    /** 3周までの進捗 0〜1（エフェクト強度用） */
+    const regenerateProgress = showRegenerateFeedback
+        ? Math.min(1, Math.abs(cumulativeRotation) / REGENERATE_THRESHOLD_DEG)
+        : 0
+    /** 3周フィードバックの文言 */
+    const regenerateMessage = (() => {
+        if (!showRegenerateFeedback) return null
+        const abs = Math.abs(cumulativeRotation)
+        if (cumulativeRotation >= REGENERATE_THRESHOLD_DEG) return "離すと再生成"
+        if (cumulativeRotation <= -REGENERATE_THRESHOLD_DEG) return "離すと全件再生成"
+        const remainingTurns = Math.ceil((REGENERATE_THRESHOLD_DEG - abs) / 360)
+        return cumulativeRotation > 0
+            ? `あと${remainingTurns}周で再生成`
+            : `あと${remainingTurns}周で全件再生成`
+    })()
 
     return (
         <div
@@ -323,17 +323,17 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
 
             {/* Settings Toggle Button（ジャンル選択・右下）。気分パネル開時または生成中は非表示 */}
             {openPanel !== "mood" && !isLoading && (
-            <Button
-                variant="outline"
-                size="icon"
-                onClick={handleToggleSettings}
-                className={`
+                <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={handleToggleSettings}
+                    className={`
                     fixed bottom-4 right-4 z-50 bg-background/80 backdrop-blur-sm
                     ${openPanel === "genre" ? "bg-primary text-primary-foreground" : ""}
                 `}
-            >
-                <Music className="h-4 w-4" />
-            </Button>
+                >
+                    <Music className="h-4 w-4" />
+                </Button>
             )}
 
             {/* Settings Panel with Genre Selector（ボタンの上に表示）。生成中は非表示 */}
@@ -363,25 +363,25 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                     className="relative w-[min(18rem,42vh)] h-[min(18rem,42vh)] rounded-full transition-shadow duration-200"
                     style={
                         showRegenerateFeedback
-                          ? {
-                              boxShadow: `0 0 ${29 + regenerateProgress * 58}px ${vinylColors.accentColor}90, 0 0 ${14 + regenerateProgress * 29}px ${vinylColors.accentColor}60`,
+                            ? {
+                                boxShadow: `0 0 ${29 + regenerateProgress * 58}px ${vinylColors.accentColor}90, 0 0 ${14 + regenerateProgress * 29}px ${vinylColors.accentColor}60`,
                             }
-                          : undefined
+                            : undefined
                     }
                 >
                     {/* 固定された影（回転しない） */}
                     <div className="absolute inset-0 rounded-full shadow-2xl pointer-events-none" />
-                    
+
                     <div
                         ref={vinylRef}
                         className={`relative w-full h-full select-none touch-none ${isLoading ? "pointer-events-none cursor-default" : "cursor-grab active:cursor-grabbing"}`}
                         style={{
                             transform: `rotate(${rotation}deg)`,
                             transition: isDragging
-                              ? "none"
-                              : snapBackDurationMs != null
-                                ? `transform ${snapBackDurationMs}ms cubic-bezier(0.6, 0, 1, 1)`
-                                : "none",
+                                ? "none"
+                                : snapBackDurationMs != null
+                                    ? `transform ${snapBackDurationMs}ms cubic-bezier(0.6, 0, 1, 1)`
+                                    : "none",
                         }}
                         onTouchStart={handleTouchStart}
                         onTouchMove={handleTouchMove}
@@ -391,7 +391,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                     >
                         {/* Vinyl Disc */}
                         <div className="absolute inset-0 rounded-full overflow-hidden">
-                            <div className={`absolute inset-0 bg-gradient-to-br ${vinylColors.vinylColor} opacity-85`} />
+                            <div className={`absolute inset-0 bg-linear-to-br ${vinylColors.vinylColor} opacity-85`} />
                             {[...Array(20)].map((_, i) => (
                                 <div
                                     key={i}
@@ -433,9 +433,8 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                             }}
                         >
                             <span
-                                className={`text-xs font-medium whitespace-nowrap ${
-                                    isDark ? "text-white/90" : "text-foreground/90"
-                                }`}
+                                className={`text-xs font-medium whitespace-nowrap ${isDark ? "text-white/90" : "text-foreground/90"
+                                    }`}
                             >
                                 {regenerateMessage}
                             </span>
