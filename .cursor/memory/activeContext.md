@@ -33,6 +33,10 @@ UI/UX 改善とコードベースのリファクタリング
   - `loadingMode: "initial"` で「プレイリストを生成中」（"再生成" ではない）を表示
 - generateDashboard のエラーハンドリング:
   - try/catch で空配列を返し、クライアントの unexpected response を防止
+- Mood Tuning「現在の天気、時間に戻す」ボタン:
+  - 表示条件を「パネルを開いた時点で実際の天気・時間と違う状態を設定していた場合のみ」に変更
+  - `showResetButton` を UI に適用（従来の `isTestMode` から切り替え）
+  - 未設定（null）時は「実際と同じ」とみなし、誤表示しないよう算出を修正
 - プロジェクト全体のリファクタリング:
   - `src/types/dashboard.ts`: `DashboardItem` 型を専用ファイルに移動
   - `src/lib/playlist-utils.ts`: ユーティリティ関数・定数を集約

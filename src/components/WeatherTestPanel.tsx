@@ -54,11 +54,16 @@ export default function WeatherTestPanel({
   /** パネルを開いた時点の天気・時間（閉じたときに「開いた時点と変わっているか」の判定用） */
   const openedWeatherTypeRef = useRef<string | null>(null)
   const openedTimeOfDayRef = useRef<TimeOfDay | null>(null)
+  /** パネルを開いた時点の「現在の天気・時間」（リセットボタン表示判定用） */
+  const actualWeatherAtOpenRef = useRef<string | null>(null)
+  const actualTimeOfDayAtOpenRef = useRef<TimeOfDay | null>(null)
 
-  /** パネルを開く: この時点の天気・時間をスナップショットしてから開く */
+  /** パネルを開く: この時点の天気・時間と「現在の天気・時間」をスナップショットしてから開く */
   const handleOpenPanel = () => {
     openedWeatherTypeRef.current = weatherType
     openedTimeOfDayRef.current = testTimeOfDay
+    actualWeatherAtOpenRef.current = actualWeatherType
+    actualTimeOfDayAtOpenRef.current = getTimeOfDay(displayHour)
     if (onOpenProp) onOpenProp()
     else setInternalOpen(true)
   }
@@ -113,6 +118,16 @@ export default function WeatherTestPanel({
   /** 実際の天気・時間帯（API・displayHour。選択肢の「現在」強調用） */
   const actualWeatherTypeNormalized = actualWeatherType ? normalizeWeatherType(actualWeatherType) : null
   const actualTimeOfDay = getTimeOfDay(displayHour)
+
+  /** パネルを開いた時点で「現在の天気・時間」と違う状態を設定していた場合のみリセットボタンを表示 */
+  const actualWeatherAtOpenNorm = normalizeWeatherType(actualWeatherAtOpenRef.current ?? "Clear")
+  const actualTimeAtOpen = actualTimeOfDayAtOpenRef.current ?? actualTimeOfDay
+  const effectiveWeatherAtOpen =
+    openedWeatherTypeRef.current != null ? normalizeWeatherType(openedWeatherTypeRef.current) : actualWeatherAtOpenNorm
+  const effectiveTimeOfDayAtOpen = openedTimeOfDayRef.current ?? actualTimeAtOpen
+  const showResetButton =
+    isOpen &&
+    (effectiveWeatherAtOpen !== actualWeatherAtOpenNorm || effectiveTimeOfDayAtOpen !== actualTimeAtOpen)
 
   return (
     <>
@@ -223,7 +238,7 @@ export default function WeatherTestPanel({
               実際の時間・天気の変化でプレイリストを自動で再生成します
             </p>
 
-            {isTestMode && (
+            {showResetButton && (
               <div className="pt-2 flex flex-col gap-2">
                 <Button
                   onClick={handleReset}
@@ -231,7 +246,7 @@ export default function WeatherTestPanel({
                   className="w-full"
                   size="sm"
                 >
-                  実際の天気・時間に戻す
+                  現在の天気、時間に戻す
                 </Button>
                 <div className="pt-2 border-t text-xs text-muted-foreground space-y-1">
                   <div>
