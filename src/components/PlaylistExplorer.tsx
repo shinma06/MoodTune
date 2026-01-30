@@ -364,7 +364,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                     style={
                         showRegenerateFeedback
                           ? {
-                              boxShadow: `0 0 ${24 + regenerateProgress * 48}px ${vinylColors.accentColor}50, 0 0 ${12 + regenerateProgress * 24}px ${vinylColors.accentColor}30`,
+                              boxShadow: `0 0 ${29 + regenerateProgress * 58}px ${vinylColors.accentColor}90, 0 0 ${14 + regenerateProgress * 29}px ${vinylColors.accentColor}60`,
                             }
                           : undefined
                     }
