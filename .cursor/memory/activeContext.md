@@ -6,6 +6,13 @@ UI/UX 改善とコードベースのリファクタリング、Vibeコーディ�
 
 ## 最近の変更履歴
 
+- 初回アクセス時の背景・時間帯の初期化修正:
+  - `WeatherContext`: `isTimeInitialized` を追加。SSR/初回はサーバー時刻に依存せず、`displayHour` を 0 で初期化。`useEffect` でクライアント現地時刻を設定したあと `isTimeInitialized = true` にし、時間帯に応じた背景を有効化
+  - 未初期化時は `effectiveTimeOfDay = "day"`, `isDark = false` で中性背景時の UI と揃える
+  - `weather-background-utils.ts`: `INITIAL_BACKGROUND_GRADIENT` 定数を追加（中性グラデーション）
+  - `PlaylistExplorer`: `isTimeInitialized` が true になるまで `INITIAL_BACKGROUND_GRADIENT` を使用し、確定後に天気・時間帯に応じた背景へ切り替え
+  - `layout.tsx`: body に `INITIAL_BACKGROUND_GRADIENT` を付与し、コンテンツ到着前も白画面を避ける
+  - `app/loading.tsx`: ページ非同期ロード中のフォールバックに同じ中性背景を適用
 - Vibeコーディング効率向上のための AI ルール強化:
   - `.cursorrules` に「5. Pre-Implementation Check」「6. Simplicity First」を追加
   - `.cursor/rules/pre-implementation-check.md` を新規作成（実装前チェックリスト、機能連携ポイント）
