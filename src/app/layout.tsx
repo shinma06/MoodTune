@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next"
 import { Geist, Cormorant_Garamond } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { WeatherProvider } from "@/contexts/WeatherContext"
+import { INITIAL_BACKGROUND_GRADIENT } from "@/lib/weather-background-utils"
 import "./globals.css"
 
 const _geist = Geist({ subsets: ["latin"] })
@@ -49,7 +50,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja" suppressHydrationWarning>
-      <body className={`font-sans antialiased ${_cormorant.variable}`}>
+      <body
+        className={`font-sans antialiased ${_cormorant.variable}`}
+        style={{
+          background: INITIAL_BACKGROUND_GRADIENT,
+          minHeight: "100vh",
+        }}
+      >
         <WeatherProvider>
           {children}
           <Analytics />

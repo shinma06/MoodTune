@@ -130,3 +130,54 @@ src/
 - Tailwind CSSのみ使用（カスタムCSSは最小限）
 - shadcn/uiコンポーネントを優先
 - レスポンシブ: `sm:`, `md:`, `lg:`ブレークポイントを使用
+
+## 設計原則（技術負債回避）
+
+### シンプルさの追求
+
+1. **YAGNI (You Aren't Gonna Need It)**
+   - 「将来使うかも」で抽象化しない
+   - 現在の要件を満たす最小限の実装を選ぶ
+
+2. **DRY (Don't Repeat Yourself)**
+   - 同じロジックは 1 箇所にまとめる
+   - ただし、過度な共通化で可読性を損なわない
+
+3. **単一責任の原則**
+   - 1 つの関数・コンポーネントは 1 つの責務のみ
+   - 肥大化したら分割を検討
+
+### 決定的マッピングの静的化
+
+入力→出力が常に一意に決まるロジックは、関数内オブジェクトではなく**静的定数**で定義する。
+
+```typescript
+// ✗ Bad: 関数呼び出しごとにオブジェクト生成
+function getIcon(type: string) {
+  const map = { Clear: Sun, Rain: CloudRain }
+  return map[type]
+}
+
+// ✓ Good: 静的定数として定義
+const WEATHER_ICON_MAP = { Clear: Sun, Rain: CloudRain }
+function getIcon(type: string) {
+  return WEATHER_ICON_MAP[type]
+}
+```
+
+### 単一ソースの原則
+
+同じ導出が必要な値は、1 箇所で計算して共有する。
+
+- **Context で管理**: `effectiveWeather`, `effectiveTimeOfDay`, `isDark`, `displayHour`
+- **共通関数**: `normalizeWeatherType`, `getTimeOfDay`, `isDarkBackground`
+
+### 機能連携の意識
+
+新機能を追加する前に、既存の連携ポイントを把握する:
+
+1. **WeatherContext**: 天気・時間帯・表示状態の単一ソース
+2. **useLocalStorage**: ジャンル選択の永続化・バリデーション
+3. **PlaylistExplorer**: Context と localStorage を統合してプレイリスト管理
+
+詳細は `.cursor/rules/pre-implementation-check.md` を参照

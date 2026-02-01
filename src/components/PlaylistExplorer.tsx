@@ -8,7 +8,7 @@ import GenreSelector, { useSelectedGenres } from "./GenreSelector"
 import { useWeather } from "@/contexts/WeatherContext"
 import { getWeatherBackground, getTimeOfDay, type WeatherType } from "@/lib/weather-background"
 import { normalizeWeatherType } from "@/lib/weather-utils"
-import { formatGradientBackground } from "@/lib/weather-background-utils"
+import { formatGradientBackground, INITIAL_BACKGROUND_GRADIENT } from "@/lib/weather-background-utils"
 import {
     useVinylRotation,
     REGENERATE_THRESHOLD_DEG,
@@ -37,7 +37,7 @@ interface PlaylistExplorerProps {
 
 export default function PlaylistExplorer({ playlists: initialPlaylists }: PlaylistExplorerProps) {
     const [currentIndex, setCurrentIndex] = useState(0)
-    const { displayHour, weatherType, actualWeatherType, testTimeOfDay, isTestMode, playlistAutoUpdate, playlistRefreshTrigger, isDark } = useWeather()
+    const { isTimeInitialized, displayHour, weatherType, actualWeatherType, testTimeOfDay, isTestMode, playlistAutoUpdate, playlistRefreshTrigger, isDark } = useWeather()
     /** 開いているパネル（null = 両方閉じている）。同時に1つだけ開く */
     const [openPanel, setOpenPanel] = useState<null | "mood" | "genre">(null)
     const [selectedGenres, isGenresInitialized] = useSelectedGenres()
@@ -257,7 +257,9 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     const calculatedTimeOfDay = getTimeOfDay(displayHour)
     const timeOfDay = isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay
     const weather = normalizeWeatherType(weatherType ?? "Clear")
-    const background = getWeatherBackground(weather, timeOfDay)
+    const backgroundStyle = isTimeInitialized
+      ? formatGradientBackground(getWeatherBackground(weather, timeOfDay))
+      : INITIAL_BACKGROUND_GRADIENT
     const genreColorClass = isDark ? "text-white/80" : "text-muted-foreground"
     const titleColorClass = isDark ? "text-white" : "text-foreground"
 
@@ -316,7 +318,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         <div
             className="min-h-screen flex flex-col items-center justify-between p-4 pb-20 sm:p-6 sm:pb-8 overflow-x-hidden overflow-y-auto transition-all duration-1000 ease-in-out relative z-10"
             style={{
-                background: formatGradientBackground(background),
+                background: backgroundStyle,
             }}
         >
             {/* Weather Animation */}

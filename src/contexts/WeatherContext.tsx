@@ -5,6 +5,8 @@ import { getTimeOfDay, isDarkBackground, type TimeOfDay, type WeatherType } from
 import { normalizeWeatherType } from "@/lib/weather-utils"
 
 interface WeatherContextType {
+  /** クライアントで現在時刻が確定したか（SSR/初回は false。useEffect で true になり時間帯背景が有効になる） */
+  isTimeInitialized: boolean
   /** 表示用の現在時（0–23）。マウント時と1分ごとに更新。 */
   displayHour: number
   /** testTimeOfDay を考慮した表示用時間帯（単一ソース） */
@@ -34,7 +36,9 @@ interface WeatherContextType {
 const WeatherContext = createContext<WeatherContextType | undefined>(undefined)
 
 export function WeatherProvider({ children }: { children: ReactNode }) {
-  const [displayHour, setDisplayHour] = useState(() => new Date().getHours())
+  /** SSR/初回は false。useEffect でクライアント現地時刻を設定したあと true にし、時間帯に応じた背景を有効にする */
+  const [isTimeInitialized, setIsTimeInitialized] = useState(false)
+  const [displayHour, setDisplayHour] = useState(0)
   const [weatherType, setWeatherType] = useState<string | null>(null)
   const [actualWeatherType, setActualWeatherType] = useState<string | null>(null)
   const [testTimeOfDay, setTestTimeOfDay] = useState<TimeOfDay | null>(null)
@@ -42,30 +46,33 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
   const [playlistAutoUpdate, setPlaylistAutoUpdate] = useState(true)
   const [playlistRefreshTrigger, setPlaylistRefreshTrigger] = useState(0)
 
-  /** 表示用時刻の単一ソース。マウント時にクライアント現地時刻で補正し、1分ごとに更新（SSR/ハイドレーション・コンポーネント間のずれを防止） */
+  /** 表示用時刻の単一ソース。マウント時にクライアント現地時刻で設定し、1分ごとに更新。SSR のサーバー時刻に依存しない。 */
   useEffect(() => {
     setDisplayHour(new Date().getHours())
+    setIsTimeInitialized(true)
     const timer = setInterval(() => setDisplayHour(new Date().getHours()), 60000)
     return () => clearInterval(timer)
   }, [])
 
-  /** testTimeOfDay を考慮した表示用時間帯（単一ソース） */
+  /** testTimeOfDay を考慮した表示用時間帯（単一ソース）。未初期化時は day を返し UI を明るいテーマに揃える。 */
   const effectiveTimeOfDay = useMemo<TimeOfDay>(() => {
+    if (!isTimeInitialized) return "day"
     if (isTestMode && testTimeOfDay) {
       return testTimeOfDay
     }
     return getTimeOfDay(displayHour)
-  }, [isTestMode, testTimeOfDay, displayHour])
+  }, [isTimeInitialized, isTestMode, testTimeOfDay, displayHour])
 
   /** normalizeWeatherType を適用した表示用天気（単一ソース） */
   const effectiveWeather = useMemo<WeatherType>(() => {
     return normalizeWeatherType(weatherType ?? "Clear")
   }, [weatherType])
 
-  /** 背景が暗いかどうか（単一ソース） */
+  /** 背景が暗いかどうか（単一ソース）。未初期化時は false で中性背景時の UI と揃える。 */
   const isDark = useMemo(() => {
+    if (!isTimeInitialized) return false
     return isDarkBackground(effectiveWeather, effectiveTimeOfDay)
-  }, [effectiveWeather, effectiveTimeOfDay])
+  }, [isTimeInitialized, effectiveWeather, effectiveTimeOfDay])
 
   const requestPlaylistRefresh = () => {
     setPlaylistRefreshTrigger((prev) => prev + 1)
@@ -74,6 +81,7 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
   return (
     <WeatherContext.Provider
       value={{
+        isTimeInitialized,
         displayHour,
         effectiveTimeOfDay,
         effectiveWeather,
