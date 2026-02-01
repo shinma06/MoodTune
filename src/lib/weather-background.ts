@@ -20,66 +20,51 @@ export interface BackgroundGradient {
     to2?: string // 最終色（5色以上のグラデーション用）
 }
 
-/** 明るい背景用の上部色（内部使用のみ） */
+/** 明るい背景用の上部色（ヘッダー/UIが暗いテーマになるかどうかの境界） */
 const BACKGROUND_TOP_COLOR_BRIGHT = "#FAFAFA"
 
 /**
- * 天気と時間帯に応じた適切なtop色を取得（内部使用のみ）
- * 暗い雰囲気の場合は、天気の雰囲気に合わせた暗い色を使用し、上部UIのテキストを白ベースにする
+ * 天気×時間帯 → グラデーション最上部の色（静的なテーブル）
+ * ヘッダー・UIのテキスト色はこの値が明るいかどうかで固定で紐づく
  */
-function getTopColor(weather: WeatherType, timeOfDay: TimeOfDay): string {
-    // 非常に暗い天気（Thunderstorm）は暗いtop色を使用
-    const isVeryDarkWeather = weather === "Thunderstorm"
-    if (isVeryDarkWeather) {
-        if (timeOfDay === "night") {
-            return "#0A0A0A" // ほぼ黒
-        }
-        return "#1C1C1C" // 暗いグレー
-    }
-
-    // 夜の時間帯は天気に応じた暗い色を使用
-    if (timeOfDay === "night") {
-        if (weather === "Clear") {
-            return "#2A2A4A" // 暗い青
-        }
-        if (weather === "Rain" || weather === "Drizzle") {
-            return "#1A1A2A" // 暗い青グレー
-        }
-        if (weather === "Clouds" || weather === "Mist" || weather === "Fog" || weather === "Haze") {
-            return "#1C1C1C" // 暗いグレー
-        }
-        if (weather === "Snow") {
-            return "#2A2A2A" // 暗いグレー（雪の雰囲気）
-        }
-        return "#1C1C1C" // デフォルトの暗いグレー
-    }
-
-    // 夕方の暗い天気も暗いtop色（グラデーション下部の視認性を確保）
-    // Clouds/Drizzle/Mist/Haze の dusk もグレー系グラデーションで暗くなるため追加
-    if (timeOfDay === "dusk") {
-        const isDarkWeatherAtDusk =
-            weather === "Rain" ||
-            weather === "Fog" ||
-            weather === "Clouds" ||
-            weather === "Drizzle" ||
-            weather === "Mist" ||
-            weather === "Haze"
-        if (isDarkWeatherAtDusk) {
-            return "#2F2F2F" // 暗いグレー
-        }
-    }
-
-    // その他の場合は明るい白ベース
-    return BACKGROUND_TOP_COLOR_BRIGHT
+const TOP_COLOR: Record<WeatherType, Record<TimeOfDay, string>> = {
+    Clear: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#FAFAFA", night: "#2A2A4A" },
+    Clouds: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#2F2F2F", night: "#1C1C1C" },
+    Rain: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#2F2F2F", night: "#1A1A2A" },
+    Drizzle: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#2F2F2F", night: "#1A1A2A" },
+    Thunderstorm: { dawn: "#1C1C1C", day: "#1C1C1C", dusk: "#1C1C1C", night: "#0A0A0A" },
+    Snow: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#FAFAFA", night: "#2A2A2A" },
+    Mist: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#2F2F2F", night: "#1C1C1C" },
+    Fog: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#2F2F2F", night: "#1C1C1C" },
+    Haze: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#2F2F2F", night: "#1C1C1C" },
 }
 
 /**
- * 背景が暗いかどうかを判定（上部UIのテキスト色を決定するため）
+ * 天気×時間帯 → ヘッダー/UIを暗いテーマ（白文字）にするか（静的なテーブル）
+ * TOP_COLOR が明るい色でない組み合わせは true
+ */
+const IS_DARK: Record<WeatherType, Record<TimeOfDay, boolean>> = {
+    Clear: { dawn: false, day: false, dusk: false, night: true },
+    Clouds: { dawn: false, day: false, dusk: true, night: true },
+    Rain: { dawn: false, day: false, dusk: true, night: true },
+    Drizzle: { dawn: false, day: false, dusk: true, night: true },
+    Thunderstorm: { dawn: true, day: true, dusk: true, night: true },
+    Snow: { dawn: false, day: false, dusk: false, night: true },
+    Mist: { dawn: false, day: false, dusk: true, night: true },
+    Fog: { dawn: false, day: false, dusk: true, night: true },
+    Haze: { dawn: false, day: false, dusk: true, night: true },
+}
+
+/** 天気と時間帯に応じた top 色を取得（テーブル参照） */
+function getTopColor(weather: WeatherType, timeOfDay: TimeOfDay): string {
+    return TOP_COLOR[weather]?.[timeOfDay] ?? BACKGROUND_TOP_COLOR_BRIGHT
+}
+
+/**
+ * 背景が暗いかどうか（ヘッダー/UIのテキスト色を白にするか）を取得（テーブル参照）
  */
 export function isDarkBackground(weather: WeatherType, timeOfDay: TimeOfDay): boolean {
-    const topColor = getTopColor(weather, timeOfDay)
-    // top色が暗い（#FAFAFAより暗い）場合は、背景が暗いと判定
-    return topColor !== BACKGROUND_TOP_COLOR_BRIGHT
+    return IS_DARK[weather]?.[timeOfDay] ?? false
 }
 
 // 時間帯の判定

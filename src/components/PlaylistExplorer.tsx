@@ -6,7 +6,7 @@ import WeatherAnimation from "./WeatherAnimation"
 import WeatherTestPanel from "./WeatherTestPanel"
 import GenreSelector, { useSelectedGenres } from "./GenreSelector"
 import { useWeather } from "@/contexts/WeatherContext"
-import { getWeatherBackground, getTimeOfDay, type WeatherType, isDarkBackground } from "@/lib/weather-background"
+import { getWeatherBackground, getTimeOfDay, type WeatherType } from "@/lib/weather-background"
 import { normalizeWeatherType } from "@/lib/weather-utils"
 import { formatGradientBackground } from "@/lib/weather-background-utils"
 import {
@@ -37,7 +37,7 @@ interface PlaylistExplorerProps {
 
 export default function PlaylistExplorer({ playlists: initialPlaylists }: PlaylistExplorerProps) {
     const [currentIndex, setCurrentIndex] = useState(0)
-    const { displayHour, weatherType, actualWeatherType, testTimeOfDay, isTestMode, playlistAutoUpdate, playlistRefreshTrigger } = useWeather()
+    const { displayHour, weatherType, actualWeatherType, testTimeOfDay, isTestMode, playlistAutoUpdate, playlistRefreshTrigger, isDark } = useWeather()
     /** 開いているパネル（null = 両方閉じている）。同時に1つだけ開く */
     const [openPanel, setOpenPanel] = useState<null | "mood" | "genre">(null)
     const [selectedGenres, isGenresInitialized] = useSelectedGenres()
@@ -258,7 +258,6 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     const timeOfDay = isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay
     const weather = normalizeWeatherType(weatherType ?? "Clear")
     const background = getWeatherBackground(weather, timeOfDay)
-    const isDark = isDarkBackground(weather, timeOfDay)
     const genreColorClass = isDark ? "text-white/80" : "text-muted-foreground"
     const titleColorClass = isDark ? "text-white" : "text-foreground"
 
