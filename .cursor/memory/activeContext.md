@@ -2,9 +2,17 @@
 
 ## 現在のセッションの焦点
 
-UI/UX 改善とコードベースのリファクタリング
+UI/UX 改善とコードベースのリファクタリング、Vibeコーディング効率の最大化
 
 ## 最近の変更履歴
+
+- Vibeコーディング効率向上のための AI ルール強化:
+  - `.cursorrules` に「5. Pre-Implementation Check」「6. Simplicity First」を追加
+  - `.cursor/rules/pre-implementation-check.md` を新規作成（実装前チェックリスト、機能連携ポイント）
+  - `systemPatterns.md` に「設計原則（技術負債回避）」セクションを追加
+- リファクタリング: 静的テーブル化
+  - `weather-background.ts`: `BACKGROUNDS` 定数に背景グラデーションを移動
+  - `weather-utils.ts`: `WEATHER_ICON_MAP`, `WEATHER_THEME_COLORS`, `WEATHER_THEME_COLORS_DARK` を静的定数化
 
 - Context による単一ソース化（背景・テキスト色・天気・時間帯）:
   - `WeatherContext` に `effectiveTimeOfDay`, `effectiveWeather`, `isDark` を追加
