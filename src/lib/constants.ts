@@ -9,27 +9,27 @@ export type GenreThemeColors = { vinylColor: string; accentColor: string }
  * - themeColors: レコード・ページネーションのテーマカラー
  */
 const GENRE_DEFINITIONS = [
-  { id: "J-POP" as const, themeColors: { vinylColor: "from-rose-500 to-pink-700", accentColor: "#e11d48" } },
-  { id: "J-Rock" as const, themeColors: { vinylColor: "from-red-600 to-rose-900", accentColor: "#b91c1c" } },
-  { id: "J-HipHop" as const, themeColors: { vinylColor: "from-amber-500 to-orange-800", accentColor: "#d97706" } },
-  { id: "Hip Hop" as const, themeColors: { vinylColor: "from-violet-600 to-fuchsia-800", accentColor: "#7c3aed" } },
-  { id: "Lo-fi Hip Hop" as const, themeColors: { vinylColor: "from-amber-600 to-orange-900", accentColor: "#b45309" } },
+  { id: "J-POP" as const, themeColors: { vinylColor: "from-rose-400 via-pink-600 to-rose-900", accentColor: "#e11d48" } },
+  { id: "J-Rock" as const, themeColors: { vinylColor: "from-red-400 via-rose-600 to-red-950", accentColor: "#b91c1c" } },
+  { id: "J-HipHop" as const, themeColors: { vinylColor: "from-amber-400 via-orange-600 to-amber-900", accentColor: "#d97706" } },
+  { id: "Hip Hop" as const, themeColors: { vinylColor: "from-violet-500 via-purple-600 to-violet-800", accentColor: "#7c3aed" } },
+  { id: "Lo-fi Hip Hop" as const, themeColors: { vinylColor: "from-amber-500 via-orange-700 to-amber-950", accentColor: "#b45309" } },
   { id: "City Pop" as const, themeColors: { vinylColor: "from-cyan-600 to-fuchsia-700", accentColor: "#0891b2" } },
-  { id: "R&B" as const, themeColors: { vinylColor: "from-indigo-500 to-violet-700", accentColor: "#4f46e5" } },
-  { id: "J-R&B" as const, themeColors: { vinylColor: "from-violet-500 to-fuchsia-700", accentColor: "#7c3aed" } },
-  { id: "Anime Song" as const, themeColors: { vinylColor: "from-sky-400 to-indigo-600", accentColor: "#0ea5e9" } },
-  { id: "Vocaloid" as const, themeColors: { vinylColor: "from-teal-400 to-cyan-600", accentColor: "#14b8a6" } },
-  { id: "Idol Pop" as const, themeColors: { vinylColor: "from-pink-400 to-rose-600", accentColor: "#ec4899" } },
-  { id: "K-POP (Boy Group)" as const, themeColors: { vinylColor: "from-slate-500 to-slate-800", accentColor: "#475569" } },
-  { id: "K-POP (Girl Group)" as const, themeColors: { vinylColor: "from-pink-500 to-rose-700", accentColor: "#db2777" } },
-  { id: "EDM" as const, themeColors: { vinylColor: "from-lime-400 to-emerald-600", accentColor: "#65a30d" } },
-  { id: "House" as const, themeColors: { vinylColor: "from-orange-500 to-red-600", accentColor: "#ea580c" } },
-  { id: "Techno" as const, themeColors: { vinylColor: "from-slate-500 to-zinc-700", accentColor: "#64748b" } },
-  { id: "Acoustic" as const, themeColors: { vinylColor: "from-amber-500 to-yellow-600", accentColor: "#ca8a04" } },
-  { id: "Jazz" as const, themeColors: { vinylColor: "from-amber-600 to-rose-800", accentColor: "#b45309" } },
-  { id: "Piano" as const, themeColors: { vinylColor: "from-emerald-500 to-teal-700", accentColor: "#047857" } },
-  { id: "Chill Out" as const, themeColors: { vinylColor: "from-teal-500 to-cyan-600", accentColor: "#0d9488" } },
-  { id: "City Jazz" as const, themeColors: { vinylColor: "from-blue-500 to-indigo-700", accentColor: "#2563eb" } },
+  { id: "R&B" as const, themeColors: { vinylColor: "from-indigo-300 via-violet-600 to-indigo-900", accentColor: "#4f46e5" } },
+  { id: "J-R&B" as const, themeColors: { vinylColor: "from-violet-400 via-fuchsia-600 to-violet-900", accentColor: "#7c3aed" } },
+  { id: "Anime Song" as const, themeColors: { vinylColor: "from-sky-300 via-indigo-500 to-sky-800", accentColor: "#0ea5e9" } },
+  { id: "Vocaloid" as const, themeColors: { vinylColor: "from-teal-300 via-cyan-500 to-teal-800", accentColor: "#14b8a6" } },
+  { id: "Idol Pop" as const, themeColors: { vinylColor: "from-pink-300 via-rose-500 to-pink-700", accentColor: "#ec4899" } },
+  { id: "K-POP (Boy)" as const, themeColors: { vinylColor: "from-indigo-600 via-slate-500 to-indigo-900", accentColor: "#6366f1" } },
+  { id: "K-POP (Girl)" as const, themeColors: { vinylColor: "from-pink-300 via-sky-400 to-rose-600", accentColor: "#db2777" } },
+  { id: "EDM" as const, themeColors: { vinylColor: "from-lime-300 via-emerald-500 to-lime-700", accentColor: "#65a30d" } },
+  { id: "House" as const, themeColors: { vinylColor: "from-orange-400 via-red-500 to-orange-800", accentColor: "#ea580c" } },
+  { id: "Techno" as const, themeColors: { vinylColor: "from-slate-500 via-violet-600 to-slate-800", accentColor: "#7c3aed" } },
+  { id: "Acoustic" as const, themeColors: { vinylColor: "from-amber-400 via-yellow-500 to-amber-700", accentColor: "#ca8a04" } },
+  { id: "Jazz" as const, themeColors: { vinylColor: "from-amber-500 via-rose-600 to-amber-900", accentColor: "#b45309" } },
+  { id: "Piano" as const, themeColors: { vinylColor: "from-emerald-300 via-teal-600 to-emerald-900", accentColor: "#047857" } },
+  { id: "Chill Out" as const, themeColors: { vinylColor: "from-teal-300 via-cyan-500 to-teal-800", accentColor: "#0d9488" } },
+  { id: "City Jazz" as const, themeColors: { vinylColor: "from-blue-300 via-indigo-600 to-blue-900", accentColor: "#2563eb" } },
 ] as const
 
 /** 利用可能な音楽ジャンル一覧（GENRE_DEFINITIONS から導出） */
@@ -94,7 +94,7 @@ export const TIME_OF_DAY_LABELS: Record<TimeOfDay, string> = {
 }
 
 const DEFAULT_THEME_COLORS: GenreThemeColors = {
-  vinylColor: "from-slate-600 to-slate-800",
+  vinylColor: "from-slate-500 via-slate-600 to-slate-800",
   accentColor: "#64748b",
 }
 
