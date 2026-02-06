@@ -74,12 +74,6 @@ def _get_ytmusic() -> YTMusic:
     )
 
 
-def _is_browser_auth() -> bool:
-    """ブラウザ認証利用時は True。このときのみ filter='songs' が使える（OAuth だと 400 になりやすい）。"""
-    api_dir = Path(__file__).resolve().parent
-    return (api_dir / "browser.json").is_file() or (api_dir / "headers_auth.json").is_file()
-
-
 def _build_search_query(genre: str, weather: str, time_of_day: str) -> str:
     """Use OpenAI to generate a single YouTube Music search query."""
     api_key = os.environ.get("OPENAI_API_KEY")
@@ -134,11 +128,8 @@ def generate_playlist(req: PlaylistRequest):
         raise HTTPException(status_code=503, detail=str(e))
 
     try:
-        # ブラウザ認証時のみ filter="songs" で曲だけに絞る。OAuth 時は 400 回避のため filter なし
-        if _is_browser_auth():
-            search_results = yt.search(search_query, filter="songs", limit=15)
-        else:
-            search_results = yt.search(search_query, limit=15)
+        # filter="songs" は OAuth で 400、ブラウザ認証でも create_playlist で 401 が出ることがあるため使わない
+        search_results = yt.search(search_query, limit=15)
     except Exception as e:
         raise HTTPException(
             status_code=502,
