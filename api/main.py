@@ -32,6 +32,7 @@ class PlaylistRequest(BaseModel):
     genre: str = Field(..., min_length=1, description="Genre name (e.g. J-POP, City Pop)")
     weather: str = Field(..., description="WeatherType from frontend (e.g. Clear, Rain)")
     time_of_day: str = Field(..., description="TimeOfDay: dawn | day | dusk | night")
+    title: str | None = Field(None, description="Playlist title from UI (e.g. from generateDashboard); used as YT playlist name")
 
     @model_validator(mode="after")
     def check_weather_and_time(self):
@@ -43,16 +44,26 @@ class PlaylistRequest(BaseModel):
 
 
 def _get_ytmusic() -> YTMusic:
-    oauth_path = Path(__file__).resolve().parent / "oauth.json"
+    api_dir = Path(__file__).resolve().parent
+    # ブラウザ認証を優先（OAuth は search で 400 が出ることがあるため）
+    for name in ("browser.json", "headers_auth.json"):
+        path = api_dir / name
+        if path.is_file():
+            return YTMusic(str(path))
+    # フォールバック: OAuth（search が 400 になる場合は上記のブラウザ認証に切り替え）
+    oauth_path = api_dir / "oauth.json"
     if not oauth_path.is_file():
         raise FileNotFoundError(
-            "api/oauth.json not found. Run 'ytmusicapi oauth' in the api/ directory."
+            "api/browser.json or api/oauth.json not found. "
+            "Recommended: run 'ytmusicapi browser' and save as api/browser.json. "
+            "Or run 'ytmusicapi oauth' for OAuth (search may return 400)."
         )
     client_id = os.environ.get("YT_OAUTH_CLIENT_ID")
     client_secret = os.environ.get("YT_OAUTH_CLIENT_SECRET")
     if not client_id or not client_secret:
         raise ValueError(
-            "Set YT_OAUTH_CLIENT_ID and YT_OAUTH_CLIENT_SECRET in .env.local"
+            "Set YT_OAUTH_CLIENT_ID and YT_OAUTH_CLIENT_SECRET in .env.local, "
+            "or use browser auth (api/browser.json) instead."
         )
     return YTMusic(
         str(oauth_path),
@@ -61,6 +72,12 @@ def _get_ytmusic() -> YTMusic:
             client_secret=client_secret,
         ),
     )
+
+
+def _is_browser_auth() -> bool:
+    """ブラウザ認証利用時は True。このときのみ filter='songs' が使える（OAuth だと 400 になりやすい）。"""
+    api_dir = Path(__file__).resolve().parent
+    return (api_dir / "browser.json").is_file() or (api_dir / "headers_auth.json").is_file()
 
 
 def _build_search_query(genre: str, weather: str, time_of_day: str) -> str:
@@ -117,9 +134,11 @@ def generate_playlist(req: PlaylistRequest):
         raise HTTPException(status_code=503, detail=str(e))
 
     try:
-        # OAuth 時に filter="songs" だと YouTube が 400 を返すことがあるため filter なしで検索し、
-        # 結果から videoId を持つ項目（曲・動画）のみを使用する
-        search_results = yt.search(search_query, limit=15)
+        # ブラウザ認証時のみ filter="songs" で曲だけに絞る。OAuth 時は 400 回避のため filter なし
+        if _is_browser_auth():
+            search_results = yt.search(search_query, filter="songs", limit=15)
+        else:
+            search_results = yt.search(search_query, limit=15)
     except Exception as e:
         raise HTTPException(
             status_code=502,
@@ -136,7 +155,7 @@ def generate_playlist(req: PlaylistRequest):
             detail=f"No songs found for query: {search_query}",
         )
 
-    title = f"MoodTune: {req.weather} {req.genre}"
+    title = (req.title or "").strip() or f"MoodTune: {req.weather} {req.genre}"
     description = f"Auto-generated for {req.time_of_day} vibe. Query: {search_query}"
 
     try:

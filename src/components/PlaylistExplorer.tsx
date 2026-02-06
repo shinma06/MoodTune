@@ -150,7 +150,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         setIsCreatingYtMusic(true)
         setYtMusicError(null)
         try {
-            const { url } = await generateYtMusicPlaylist(currentPlaylist.genre, weather, timeOfDay)
+            const { url } = await generateYtMusicPlaylist(currentPlaylist.genre, weather, timeOfDay, currentPlaylist.title)
             window.open(url, "_blank", "noopener,noreferrer")
         } catch (err) {
             const message = err instanceof Error ? err.message : String(err)

@@ -16,21 +16,24 @@ interface GeneratePlaylistBody {
   genre: string
   weather: string
   time_of_day: string
+  title?: string
 }
 
 /**
  * Create a YouTube Music playlist for the given genre/weather/time and return its URL.
- * Call from client so the request goes through Next.js rewrites (same-origin, no CORS).
+ * Pass title from currentPlaylist.title (generateDashboard の日本語・30文字以内) to use as playlist name.
  */
 export async function generateYtMusicPlaylist(
   genre: string,
   weather: string,
-  timeOfDay: string
+  timeOfDay: string,
+  title?: string
 ): Promise<YtMusicPlaylistResponse> {
   const body: GeneratePlaylistBody = {
     genre,
     weather,
     time_of_day: timeOfDay,
+    ...(title != null && title.trim() !== "" ? { title: title.trim() } : {}),
   }
   const res = await fetch("/api/py/generate_playlist", {
     method: "POST",
