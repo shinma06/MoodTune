@@ -24,10 +24,9 @@ import {
     EMPTY_PLAYLIST,
     type LoadingMode,
 } from "@/lib/playlist-utils"
-import { Music, ExternalLink } from "lucide-react"
+import { Music } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { generateDashboard } from "@/app/actions/generateDashboard"
-import { generateYtMusicPlaylist } from "@/lib/ytmusic-api"
 import type { DashboardItem } from "@/types/dashboard"
 import type { TimeOfDay } from "@/lib/weather-background"
 import type { Genre } from "@/lib/constants"
@@ -46,9 +45,6 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     const [isLoading, setIsLoading] = useState(false)
     /** 生成中の種別（初回 / 全件再生成 / 個別 / 追加ジャンルのみ）。表示文言の切り替え用 */
     const [loadingMode, setLoadingMode] = useState<LoadingMode>(null)
-    /** YouTube Music プレイリスト作成中・エラー表示用 */
-    const [isCreatingYtMusic, setIsCreatingYtMusic] = useState(false)
-    const [ytMusicError, setYtMusicError] = useState<string | null>(null)
 
     /** パネルを開いた時点のジャンル（閉じたときの差分計算用） */
     const genresOnOpenRef = useRef<string[]>([])
@@ -139,27 +135,6 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
             setLoadingMode(null)
         }
     }, [weatherType, displayHour, isTestMode, testTimeOfDay, selectedGenres])
-
-    /** 表示中のジャンルで YouTube Music プレイリストを作成し、新しいタブで開く（クライアントから /api/py にプロキシ経由で呼び出し） */
-    const handleCreateYtMusic = useCallback(async () => {
-        if (currentPlaylist.genre === "---" || !currentPlaylist.genre) return
-        if (isCreatingYtMusic) return
-        const weather = normalizeWeatherType(weatherType ?? "Clear")
-        const calculatedTimeOfDay = getTimeOfDay(displayHour)
-        const timeOfDay = (isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay) as TimeOfDay
-        setIsCreatingYtMusic(true)
-        setYtMusicError(null)
-        try {
-            const { url } = await generateYtMusicPlaylist(currentPlaylist.genre, weather, timeOfDay, currentPlaylist.title)
-            window.open(url, "_blank", "noopener,noreferrer")
-        } catch (err) {
-            const message = err instanceof Error ? err.message : String(err)
-            setYtMusicError(message)
-            console.error("YouTube Music playlist creation failed:", err)
-        } finally {
-            setIsCreatingYtMusic(false)
-        }
-    }, [currentPlaylist.genre, weatherType, displayHour, isTestMode, testTimeOfDay, isCreatingYtMusic])
 
     /** ジャンル差分に応じてプレイリストを更新（追加ジャンルのみAPI呼び出し。既存は currentPlaylists を再利用） */
     const updatePlaylistsWithDiff = useCallback(async (
@@ -539,25 +514,6 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                     )}
                 </div>
 
-                {!isLoadingOrEmpty && currentPlaylist.genre !== "---" && (
-                    <div className="flex flex-col items-center gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={handleCreateYtMusic}
-                            disabled={isCreatingYtMusic}
-                            className="gap-1.5"
-                        >
-                            <ExternalLink className="size-3.5" aria-hidden />
-                            {isCreatingYtMusic ? "作成中…" : "YouTube Music で作成"}
-                        </Button>
-                        {ytMusicError && (
-                            <p className="text-xs text-destructive text-center max-w-[16rem]">
-                                {ytMusicError}
-                            </p>
-                        )}
-                    </div>
-                )}
             </div>
         </div>
     )

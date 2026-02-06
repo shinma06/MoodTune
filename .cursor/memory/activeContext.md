@@ -71,7 +71,7 @@ UI/UX 改善とコードベースのリファクタリング、Vibeコーディ�
 - AI 生成によるプレイリスト提案機能が動作
 - ジャンル選択のパネル閉時に差分更新が動作
 - リロード時の localStorage 読み込み完了後にプレイリストを自動同期
-- **YouTube Music 連携 (feature/ytmusic):** FastAPI (api/) + ytmusicapi OAuth。Next は rewrites で /api/py/* を localhost:8000 にプロキシ。UI の「YouTube Music で作成」で表示中ジャンルのプレイリストを YT Music に作成して開く。開発は `npm run dev:all` で Next と Python API を同時起動、停止は Ctrl+C 1 回。OAuth 時は search に filter を付けない実装で 400 を回避。
+- **YouTube Music 連携 (feature/ytmusic):** 要件のみ保持、実装は白紙化済み。FastAPI (api/) は health と generate_playlist スタブ（501）のみ。Next は rewrites で /api/py/* を localhost:8000 にプロキシ。認証は browser.json / oauth.json、入出力仕様は api/README.md に記載。UI の「YouTube Music で作成」ボタンは削除。開発は `npm run dev:all` で Next と Python API を同時起動可能。
 
 ## ジャンル選択の動作フロー
 

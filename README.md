@@ -29,7 +29,7 @@ npm run dev:all
 **停止:** ターミナルで **Ctrl+C を 1 回**押すと、Next と API の両方が終了します。
 
 - **Next.js のみ:** `npm run dev` または `npm run dev:next`
-- **Python API のみ (port 8000):** プロジェクトルートで `npm run dev:api`（要: `api/.venv` と `api/oauth.json`。手順は [api/README.md](api/README.md) を参照）
+- **Python API のみ (port 8000):** プロジェクトルートで `npm run dev:api`（要: `api/.venv`。YouTube Music 実装は未実装・要件は [api/README.md](api/README.md) 参照）
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 

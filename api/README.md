@@ -1,35 +1,80 @@
-# MoodTune Python API (YouTube Music)
+# MoodTune Python API (YouTube Music) — 要件
 
-## エラーの解読と解決の流れ
+## 目的
 
-| エラー | 意味 | 対処 |
-|--------|------|------|
-| **401 Unauthorized** | YouTube Music の認証が無効（ファイルが空・期限切れ・Cookie 不正）。YouTube が「ログインしてください」と拒否している。 | 認証ファイルの**再生成**（下記「解決手順」）。 |
-| **502 Bad Gateway** | Next.js (3000) が Python (8000) に届かない。Python が起動していないか、認証エラーでクラッシュした可能性。 | 認証を直したうえで **Python サーバーを再起動**。 |
+- ジャンル・天気・時間帯に応じて **YouTube Music でプレイリストを生成**する。
+- フロント（Next.js）は `/api/py/*` 経由でこの API を呼ぶ（next.config の rewrites で localhost:8000 にプロキシ）。
 
-**根本原因は「認証ファイルが正しくできていない」ことがほとんどです。**
+## 技術スタック（要件）
 
-**認証ファイルの役割（リネームしないこと）**
+- **FastAPI**（port 8000）
+- **ytmusicapi**（検索・プレイリスト作成）
+- **OpenAI**（任意: 検索クエリ生成。未設定時は簡易クエリでフォールバック可）
+- 認証: **ブラウザ認証**（`browser.json` / `headers_auth.json`）または **OAuth**（`oauth.json` + 環境変数）
 
-| ファイル名 | 用途 | 生成方法 |
-|------------|------|----------|
-| `oauth.json` | OAuth 認証（トークン形式） | `ytmusicapi oauth` → そのまま使用（**リネーム不要**） |
-| `browser.json` | ブラウザ認証（ヘッダー形式） | `ytmusicapi browser` |
-| `headers_auth.json` | ブラウザ認証の別名（同上） | 手動でヘッダーを保存する場合 |
+## 入出力（要件）
 
-参照順: `browser.json` → `headers_auth.json` → `oauth.json`。OAuth を使うときは `oauth.json` のままにし、空の `headers_auth.json` が残っていれば削除する。
+- **入力**: `genre`, `weather`, `time_of_day`（必須）、`title`（任意、プレイリスト名）
+- **出力**: 作成した YouTube Music プレイリストの URL（および `playlist_id`, `query` 等、必要に応じて）
 
-### 解決手順（3ステップ）
+### 値の制約（フロントと一致させること）
 
-1. **認証の再生成**  
-   - **OAuth**: `cd api` → `ytmusicapi oauth` → ブラウザで認証。`api/oauth.json` ができる。**リネームせずそのまま使う**。  
-   - **ブラウザ認証**: `ytmusicapi browser` でヘッダーを貼り付け → `api/browser.json`。手動の場合は `browser.json` または `headers_auth.json` に正しいヘッダーを保存。
+- **weather**: 次のいずれか。`Clear`, `Clouds`, `Rain`, `Drizzle`, `Thunderstorm`, `Snow`, `Mist`, `Fog`, `Haze`
+- **time_of_day**: 次のいずれか。`dawn`, `day`, `dusk`, `night`
 
-2. **Python サーバーの再起動**  
-   `api` ディレクトリで `uvicorn main:app --reload --port 8000`（または `npm run dev:api`）。起動ログにエラーが出ないこと、`Application startup complete.` が出ることを確認する。
+### API 契約
 
-3. **動作確認**  
-   Next.js (`npm run dev`) を起動した状態で、ブラウザからプレイリスト生成を再度試す。200 が返れば解消。
+- **POST** `/api/py/generate_playlist`
+- **Request body**: `{ "genre": string, "weather": string, "time_of_day": string, "title"?: string }`（JSON、snake_case）
+- **Response 200**: `{ "url": string, "playlist_id": string, "query": string }`  
+  - `url`: `https://music.youtube.com/playlist?list={playlist_id}`
+- **エラー時**: 4xx/5xx と `{ "detail": string }`
+
+## 再実装の手引き（処理フロー）
+
+この節だけ見てバックエンドとフロント接続を再構築できるようにする。
+
+1. **リクエスト受付**  
+   `PlaylistRequest` で `genre`, `weather`, `time_of_day`, `title` を受け取り、上記「値の制約」でバリデーション（任意）。
+
+2. **検索クエリ生成**  
+   - `OPENAI_API_KEY` がある場合: プロンプトで「Genre / Weather / Time of day を組み合わせた YouTube Music 用の検索クエリ（英語）」を 1 本生成。  
+   - ない場合: フォールバック例 `f"{genre} {weather} {time_of_day} music"`。
+
+3. **YTMusic 初期化**  
+   - 参照順: `api/browser.json` → `api/headers_auth.json` → `api/oauth.json`。  
+   - OAuth のときは `YTMusic(oauth_path, oauth_credentials=OAuthCredentials(client_id, client_secret))`。  
+   - **注意**: OAuth で `yt.search(..., filter="songs")` を使うと 400 が出ることがある。ブラウザ認証を推奨。ブラウザ認証時は `filter="songs"` 可。
+
+4. **検索とプレイリスト作成**  
+   - `yt.search(query, limit=15)`（OAuth のときは `filter` を付けない）。  
+   - 結果から `videoId` を持つ要素だけを集め、`yt.create_playlist(title, description)` → `yt.add_playlist_items(playlist_id, video_ids)`。  
+   - プレイリスト名: `title` が渡されていればそれ、なければ例 `f"MoodTune: {weather} {genre}"`。  
+   - 説明: 例 `f"Auto-generated for {time_of_day} vibe. Query: {query}"`。
+
+5. **レスポンス**  
+   - 成功時: `{ "url": "https://music.youtube.com/playlist?list={playlist_id}", "playlist_id": "...", "query": "..." }` を返す。
+
+6. **フロント接続**  
+   - `src/lib/ytmusic-api.ts`: `generateYtMusicPlaylist(genre, weather, timeOfDay, title?)` で `POST /api/py/generate_playlist` を呼び、`YtMusicPlaylistResponse` を返す（実装後はスタブを削除）。  
+   - 呼び出し元: `PlaylistExplorer`。渡す値は「表示中ジャンル」`currentPlaylist.genre`、`normalizeWeatherType(weatherType)`、`effectiveTimeOfDay`（テスト用時間帯を考慮）、`currentPlaylist.title`。  
+   - 成功時: `window.open(response.url, "_blank", "noopener,noreferrer")`。  
+   - UI: ジャンルが "---" でないときだけ「YouTube Music で作成」ボタンを表示。ローディング・エラー表示用 state を用意する。
+
+## 認証ファイル（リネームしないこと）
+
+| ファイル名 | 用途 |
+|------------|------|
+| `oauth.json` | OAuth 認証。`ytmusicapi oauth` で生成。**リネーム不要**。 |
+| `browser.json` | ブラウザ認証。`ytmusicapi browser` でヘッダー貼り付け。 |
+| `headers_auth.json` | ブラウザ認証の別名（手動でヘッダーを保存する場合）。 |
+
+参照順: `browser.json` → `headers_auth.json` → `oauth.json`。OAuth 利用時は `YT_OAUTH_CLIENT_ID` と `YT_OAUTH_CLIENT_SECRET` を .env.local に設定。
+
+## 環境変数（.env.local をプロジェクトルートに配置）
+
+- `OPENAI_API_KEY` — 検索クエリ生成用（任意）
+- OAuth 利用時: `YT_OAUTH_CLIENT_ID`, `YT_OAUTH_CLIENT_SECRET`
 
 ## Setup
 
@@ -40,96 +85,10 @@ source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-## 環境変数 (.env.local をプロジェクトルートに配置)
-
-- `OPENAI_API_KEY` — 検索クエリ生成用（未設定時は簡易クエリでフォールバック）
-- ブラウザ認証を使う場合: 上記のみで可
-- OAuth を使う場合: `YT_OAUTH_CLIENT_ID` と `YT_OAUTH_CLIENT_SECRET` も必要
-
-## YouTube Music 認証（どちらか一方）
-
-### 推奨: ブラウザ認証 (browser.json) — search で 400 が出ない
-
-OAuth で「Request contains an invalid argument」が出る場合は、こちらを使うと解消します。
-
-1. ブラウザで [music.youtube.com](https://music.youtube.com) にログインした状態にする。
-2. 開発者ツール (F12) → Network タブ → フィルタで `browse` を入力。ページ操作で POST が表示されたら、そのリクエストの **Request headers** をコピー（Accept 〜 Cookie まで）。
-3. ターミナルで:
-   ```bash
-   cd api
-   source .venv/bin/activate
-   ytmusicapi browser
-   ```
-   表示に従い、コピーしたヘッダーを貼り付けて Enter。`api/browser.json` が生成される。
-4. 認証は `browser.json` を優先するため、両方ある場合はブラウザ認証が使われます。
-
-※ `browser.json` は .gitignore 済み。有効期限は約 2 年（ログアウトするまで）。
-
-### 代替: OAuth (oauth.json)
-
-1. ターミナルで:
-   ```bash
-   cd api
-   source .venv/bin/activate
-   ytmusicapi oauth
-   ```
-2. Client ID / Client Secret を入力（Google Cloud Console で「TV および Limited Input デバイス」の OAuth クライアントを作成した値）。
-3. 表示された URL をブラウザで開き、Google ログイン → 許可。
-4. ターミナルに戻り Enter を押す。`api/oauth.json` が生成される。
-
-※ **oauth.json はリネームしない**: コードは `oauth.json` を OAuth 用としてそのまま参照します。OAuth のみ使う場合は `headers_auth.json` を削除し、`oauth.json` だけにすると確実です。  
-※ OAuth 利用時、search で 400 が出ることがあります。その場合はブラウザ認証（`browser.json`）に切り替えてください。`oauth.json` は .gitignore 済みです。
-
-## 401 Unauthorized が出る場合
-
-検索（Read）は通るがプレイリスト作成・追加（Write）で 401 になる場合、**認証の有効性やアカウント識別子の不整合**が原因のことが多いです。`filter="songs"` 自体が原因ではありません。以下を順に試してください。
-
-### STEP 1: ヘッダーの完全再取得（Firefox 推奨）
-
-Chrome より Firefox の方が Cookie 形式が安定しやすいです。
-
-1. Firefox で [music.youtube.com](https://music.youtube.com) を開き、**プレイリストを作成したいアカウント**に切り替えていることを確認する。
-2. 開発者ツール (F12) → ネットワークタブ → 適当な操作（ライブラリ表示など）で `browse` や `next` などのリクエストを表示。
-3. そのリクエストを右クリック → **Copy → Copy Request Headers**（または「ヘッダーをコピー」）。
-4. ターミナルで `ytmusicapi browser` を実行し、貼り付けて `api/browser.json`（または `headers_auth.json`）を**上書き生成**する。
-
-### STEP 2: X-Goog-AuthUser の手動確認
-
-`api/headers_auth.json`（または browser.json 内のヘッダー）を開き、次を確認してください。
-
-- **x-goog-authuser**: メインアカウントなら `0`。ブランドアカウントを使っている場合は `1` や `2` に変更して試す。
-- ブラウザでアカウントを切り替えた直後にヘッダーを取ると、Cookie のセッションと `X-Goog-AuthUser` が食い違うことがあります。その場合は STEP 1 をやり直し、**使いたいアカウントで**ヘッダーをコピーしてください。
-
-### STEP 3: 認証の切り分け（検索を経由しないテスト）
-
-検索を通さずに「プレイリスト作成＋曲 1 件追加」だけ実行し、ここで 401 なら認証の問題です。
-
-```bash
-cd api
-source .venv/bin/activate
-python test_ytmusic_auth.py
-```
-
-成功時は「Playlist Created」「Item Added Successfully」と表示されます。失敗時は STEP 1 / 2 を再確認してください。
-
 ## 起動
 
-**プロジェクトルートから（推奨）:**
+- プロジェクトルートから: `npm run dev:api`
+- api 直下から: `cd api && source .venv/bin/activate && uvicorn main:app --reload --port 8000`
 
-```bash
-npm run dev:api
-```
-
-**api ディレクトリから直接:**
-
-```bash
-cd api
-source .venv/bin/activate
-uvicorn main:app --reload --port 8000
-```
-
-- ヘルスチェック: `GET http://localhost:8000/api/py/health`
-- プレイリスト生成: `POST http://localhost:8000/api/py/generate_playlist`  
-  Body: `{ "genre": "J-POP", "weather": "Rain", "time_of_day": "dusk" }`
-
-**補足:** 認証は `api/browser.json` / `api/headers_auth.json`（ブラウザ認証）を優先し、なければ `api/oauth.json`（OAuth）+ 環境変数を使用します。ファイル名と用途は上記のとおりで、リネームしないでください。
+ヘルス: `GET http://localhost:8000/api/py/health`  
+プレイリスト生成: `POST http://localhost:8000/api/py/generate_playlist` — **現状は未実装（501）。上記要件に沿って実装すること。**
