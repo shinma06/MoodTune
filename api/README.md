@@ -31,6 +31,14 @@ pip install -r requirements.txt
 
 ## 起動
 
+**プロジェクトルートから（推奨）:**
+
+```bash
+npm run dev:api
+```
+
+**api ディレクトリから直接:**
+
 ```bash
 cd api
 source .venv/bin/activate
@@ -40,3 +48,5 @@ uvicorn main:app --reload --port 8000
 - ヘルスチェック: `GET http://localhost:8000/api/py/health`
 - プレイリスト生成: `POST http://localhost:8000/api/py/generate_playlist`  
   Body: `{ "genre": "J-POP", "weather": "Rain", "time_of_day": "dusk" }`
+
+**補足:** OAuth 利用時、YouTube の仕様で `filter="songs"` を付けると 400 になることがあるため、検索は filter なしで行い、結果から `videoId` を持つ項目（曲・動画）のみをプレイリストに追加しています。

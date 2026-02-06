@@ -26,11 +26,10 @@ YouTube Music 連携を使う場合は、Next と FastAPI の両方を立ち上�
 npm run dev:all
 ```
 
-**停止:** ターミナルで **Ctrl+C を1回**押すと、Next と API の両方が終了します。
+**停止:** ターミナルで **Ctrl+C を 1 回**押すと、Next と API の両方が終了します。
 
 - **Next.js のみ:** `npm run dev` または `npm run dev:next`
-- **Python API のみ (port 8000):** `npm run dev:api`  
-  （要: `api/.venv` と `api/oauth.json`。手順は [api/README.md](api/README.md) を参照）
+- **Python API のみ (port 8000):** プロジェクトルートで `npm run dev:api`（要: `api/.venv` と `api/oauth.json`。手順は [api/README.md](api/README.md) を参照）
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
@@ -45,6 +44,7 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 | `NEXT_PUBLIC_USE_MOCK_SPOTIFY`            | No          | Omit or `true`: mock mode (no Spotify, no login). Set `false` to enable Spotify login.           |
 | `NEXT_PUBLIC_WEATHER_API_KEY`             | For weather | OpenWeatherMap API key if you use live weather.                                                  |
 | `AUTH_SPOTIFY_ID` / `AUTH_SPOTIFY_SECRET` | For Spotify | Only when `NEXT_PUBLIC_USE_MOCK_SPOTIFY=false`.                                                  |
+| `YT_OAUTH_CLIENT_ID` / `YT_OAUTH_CLIENT_SECRET` | For YouTube Music | Python API のプレイリスト生成（OAuth）。`.env.local` に設定。                                  |
 
 **Minimum for deploy (no Spotify):** set `OPENAI_API_KEY`. The app runs in mock mode and does not require login.
 
