@@ -40,6 +40,13 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Python API
+api/.venv/
+api/headers_auth.json
+api/oauth.json
+api/browser.json
+api/.env
+
 # personal
 .cursorrules
 vibe_cording.md
