@@ -42,6 +42,7 @@ next-env.d.ts
 
 # Python API
 api/.venv/
+api/__pycache__/
 api/headers_auth.json
 api/oauth.json
 api/browser.json
