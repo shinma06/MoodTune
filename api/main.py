@@ -117,7 +117,9 @@ def generate_playlist(req: PlaylistRequest):
         raise HTTPException(status_code=503, detail=str(e))
 
     try:
-        search_results = yt.search(search_query, filter="songs", limit=15)
+        # OAuth 時に filter="songs" だと YouTube が 400 を返すことがあるため filter なしで検索し、
+        # 結果から videoId を持つ項目（曲・動画）のみを使用する
+        search_results = yt.search(search_query, limit=15)
     except Exception as e:
         raise HTTPException(
             status_code=502,
