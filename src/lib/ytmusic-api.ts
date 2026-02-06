@@ -1,9 +1,6 @@
 /**
  * Client-side API for MoodTune Python backend (YouTube Music).
  * Requests are proxied via Next.js rewrites: /api/py/* → localhost:8000
- *
- * 要件: genre, weather, timeOfDay, title(optional) でプレイリスト生成。
- * 実装は未実装（スタブ）。
  */
 
 export interface YtMusicPlaylistResponse {
@@ -13,13 +10,34 @@ export interface YtMusicPlaylistResponse {
 }
 
 /**
- * Create a YouTube Music playlist — 未実装（要件に沿ってバックエンド実装後に有効化すること）。
+ * Create a YouTube Music playlist via the Python backend.
+ *
+ * @param genre - Music genre (e.g. "J-POP")
+ * @param weather - Weather condition (e.g. "Clear")
+ * @param timeOfDay - Time of day (e.g. "night")
+ * @param title - Optional playlist title
  */
 export async function generateYtMusicPlaylist(
-  _genre: string,
-  _weather: string,
-  _timeOfDay: string,
-  _title?: string
+  genre: string,
+  weather: string,
+  timeOfDay: string,
+  title?: string
 ): Promise<YtMusicPlaylistResponse> {
-  throw new Error("YouTube Music integration is not implemented yet.")
+  const res = await fetch("/api/py/generate_playlist", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      genre,
+      weather,
+      time_of_day: timeOfDay,
+      title: title || undefined,
+    }),
+  })
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: "Unknown error" }))
+    throw new Error(body.detail || `HTTP ${res.status}`)
+  }
+
+  return res.json()
 }

@@ -24,9 +24,10 @@ import {
     EMPTY_PLAYLIST,
     type LoadingMode,
 } from "@/lib/playlist-utils"
-import { Music } from "lucide-react"
+import { Music, ExternalLink, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { generateDashboard } from "@/app/actions/generateDashboard"
+import { generateYtMusicPlaylist } from "@/lib/ytmusic-api"
 import type { DashboardItem } from "@/types/dashboard"
 import type { TimeOfDay } from "@/lib/weather-background"
 import type { Genre } from "@/lib/constants"
@@ -45,6 +46,10 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     const [isLoading, setIsLoading] = useState(false)
     /** 生成中の種別（初回 / 全件再生成 / 個別 / 追加ジャンルのみ）。表示文言の切り替え用 */
     const [loadingMode, setLoadingMode] = useState<LoadingMode>(null)
+    /** YouTube Music プレイリスト生成中 */
+    const [isYtLoading, setIsYtLoading] = useState(false)
+    /** YouTube Music エラーメッセージ（一定時間後に消える） */
+    const [ytError, setYtError] = useState<string | null>(null)
 
     /** パネルを開いた時点のジャンル（閉じたときの差分計算用） */
     const genresOnOpenRef = useRef<string[]>([])
@@ -135,6 +140,32 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
             setLoadingMode(null)
         }
     }, [weatherType, displayHour, isTestMode, testTimeOfDay, selectedGenres])
+
+    /** YouTube Music でプレイリストを生成して新しいタブで開く */
+    const handleCreateYtPlaylist = useCallback(async () => {
+        if (isYtLoading || currentPlaylist.genre === "---") return
+        setIsYtLoading(true)
+        setYtError(null)
+        try {
+            const ytWeather = normalizeWeatherType(weatherType ?? "Clear")
+            const calculatedTod = getTimeOfDay(displayHour)
+            const ytTimeOfDay = (isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTod)
+            const response = await generateYtMusicPlaylist(
+                currentPlaylist.genre,
+                ytWeather,
+                ytTimeOfDay,
+                currentPlaylist.title,
+            )
+            window.open(response.url, "_blank", "noopener,noreferrer")
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : "プレイリストの作成に失敗しました"
+            setYtError(msg)
+            // 5秒後にエラーを消す
+            setTimeout(() => setYtError(null), 5000)
+        } finally {
+            setIsYtLoading(false)
+        }
+    }, [isYtLoading, currentPlaylist.genre, currentPlaylist.title, weatherType, displayHour, isTestMode, testTimeOfDay])
 
     /** ジャンル差分に応じてプレイリストを更新（追加ジャンルのみAPI呼び出し。既存は currentPlaylists を再利用） */
     const updatePlaylistsWithDiff = useCallback(async (
@@ -513,6 +544,31 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                         />
                     )}
                 </div>
+
+                {/* YouTube Music で作成ボタン（ジャンルが有効なときだけ表示） */}
+                {!isLoadingOrEmpty && currentPlaylist.genre !== "---" && (
+                    <div className="flex flex-col items-center gap-1.5">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleCreateYtPlaylist}
+                            disabled={isYtLoading}
+                            className={`gap-1.5 text-xs backdrop-blur-sm ${isDark ? "bg-white/10 border-white/20 text-white hover:bg-white/20" : "bg-background/80 border-border hover:bg-accent"}`}
+                        >
+                            {isYtLoading ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                                <ExternalLink className="w-3.5 h-3.5" />
+                            )}
+                            {isYtLoading ? "作成中..." : "YouTube Music で作成"}
+                        </Button>
+                        {ytError && (
+                            <p className={`text-[10px] ${isDark ? "text-red-300" : "text-destructive"}`}>
+                                {ytError}
+                            </p>
+                        )}
+                    </div>
+                )}
 
             </div>
         </div>
