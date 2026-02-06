@@ -43,6 +43,11 @@ class PlaylistRequest(BaseModel):
         return self
 
 
+# 認証ファイルの役割（リネームしないこと）
+# - browser.json / headers_auth.json: ブラウザ認証（ytmusicapi browser で生成。ヘッダー形式）
+# - oauth.json: OAuth 認証（ytmusicapi oauth で生成。トークン形式）
+
+
 def _get_ytmusic() -> YTMusic:
     api_dir = Path(__file__).resolve().parent
     # ブラウザ認証を優先（OAuth は search で 400 が出ることがあるため）
@@ -50,13 +55,13 @@ def _get_ytmusic() -> YTMusic:
         path = api_dir / name
         if path.is_file():
             return YTMusic(str(path))
-    # フォールバック: OAuth（search が 400 になる場合は上記のブラウザ認証に切り替え）
+    # OAuth: oauth.json のみ（リネーム不要）
     oauth_path = api_dir / "oauth.json"
     if not oauth_path.is_file():
         raise FileNotFoundError(
-            "api/browser.json or api/oauth.json not found. "
-            "Recommended: run 'ytmusicapi browser' and save as api/browser.json. "
-            "Or run 'ytmusicapi oauth' for OAuth (search may return 400)."
+            "api/browser.json, api/headers_auth.json or api/oauth.json not found. "
+            "Browser auth: run 'ytmusicapi browser' → api/browser.json. "
+            "OAuth: run 'ytmusicapi oauth' → api/oauth.json (do not rename)."
         )
     client_id = os.environ.get("YT_OAUTH_CLIENT_ID")
     client_secret = os.environ.get("YT_OAUTH_CLIENT_SECRET")
@@ -72,6 +77,12 @@ def _get_ytmusic() -> YTMusic:
             client_secret=client_secret,
         ),
     )
+
+
+def _is_browser_auth() -> bool:
+    """True if using browser/headers auth (browser.json or headers_auth.json). filter='songs' only then."""
+    api_dir = Path(__file__).resolve().parent
+    return (api_dir / "browser.json").is_file() or (api_dir / "headers_auth.json").is_file()
 
 
 def _build_search_query(genre: str, weather: str, time_of_day: str) -> str:
@@ -128,8 +139,11 @@ def generate_playlist(req: PlaylistRequest):
         raise HTTPException(status_code=503, detail=str(e))
 
     try:
-        # filter="songs" は OAuth で 400、ブラウザ認証でも create_playlist で 401 が出ることがあるため使わない
-        search_results = yt.search(search_query, limit=15)
+        # ブラウザ認証時のみ filter="songs"。401 が出る場合は認証の再取得・X-Goog-AuthUser 確認（api/README.md）
+        if _is_browser_auth():
+            search_results = yt.search(search_query, filter="songs", limit=15)
+        else:
+            search_results = yt.search(search_query, limit=15)
     except Exception as e:
         raise HTTPException(
             status_code=502,
