@@ -18,6 +18,20 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+### Next.js と Python API を同時に起動する
+
+YouTube Music 連携を使う場合は、Next と FastAPI の両方を立ち上げます。
+
+```bash
+npm run dev:all
+```
+
+**停止:** ターミナルで **Ctrl+C を1回**押すと、Next と API の両方が終了します。
+
+- **Next.js のみ:** `npm run dev` または `npm run dev:next`
+- **Python API のみ (port 8000):** `npm run dev:api`  
+  （要: `api/.venv` と `api/oauth.json`。手順は [api/README.md](api/README.md) を参照）
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
