@@ -107,6 +107,17 @@ export function useVinylRotation({
     idleRotationRef.current = 0
   }, [])
 
+  /** 指を離した角度を維持し、その角度からアイドル回転を再開する。releaseAngle は startRotation + cumulativeRotationRef で計算した「離した瞬間の角度」を渡すこと。 */
+  const syncIdleToCurrentAndResetGesture = useCallback((releaseAngle: number) => {
+    idleRotationRef.current = releaseAngle
+    lastIdleTimeRef.current = null
+    setTotalRotation(0)
+    setCumulativeRotation(0)
+    setStartRotation(0)
+    cumulativeRotationRef.current = 0
+    setCumulativeRotation(0)
+  }, [])
+
   /** 指定角度から 0° まで、CSS transition（linear）で回した角度分を逆方向に戻す。角速度一定で滑らかに一貫した制御。 */
   const runSnapBackAnimation = useCallback(
     (fromRotationDeg: number) => {
@@ -187,11 +198,13 @@ export function useVinylRotation({
       onRotationComplete("prev")
       resetRotation()
     } else {
-      resetRotation()
+      // 指を離した瞬間の角度（ref で同期的に取得）からアイドル回転を再開。state の rotation は非同期で古い可能性があるため使わない
+      const releaseAngle = startRotation + cumulativeRotationRef.current
+      syncIdleToCurrentAndResetGesture(releaseAngle)
     }
   }, [
     isDragging,
-    rotation,
+    startRotation,
     totalRotation,
     rotationThreshold,
     onRotationComplete,
@@ -199,6 +212,7 @@ export function useVinylRotation({
     onRegenerateAll,
     resetRotation,
     runSnapBackAnimation,
+    syncIdleToCurrentAndResetGesture,
   ])
 
   const handleStart = useCallback(
