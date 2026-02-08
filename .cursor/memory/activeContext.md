@@ -133,3 +133,4 @@ WXTECH_API_KEY=...                 # WxTech（天気・日本1km/世界5km）。
 - **進捗・未実装**: `.cursor/memory/progress.md`
 - **製品・ユーザー体験**: `.cursor/memory/productContext.md`
 - **技術スタック詳細**: `.cursor/memory/techContext.md`
+- **今後の開発（開発者・エージェント向けメモ）**: `.cursor/memory/futureDevelopment.md`
