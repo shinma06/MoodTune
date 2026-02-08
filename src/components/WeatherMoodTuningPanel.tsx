@@ -172,7 +172,7 @@ export default function WeatherMoodTuningPanel({
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Sparkles className="w-4 h-4" />
-                Mood Tuning
+                <span className="text-rainbow">Mood Tuning</span>
               </CardTitle>
               <CardDescription className="text-xs">
                 天気や時間帯を選んで、今の気分に合わせたプレイリストを作成
