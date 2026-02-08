@@ -9,7 +9,7 @@ interface WeatherContextType {
   isTimeInitialized: boolean
   /** 表示用の現在時（0–23）。マウント時と1分ごとに更新。 */
   displayHour: number
-  /** testTimeOfDay を考慮した表示用時間帯（単一ソース） */
+  /** moodTuningTimeOfDay を考慮した表示用時間帯（単一ソース） */
   effectiveTimeOfDay: TimeOfDay
   /** normalizeWeatherType を適用した表示用天気（単一ソース） */
   effectiveWeather: WeatherType
@@ -20,11 +20,12 @@ interface WeatherContextType {
   /** APIから取得した実際の天気（手動設定をやめるときの復帰用） */
   actualWeatherType: string | null
   setActualWeatherType: (weather: string | null) => void
-  testTimeOfDay: TimeOfDay | null
-  setTestTimeOfDay: (timeOfDay: TimeOfDay | null) => void
-  /** 手動で雰囲気（天気・時間帯）を設定しているか */
-  isTestMode: boolean
-  setIsTestMode: (isTestMode: boolean) => void
+  /** Mood Tuning で手動設定した時間帯 */
+  moodTuningTimeOfDay: TimeOfDay | null
+  setMoodTuningTimeOfDay: (timeOfDay: TimeOfDay | null) => void
+  /** Mood Tuning で手動設定中か（天気・時間帯を上書きしているか） */
+  isMoodTuning: boolean
+  setIsMoodTuning: (enabled: boolean) => void
   /** 時間帯・天気変更時にプレイリストを自動更新するか */
   playlistAutoUpdate: boolean
   setPlaylistAutoUpdate: (enabled: boolean) => void
@@ -41,8 +42,8 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
   const [displayHour, setDisplayHour] = useState(0)
   const [weatherType, setWeatherType] = useState<string | null>(null)
   const [actualWeatherType, setActualWeatherType] = useState<string | null>(null)
-  const [testTimeOfDay, setTestTimeOfDay] = useState<TimeOfDay | null>(null)
-  const [isTestMode, setIsTestMode] = useState(false)
+  const [moodTuningTimeOfDay, setMoodTuningTimeOfDay] = useState<TimeOfDay | null>(null)
+  const [isMoodTuning, setIsMoodTuning] = useState(false)
   const [playlistAutoUpdate, setPlaylistAutoUpdate] = useState(true)
   const [playlistRefreshTrigger, setPlaylistRefreshTrigger] = useState(0)
 
@@ -54,14 +55,14 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(timer)
   }, [])
 
-  /** testTimeOfDay を考慮した表示用時間帯（単一ソース）。未初期化時は day を返し UI を明るいテーマに揃える。 */
+  /** moodTuningTimeOfDay を考慮した表示用時間帯（単一ソース）。未初期化時は day を返し UI を明るいテーマに揃える。 */
   const effectiveTimeOfDay = useMemo<TimeOfDay>(() => {
     if (!isTimeInitialized) return "day"
-    if (isTestMode && testTimeOfDay) {
-      return testTimeOfDay
+    if (isMoodTuning && moodTuningTimeOfDay) {
+      return moodTuningTimeOfDay
     }
     return getTimeOfDay(displayHour)
-  }, [isTimeInitialized, isTestMode, testTimeOfDay, displayHour])
+  }, [isTimeInitialized, isMoodTuning, moodTuningTimeOfDay, displayHour])
 
   /** normalizeWeatherType を適用した表示用天気（単一ソース） */
   const effectiveWeather = useMemo<WeatherType>(() => {
@@ -90,10 +91,10 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
         setWeatherType,
         actualWeatherType,
         setActualWeatherType,
-        testTimeOfDay,
-        setTestTimeOfDay,
-        isTestMode,
-        setIsTestMode,
+        moodTuningTimeOfDay,
+        setMoodTuningTimeOfDay,
+        isMoodTuning,
+        setIsMoodTuning,
         playlistAutoUpdate,
         setPlaylistAutoUpdate,
         playlistRefreshTrigger,
