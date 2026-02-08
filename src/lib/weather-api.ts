@@ -25,6 +25,13 @@ export async function fetchWeatherData(lat: number, lon: number): Promise<{
   if (geocodeRes.ok && geocodeBody.city) {
     city = geocodeBody.city
   }
+  if (!city) {
+    const owmCityRes = await fetch(`/api/weather/owm-city?lat=${lat}&lon=${lon}`).catch(() => null)
+    if (owmCityRes?.ok) {
+      const owmCity = await owmCityRes.json().catch(() => ({}))
+      if (owmCity.name) city = owmCity.name
+    }
+  }
 
   return {
     weatherData: {
