@@ -11,35 +11,39 @@ src/
 │   │   └── generateDashboard.ts
 │   ├── api/          # API Routes
 │   │   ├── auth/[...nextauth]/  # NextAuth (Spotify)
-│   │   └── weather/  # 天気APIプロキシ
+│   │   ├── geocode/  # 逆ジオコーディング（都市名取得）
+│   │   └── weather/  # 天気 API プロキシ（WxTech 優先 → OWM フォールバック）
 │   ├── page.tsx      # メインページ
-│   └── layout.tsx    # ルートレイアウト
+│   ├── layout.tsx    # ルートレイアウト
+│   └── loading.tsx   # ローディングフォールバック
 ├── auth.ts           # NextAuth 設定
-├── components/       # Reactコンポーネント
-│   ├── ui/           # shadcn/uiコンポーネント
+├── components/       # React コンポーネント
+│   ├── ui/           # shadcn/ui コンポーネント
 │   ├── GenreSelector.tsx   # Favorite Music パネル
 │   ├── PlaylistExplorer.tsx
 │   ├── WeatherMonitor.tsx
 │   ├── WeatherAnimation.tsx
 │   └── WeatherMoodTuningPanel.tsx  # Mood Tuning パネル
-├── contexts/         # React Context
-│   └── WeatherContext.tsx
-├── hooks/            # カスタムフック
+├── contexts/
+│   └── WeatherContext.tsx  # 天気・時間帯・表示状態の単一ソース
+├── hooks/
 │   ├── useGeolocation.ts
 │   ├── useLocalStorage.ts   # ジャンル選択の永続化（バリデーション・修復あり）
-│   └── useVinylRotation.ts # レコード回転・3周で再生成
-├── lib/              # ユーティリティ・APIクライアント
-│   ├── constants.ts        # 定数・ジャンル定義
-│   ├── playlist-utils.ts   # プレイリスト関連ユーティリティ
-│   ├── spotify-server.ts   # Spotify API クライアント
-│   ├── weather-api.ts
-│   ├── weather-background.ts
-│   ├── weather-background-utils.ts
-│   └── weather-utils.ts
-└── types/            # TypeScript型定義
-    ├── dashboard.ts  # DashboardItem
+│   └── useVinylRotation.ts # レコード回転・3 周で再生成
+├── lib/
+│   ├── constants.ts          # 定数・ジャンル定義
+│   ├── playlist-utils.ts     # プレイリスト関連ユーティリティ
+│   ├── spotify-server.ts     # Spotify API クライアント
+│   ├── weather-api.ts       # 天気・Geocoding 取得（Promise.all 並列）
+│   ├── weather-background.ts # 背景グラデーション（BACKGROUNDS 等）
+│   ├── weather-background-utils.ts # 背景ユーティリティ（INITIAL_BACKGROUND_GRADIENT 等）
+│   ├── weather-utils.ts     # 天気アイコン・テーマ色（静的定数）
+│   └── wxtech-weather.ts   # WxTech API（日本域判定・天気コード→WeatherType）
+└── types/
+    ├── dashboard.ts   # DashboardItem
     ├── next-auth.d.ts
-    └── weather.ts    # WeatherApiResponse, WeatherData
+    ├── spotify-web-api-node.d.ts
+    └── weather.ts     # WeatherApiResponse, WeatherData
 ```
 
 ### データフロー
@@ -64,8 +68,9 @@ src/
 
 ### バックエンド/API
 
-- **API Route**: Next.js API Routes
-- **External API**: OpenWeatherMap API
+- **API Route**: Next.js API Routes（`/api/weather`, `/api/geocode`, `/api/auth/[...nextauth]`）
+- **天気**: WxTech 優先（日本: 1km メッシュ ピンポイント、海外: 5km メッシュ）。失敗時は OpenWeatherMap にフォールバック
+- **都市名**: Google Geocoding API（逆ジオコーディング）。失敗時は OWM の `name` にフォールバック
 
 ### 状態管理
 

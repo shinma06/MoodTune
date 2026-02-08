@@ -40,9 +40,11 @@
 ```
 actualWeatherType / actualTimeOfDay  → 実際の天気・時間帯
 weatherType / moodTuningTimeOfDay    → Mood Tuning で設定した値（Context）
-effectiveWeather / effectiveTimeOfDay → 表示用（test があればそちら優先）
+effectiveWeather / effectiveTimeOfDay → 表示用（Mood Tuning で設定されていればそちら優先）
 isDark                               → 背景が暗いかどうか
-displayHour                          → 表示用時刻（1分ごと更新）
+isMoodTuning                         → Mood Tuning で手動設定中か（10 分ポーリングはスキップ）
+isTimeInitialized                    → クライアントで時刻が確定したか（初回背景の切り替えに使用）
+displayHour                          → 表示用時刻（1 分ごと更新）
 playlistRefreshTrigger               → プレイリスト再生成のトリガー
 ```
 

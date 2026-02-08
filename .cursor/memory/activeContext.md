@@ -120,5 +120,16 @@ WXTECH_API_KEY=...                 # WxTech（天気・日本1km/世界5km）。
 ## 次の優先事項
 
 - Spotify API 連携の本番テスト
-- トークンリフレッシュ機能の実装
-- プレイリスト保存機能の実装
+- トークンリフレッシュの堅牢化
+- プレイリストの Spotify 保存機能の実装
+- （任意）ユーザー設定（位置情報の再取得、天気更新間隔など）
+
+## ドキュメント参照
+
+- **アーキテクチャ・データフロー・命名**: `.cursor/memory/systemPatterns.md`
+- **技術選定理由・ADR**: `.cursor/memory/decisionLog.md`
+- **実装前チェック**: `.cursor/rules/pre-implementation-check.md`
+- **過剰な複雑さのリファクタ**: `.cursor/rules/refactor-overcomplexity.md`
+- **進捗・未実装**: `.cursor/memory/progress.md`
+- **製品・ユーザー体験**: `.cursor/memory/productContext.md`
+- **技術スタック詳細**: `.cursor/memory/techContext.md`
