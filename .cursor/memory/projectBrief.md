@@ -13,7 +13,7 @@ MoodTune - 天気 × 時間でプレイリスト提案
 ### 機能要件（現在の実装）
 
 1. **天気連動システム**
-   - 位置情報から現在の天気を取得（OpenWeatherMap API）
+   - 位置情報から現在の天気を取得（WxTech 優先: 日本は 1km メッシュ ピンポイント、海外は 5km メッシュ 世界天気予報。失敗時は OpenWeatherMap にフォールバック）。都市名は Google Geocoding API（逆ジオコーディング）で取得
    - 天気タイプは日本の主要気象に絞り対応（Clear, Clouds, Rain, Drizzle, Thunderstorm, Snow, Mist, Fog, Haze など）
    - 時間帯（朝/昼/夕方/夜）に応じた背景色の動的変化
    - 表示用時刻は `displayHour` で単一ソース化（マウント時・1分ごとに更新）

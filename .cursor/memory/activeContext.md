@@ -6,6 +6,14 @@ UI/UX 改善とコードベースのリファクタリング、Vibeコーディ�
 
 ## 最近の変更履歴
 
+- 天気取得を WxTech 優先に変更（API 切り替え完了、テスト用表示は削除済み）:
+  - `GET /api/weather`: WxTech を優先。日本域は 1km メッシュ ピンポイント（`/api/v1/ss1wx`）、海外は 5km メッシュ 世界天気予報（`/api/v2/global/wx`）。失敗時は OpenWeatherMap にフォールバック。レスポンスは OpenWeatherMap 互換に正規化（クライアント変更不要）
+  - Base URL は `https://wxtech.weathernews.com`（api. サブドメインは付けない）。公式エンドポイントは `lib/wxtech-weather.ts` のコメントに記載
+  - `lib/wxtech-weather.ts`: 日本域判定、天気コード(wx) → WeatherType マッピング
+  - 環境変数: `WXTECH_API_KEY`（WxTech）、`NEXT_PUBLIC_WEATHER_API_KEY`（OWM フォールバック）
+- 都市名取得を Google Geocoding API（逆ジオコーディング）に移行:
+  - `GET /api/geocode?lat=&lon=` を新設。`GOOGLE_GEOCODING_API_KEY` で逆ジオコーディングし、最もローカルな地名のみ返す（locality > administrative_area_level_2 > level_1）。本番では Referer を送り、開発では送らない
+  - `fetchWeatherData`: 天気と Geocoding を `Promise.all` で並列取得。都市名は Geocoding の `city` を優先し、失敗・空の場合は天気APIの `name`（OWM 時のみ）にフォールバック
 - 初回アクセス時の背景・時間帯の初期化修正:
   - `WeatherContext`: `isTimeInitialized` を追加。SSR/初回はサーバー時刻に依存せず、`displayHour` を 0 で初期化。`useEffect` でクライアント現地時刻を設定したあと `isTimeInitialized = true` にし、時間帯に応じた背景を有効化
   - 未初期化時は `effectiveTimeOfDay = "day"`, `isDark = false` で中性背景時の UI と揃える
@@ -96,6 +104,9 @@ AUTH_SPOTIFY_SECRET=your_spotify_client_secret
 AUTH_SECRET=your_random_secret_string
 OPENAI_API_KEY=your_openai_api_key
 NEXT_PUBLIC_USE_MOCK_SPOTIFY=true  # モックモード有効化
+NEXT_PUBLIC_WEATHER_API_KEY=...    # OpenWeatherMap（天気取得）
+GOOGLE_GEOCODING_API_KEY=...       # Google Geocoding（都市名取得、サーバー側のみ）
+WXTECH_API_KEY=...                 # WxTech（天気・日本1km/世界5km）。未設定時は OWM のみ
 ```
 
 ## 次の優先事項

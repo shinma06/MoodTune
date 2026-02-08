@@ -8,7 +8,7 @@
 
 ## 主な機能
 
-- **天気・時間帯連動** — 位置情報から現在の天気を取得（OpenWeatherMap）。朝/昼/夕方/夜で背景グラデーションとテーマが変化
+- **天気・時間帯連動** — 位置情報から現在の天気を取得（WxTech 優先: 日本は 1km メッシュ ピンポイント、海外は 5km メッシュ 世界天気予報。失敗時は OpenWeatherMap にフォールバック）。都市名は Google Geocoding API（逆ジオコーディング）で取得。朝/昼/夕方/夜で背景グラデーションとテーマが変化
 - **天気アニメーション** — 雨・雪・雲・霧など、天気に応じたビジュアルで没入感のある UI
 - **Favorite Music** — 21 ジャンルから 1〜8 個選択。選択はブラウザに保存され、パネルを閉じたときに変更分だけプレイリストを再生成
 - **Mood Tuning** — 天気・時間帯を手動で切り替えてプレビュー。開発・テストや「今は夜の雨の気分」で試すのに便利
@@ -26,7 +26,7 @@
 | Styling | Tailwind CSS 4, shadcn/ui (Radix UI), Lucide React |
 | Auth | NextAuth v5 (Spotify) |
 | AI | Vercel AI SDK + OpenAI |
-| External API | OpenWeatherMap, Spotify Web API（オプション） |
+| External API | WxTech（天気・日本/世界）, OpenWeatherMap（天気フォールバック）, Google Geocoding API（都市名）, Spotify Web API（オプション） |
 
 ---
 
@@ -58,7 +58,9 @@ npm install
 | `AUTH_SPOTIFY_ID` | Spotify 時 | Spotify Developer の Client ID |
 | `AUTH_SPOTIFY_SECRET` | Spotify 時 | Spotify Developer の Client Secret |
 | `NEXT_PUBLIC_USE_MOCK_SPOTIFY` | No | 未設定または `true`: モックモード（ログイン不要）。`false` で Spotify ログインを有効化 |
-| `NEXT_PUBLIC_WEATHER_API_KEY` | 天気 API 時 | OpenWeatherMap API キー（実天気を使用する場合） |
+| `WXTECH_API_KEY` | 天気 API 推奨 | WxTech API キー（日本: 1km メッシュ、海外: 5km メッシュ）。未設定時は OpenWeatherMap のみ使用 |
+| `NEXT_PUBLIC_WEATHER_API_KEY` | 天気フォールバック | OpenWeatherMap API キー（WxTech 失敗時または WxTech 未設定時に使用） |
+| `GOOGLE_GEOCODING_API_KEY` | 都市名表示時 | Google Geocoding API キー（逆ジオコーディングで都市名取得）。未設定時は OpenWeatherMap の地名を表示 |
 
 **最小構成（Spotify なし・モックで動かす場合）:** `OPENAI_API_KEY` のみ設定すれば起動できます。
 
@@ -89,7 +91,7 @@ npm run dev
 src/
 ├── app/                    # Next.js App Router
 │   ├── actions/            # Server Actions（generateDashboard 等）
-│   ├── api/                # API Routes（auth, weather プロキシ）
+│   ├── api/                # API Routes（auth, weather, geocode プロキシ）
 │   ├── page.tsx            # メインページ
 │   ├── layout.tsx
 │   └── loading.tsx
@@ -121,7 +123,7 @@ src/
 
 ## データフロー（要約）
 
-1. **WeatherMonitor** — 位置情報 → `/api/weather` → WeatherContext 更新
+1. **WeatherMonitor** — 位置情報 → `/api/weather`（天気）と `/api/geocode`（都市名）を並列取得 → WeatherContext 更新
 2. **PlaylistExplorer** — WeatherContext から天気・時間帯・背景を取得。`useLocalStorage` でジャンルを取得し、プレイリスト表示・再生成を担当
 3. **GenreSelector** — ジャンル選択 → localStorage 更新。パネル閉じ時に PlaylistExplorer が差分を検知し、追加ジャンル分のみ API で再生成
 4. **WeatherTestPanel (Mood Tuning)** — 手動で天気・時間を設定 → WeatherContext 更新 → 全コンポーネントに反映。パネル閉じ時に変更があればプレイリストを再生成
