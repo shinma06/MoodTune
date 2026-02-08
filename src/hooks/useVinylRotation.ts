@@ -14,6 +14,8 @@ interface UseVinylRotationOptions {
   onRotationComplete: (direction: "next" | "prev") => void
   /** 次の/前のプレイリストに切り替える閾値（度） */
   rotationThreshold?: number
+  /** ページネーション可能か。false のとき 45°以上で離しても next/prev せず離した角度からアイドル回転を再開する */
+  canPaginate?: boolean
   /** 右に3周以上回したときに呼ぶ（現在表示中のジャンルを個別再生成） */
   onRegenerateCurrent?: () => void
   /** 左に3周以上回したときに呼ぶ（全件再生成） */
@@ -22,13 +24,14 @@ interface UseVinylRotationOptions {
 
 /**
  * レコード盤の回転操作を管理するカスタムフック
- * - 45°以上で next/prev（操作と衝突しない）
+ * - 45°以上で next/prev（canPaginate が true のとき。false なら離した角度からアイドル再開）
  * - 右に3周以上で onRegenerateCurrent（個別再生成）
  * - 左に3周以上で onRegenerateAll（全件再生成）
  */
 export function useVinylRotation({
   onRotationComplete,
   rotationThreshold = 45,
+  canPaginate = true,
   onRegenerateCurrent,
   onRegenerateAll,
 }: UseVinylRotationOptions) {
@@ -191,15 +194,23 @@ export function useVinylRotation({
       runSnapBackAnimation(rotation)
       return
     }
+    const releaseAngle = startRotation + cumulativeRotationRef.current
     if (rotationDiff >= rotationThreshold) {
-      onRotationComplete("next")
-      resetRotation()
+      if (canPaginate) {
+        onRotationComplete("next")
+        resetRotation()
+      } else {
+        syncIdleToCurrentAndResetGesture(releaseAngle)
+      }
     } else if (rotationDiff <= -rotationThreshold) {
-      onRotationComplete("prev")
-      resetRotation()
+      if (canPaginate) {
+        onRotationComplete("prev")
+        resetRotation()
+      } else {
+        syncIdleToCurrentAndResetGesture(releaseAngle)
+      }
     } else {
       // 指を離した瞬間の角度（ref で同期的に取得）からアイドル回転を再開。state の rotation は非同期で古い可能性があるため使わない
-      const releaseAngle = startRotation + cumulativeRotationRef.current
       syncIdleToCurrentAndResetGesture(releaseAngle)
     }
   }, [
@@ -207,6 +218,7 @@ export function useVinylRotation({
     startRotation,
     totalRotation,
     rotationThreshold,
+    canPaginate,
     onRotationComplete,
     onRegenerateCurrent,
     onRegenerateAll,

@@ -285,6 +285,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                 setCurrentIndex((prev) => (prev - 1 + length) % length)
             }
         },
+        canPaginate: displayPlaylists.length > 1,
         onRegenerateCurrent:
             displayPlaylists.length > 0 && currentPlaylist.genre !== "---"
                 ? () => refreshPlaylistByGenre(currentPlaylist.genre as Genre)
