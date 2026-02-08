@@ -37,7 +37,7 @@ interface PlaylistExplorerProps {
 
 export default function PlaylistExplorer({ playlists: initialPlaylists }: PlaylistExplorerProps) {
     const [currentIndex, setCurrentIndex] = useState(0)
-    const { isTimeInitialized, displayHour, weatherType, actualWeatherType, testTimeOfDay, isTestMode, playlistAutoUpdate, playlistRefreshTrigger, isDark } = useWeather()
+    const { isTimeInitialized, displayHour, weatherType, actualWeatherType, testTimeOfDay, isTestMode, effectiveWeather, effectiveTimeOfDay, playlistAutoUpdate, playlistRefreshTrigger, isDark } = useWeather()
     /** 開いているパネル（null = 両方閉じている）。同時に1つだけ開く */
     const [openPanel, setOpenPanel] = useState<null | "mood" | "genre">(null)
     const [selectedGenres, isGenresInitialized] = useSelectedGenres()
@@ -256,6 +256,13 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
 
     const calculatedTimeOfDay = getTimeOfDay(displayHour)
     const timeOfDay = isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay
+
+    /** パネルを閉じたうえで、表示中の天気・時間が実際と異なる場合のみ Mood Tuning 表示を適用 */
+    const actualTimeOfDay = getTimeOfDay(displayHour)
+    const actualWeatherNorm = actualWeatherType ? normalizeWeatherType(actualWeatherType) : null
+    const isMoodTuningApplied =
+        openPanel !== "mood" &&
+        (actualWeatherNorm != null && effectiveWeather !== actualWeatherNorm || effectiveTimeOfDay !== actualTimeOfDay)
     const weather = normalizeWeatherType(weatherType ?? "Clear")
     const backgroundStyle = isTimeInitialized
       ? formatGradientBackground(getWeatherBackground(weather, timeOfDay))
@@ -384,7 +391,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                                     ? "右3周でプレイリストを再生成"
                                     : "右3周でプレイリストを再生成・左3周で一括再生成"}
                         </p>
-                        {isTestMode && (
+                        {isMoodTuningApplied && (
                             <p className="text-base font-semibold text-rainbow whitespace-nowrap mt-2.5">
                                 Mood Tuning
                             </p>
@@ -482,7 +489,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                             const inactiveCount = Math.max(1, displayPlaylists.length - 1)
                             const inactiveIndex = i < safeCurrentIndex ? i : i - 1
                             const rainbowSliceStyle =
-                                isTestMode && !isActive
+                                isMoodTuningApplied && !isActive
                                     ? {
                                           background: "linear-gradient(90deg, #ef4444, #f97316, #eab308, #22c55e, #06b6d4, #8b5cf6, #ec4899, #ef4444)",
                                           backgroundSize: `${inactiveCount * 100}% 100%`,
@@ -492,7 +499,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                             return (
                                 <div
                                     key={i}
-                                    className={`w-1.5 h-1.5 rounded-full transition-all ${isActive ? "w-6" : isTestMode ? "" : "bg-border"}`}
+                                    className={`w-1.5 h-1.5 rounded-full transition-all ${isActive ? "w-6" : isMoodTuningApplied ? "" : "bg-border"}`}
                                     style={isActive ? { backgroundColor: colors.accentColor } : rainbowSliceStyle}
                                 />
                             )
@@ -507,14 +514,14 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                     <p className={`text-[10px] sm:text-xs uppercase tracking-widest font-light ${genreColorClass}`}>
                         {isLoadingOrEmpty ? getLoadingGenreText(loadingMode) : currentPlaylist.genre}
                     </p>
-                    <h2 className={`text-xl sm:text-2xl font-serif leading-tight text-balance ${isTestMode ? "text-rainbow" : titleColorClass}`}>
+                    <h2 className={`text-xl sm:text-2xl font-serif leading-tight text-balance ${isMoodTuningApplied ? "text-rainbow" : titleColorClass}`}>
                         {isLoadingOrEmpty ? getLoadingTitleText(loadingMode) : currentPlaylist.title}
                     </h2>
                 </div>
 
                 <div className="flex items-center justify-center">
                     {isLoadingOrEmpty ? (
-                        isTestMode ? (
+                        isMoodTuningApplied ? (
                             <div className="bg-rainbow p-[2px] rounded-lg shrink-0">
                                 <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-[calc(1rem-2px)] bg-muted/50 animate-pulse flex items-center justify-center">
                                     <Music className={`w-6 h-6 sm:w-8 sm:h-8 ${isDark ? "text-white/30" : "text-muted-foreground/30"}`} />
@@ -525,7 +532,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                                 <Music className={`w-6 h-6 sm:w-8 sm:h-8 ${isDark ? "text-white/30" : "text-muted-foreground/30"}`} />
                             </div>
                         )
-                    ) : isTestMode ? (
+                    ) : isMoodTuningApplied ? (
                         <div className="bg-rainbow p-[2px] rounded-lg shrink-0">
                             <img
                                 src={getImageUrl(currentPlaylist.imageUrl)}

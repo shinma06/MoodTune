@@ -119,6 +119,12 @@ export default function WeatherTestPanel({
   const actualWeatherTypeNormalized = actualWeatherType ? normalizeWeatherType(actualWeatherType) : null
   const actualTimeOfDay = getTimeOfDay(displayHour)
 
+  /** パネルを閉じたうえで、表示中の天気・時間が実際と異なる場合のみ Mood Tuning 表示（虹色ボタン）を適用 */
+  const isMoodTuningApplied =
+    !isOpen &&
+    (actualWeatherTypeNormalized != null && effectiveWeather !== actualWeatherTypeNormalized ||
+      effectiveTimeOfDay !== actualTimeOfDay)
+
   /** パネルを開いた時点で「現在の天気・時間」と違う状態を設定していた場合のみリセットボタンを表示 */
   const actualWeatherAtOpenNorm = normalizeWeatherType(actualWeatherAtOpenRef.current ?? "Clear")
   const actualTimeAtOpen = actualTimeOfDayAtOpenRef.current ?? actualTimeOfDay
@@ -134,7 +140,7 @@ export default function WeatherTestPanel({
       {/* トグルボタン（ジャンルパネル開時は非表示）。Mood Tuning 中は虹色ボーダーのみ */}
       {!hideToggleButton && (
         <div className="fixed bottom-4 left-4 z-50">
-          {(isOpen || isTestMode) ? (
+          {isMoodTuningApplied ? (
             <div className="bg-rainbow p-[2px] rounded-[1.1rem]">
               <Button
                 variant="outline"
