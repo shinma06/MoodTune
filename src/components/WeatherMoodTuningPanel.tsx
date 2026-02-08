@@ -242,20 +242,25 @@ export default function WeatherMoodTuningPanel({
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-2 pt-2 border-t">
-              <Label className="text-sm">自動更新</Label>
-              <Button
-                variant={playlistAutoUpdate ? "default" : "outline"}
-                size="sm"
-                className="min-w-16"
-                onClick={() => setPlaylistAutoUpdate(!playlistAutoUpdate)}
-              >
-                {playlistAutoUpdate ? "ON" : "OFF"}
-              </Button>
-            </div>
-            <p className="text-[10px] text-muted-foreground -mt-1">
-              実際の時間・天気の変化でプレイリストを自動で再生成します
-            </p>
+            {/* Legacy: 自動更新 ON/OFF（一時非表示。アプリは常に自動更新ONとして動作） */}
+            {false && (
+              <>
+                <div className="flex items-center justify-between gap-2 pt-2 border-t">
+                  <Label className="text-sm">自動更新</Label>
+                  <Button
+                    variant={playlistAutoUpdate ? "default" : "outline"}
+                    size="sm"
+                    className="min-w-16"
+                    onClick={() => setPlaylistAutoUpdate(!playlistAutoUpdate)}
+                  >
+                    {playlistAutoUpdate ? "ON" : "OFF"}
+                  </Button>
+                </div>
+                <p className="text-[10px] text-muted-foreground -mt-1">
+                  実際の時間・天気の変化でプレイリストを自動で再生成します
+                </p>
+              </>
+            )}
 
             {showResetButton && (
               <div className="pt-2 flex flex-col gap-2">

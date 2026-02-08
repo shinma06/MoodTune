@@ -37,7 +37,7 @@ interface PlaylistExplorerProps {
 
 export default function PlaylistExplorer({ playlists: initialPlaylists }: PlaylistExplorerProps) {
     const [currentIndex, setCurrentIndex] = useState(0)
-    const { isTimeInitialized, displayHour, weatherType, actualWeatherType, moodTuningTimeOfDay, isMoodTuning, effectiveWeather, effectiveTimeOfDay, playlistAutoUpdate, playlistRefreshTrigger, isDark } = useWeather()
+    const { isTimeInitialized, displayHour, weatherType, actualWeatherType, moodTuningTimeOfDay, isMoodTuning, effectiveWeather, effectiveTimeOfDay, playlistRefreshTrigger, isDark } = useWeather()
     /** 開いているパネル（null = 両方閉じている）。同時に1つだけ開く */
     const [openPanel, setOpenPanel] = useState<null | "mood" | "genre">(null)
     const [selectedGenres, isGenresInitialized] = useSelectedGenres()
@@ -220,16 +220,16 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         }
     }, [isGenresInitialized, selectedGenres, playlists, updatePlaylistsWithDiff])
 
-    /** 実時刻の時間帯（朝・昼・夕方・夜）が変わったタイミングでプレイリストを自動更新（手動設定中は行わない） */
+    /** 実時刻の時間帯が変わったタイミングでプレイリストを自動更新（手動設定中は行わない）。常に自動更新ONとして動作。 */
     const calculatedTimeOfDayForEffect = getTimeOfDay(displayHour)
     useEffect(() => {
-        if (!playlistAutoUpdate || isMoodTuning || !isGenresInitialized || selectedGenres.length === 0) return
+        if (isMoodTuning || !isGenresInitialized || selectedGenres.length === 0) return
         const prev = prevTimeOfDayRef.current
         prevTimeOfDayRef.current = calculatedTimeOfDayForEffect
         if (prev !== null && prev !== calculatedTimeOfDayForEffect) {
             refreshPlaylists({ autoUpdate: true })
         }
-    }, [calculatedTimeOfDayForEffect, playlistAutoUpdate, isMoodTuning, isGenresInitialized, selectedGenres.length, refreshPlaylists])
+    }, [calculatedTimeOfDayForEffect, isMoodTuning, isGenresInitialized, selectedGenres.length, refreshPlaylists])
 
     /** プレイリスト生成中はパネルを閉じ、値変更を防ぐ（同期ずれ防止） */
     useEffect(() => {
@@ -243,16 +243,16 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         refreshPlaylistsRef.current()
     }, [playlistRefreshTrigger, isGenresInitialized, selectedGenres.length])
 
-    /** APIが天気の変更を示したタイミングでプレイリストを自動更新（手動設定中は対象外） */
+    /** APIが天気の変更を示したタイミングでプレイリストを自動更新（手動設定中は対象外）。常に自動更新ONとして動作。 */
     useEffect(() => {
-        if (!playlistAutoUpdate || isMoodTuning || !isGenresInitialized || selectedGenres.length === 0) return
+        if (isMoodTuning || !isGenresInitialized || selectedGenres.length === 0) return
         const current = actualWeatherType ?? null
         const prev = prevActualWeatherRef.current
         prevActualWeatherRef.current = current
         if (prev !== null && prev !== current) {
             refreshPlaylists({ autoUpdate: true })
         }
-    }, [actualWeatherType, playlistAutoUpdate, isMoodTuning, isGenresInitialized, selectedGenres.length, refreshPlaylists])
+    }, [actualWeatherType, isMoodTuning, isGenresInitialized, selectedGenres.length, refreshPlaylists])
 
     const calculatedTimeOfDay = getTimeOfDay(displayHour)
     const timeOfDay = isMoodTuning && moodTuningTimeOfDay ? moodTuningTimeOfDay : calculatedTimeOfDay
