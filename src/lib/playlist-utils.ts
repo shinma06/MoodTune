@@ -29,37 +29,26 @@ export function getImageUrl(url: string | undefined | null): string {
 }
 
 /** ローディング種別 */
-export type LoadingMode = "initial" | "all" | "single" | "added" | null
+export type LoadingMode = "initial" | "all" | "single" | "added" | "auto" | null
 
-/** ローディング中のジャンル表示文言（initial=生成、single=再生成の区別を getLoadingTitleText と揃える） */
-export function getLoadingGenreText(mode: LoadingMode): string {
-  switch (mode) {
-    case "initial":
-      return "プレイリスト生成中..."
-    case "all":
-      return "プレイリスト一括生成中..."
-    case "single":
-      return "プレイリストを再生成中..."
-    case "added":
-      return "追加ジャンルのプレイリストを生成中..."
-    default:
-      return "プレイリストを読み込み中..."
-  }
-}
+/** ローディング中のジャンル表示文言 */
+export const LOADING_GENRE_TEXT = "プレイリストを構築中..."
 
 /** ローディング中のタイトル表示文言 */
 export function getLoadingTitleText(mode: LoadingMode): string {
   switch (mode) {
     case "initial":
-      return "プレイリストを生成中"
+      return "プレイリストを構築中"
     case "all":
-      return "プレイリストを全件再生成中"
+      return "プレイリストを全件再構築中"
     case "single":
-      return "プレイリストを再生成中"
+      return "プレイリストを再構築中"
     case "added":
-      return "追加ジャンルのプレイリストを生成中"
+      return "追加ジャンルのプレイリストを構築中"
+    case "auto":
+      return "天気・時間の変化に合わせて再構築中"
     default:
-      return "プレイリストを生成中"
+      return "プレイリストを構築中"
   }
 }
 

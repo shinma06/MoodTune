@@ -1,3 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#e2e8f0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none">
+  <!-- vinyl disk (visible on dark background) -->
+  <circle cx="12" cy="12" r="11" fill="#475569"/>
+  <!-- label -->
+  <circle cx="12" cy="12" r="4" fill="#94a3b8"/>
+  <!-- center hole -->
+  <circle cx="12" cy="12" r="1.2" fill="#1e293b"/>
 </svg>

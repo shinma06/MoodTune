@@ -102,7 +102,7 @@ src/
 │   ├── GenreSelector.tsx   # Favorite Music パネル
 │   ├── WeatherMonitor.tsx  # 位置・天気取得
 │   ├── WeatherAnimation.tsx
-│   └── WeatherTestPanel.tsx # Mood Tuning パネル
+│   └── WeatherMoodTuningPanel.tsx # Mood Tuning パネル
 ├── contexts/
 │   └── WeatherContext.tsx  # 天気・時間帯・表示状態の単一ソース
 ├── hooks/
@@ -126,7 +126,7 @@ src/
 1. **WeatherMonitor** — 位置情報 → `/api/weather`（天気）と `/api/geocode`（都市名）を並列取得 → WeatherContext 更新
 2. **PlaylistExplorer** — WeatherContext から天気・時間帯・背景を取得。`useLocalStorage` でジャンルを取得し、プレイリスト表示・再生成を担当
 3. **GenreSelector** — ジャンル選択 → localStorage 更新。パネル閉じ時に PlaylistExplorer が差分を検知し、追加ジャンル分のみ API で再生成
-4. **WeatherTestPanel (Mood Tuning)** — 手動で天気・時間を設定 → WeatherContext 更新 → 全コンポーネントに反映。パネル閉じ時に変更があればプレイリストを再生成
+4. **WeatherMoodTuningPanel (Mood Tuning)** — 手動で天気・時間を設定 → WeatherContext 更新 → 全コンポーネントに反映。パネル閉じ時に変更があればプレイリストを再生成
 
 ---
 

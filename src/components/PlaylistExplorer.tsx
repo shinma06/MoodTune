@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import WeatherMonitor from "./WeatherMonitor"
 import WeatherAnimation from "./WeatherAnimation"
-import WeatherTestPanel from "./WeatherTestPanel"
+import WeatherMoodTuningPanel from "./WeatherMoodTuningPanel"
 import GenreSelector, { useSelectedGenres } from "./GenreSelector"
 import { useWeather } from "@/contexts/WeatherContext"
 import { getWeatherBackground, getTimeOfDay, type WeatherType } from "@/lib/weather-background"
@@ -19,7 +19,7 @@ import {
     hasGenresChanged,
     getGenresDiff,
     getImageUrl,
-    getLoadingGenreText,
+    LOADING_GENRE_TEXT,
     getLoadingTitleText,
     EMPTY_PLAYLIST,
     type LoadingMode,
@@ -37,13 +37,13 @@ interface PlaylistExplorerProps {
 
 export default function PlaylistExplorer({ playlists: initialPlaylists }: PlaylistExplorerProps) {
     const [currentIndex, setCurrentIndex] = useState(0)
-    const { isTimeInitialized, displayHour, weatherType, actualWeatherType, testTimeOfDay, isTestMode, playlistAutoUpdate, playlistRefreshTrigger, isDark } = useWeather()
+    const { isTimeInitialized, displayHour, weatherType, actualWeatherType, moodTuningTimeOfDay, isMoodTuning, effectiveWeather, effectiveTimeOfDay, playlistRefreshTrigger, isDark } = useWeather()
     /** 開いているパネル（null = 両方閉じている）。同時に1つだけ開く */
     const [openPanel, setOpenPanel] = useState<null | "mood" | "genre">(null)
     const [selectedGenres, isGenresInitialized] = useSelectedGenres()
     const [playlists, setPlaylists] = useState<DashboardItem[] | null>(initialPlaylists ?? null)
     const [isLoading, setIsLoading] = useState(false)
-    /** 生成中の種別（初回 / 全件再生成 / 個別 / 追加ジャンルのみ）。表示文言の切り替え用 */
+    /** 構築中の種別（初回 / 全件再構築 / 個別 / 追加ジャンルのみ）。表示文言の切り替え用 */
     const [loadingMode, setLoadingMode] = useState<LoadingMode>(null)
 
     /** パネルを開いた時点のジャンル（閉じたときの差分計算用） */
@@ -54,12 +54,12 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     const prevTimeOfDayRef = useRef<TimeOfDay | null>(null)
     const prevActualWeatherRef = useRef<string | null>(null)
 
-    /** 生成失敗時は空のままローディング表示を継続（静的フォールバックは使わない） */
+    /** 構築失敗時は空のままローディング表示を継続（静的フォールバックは使わない） */
     const displayPlaylists = useMemo(() => {
         return playlists && playlists.length > 0 ? playlists : []
     }, [playlists])
 
-    /** ローディング表示を出す条件（生成中 or 未取得・失敗でプレイリストが空） */
+    /** ローディング表示を出す条件（構築中 or 未取得・失敗でプレイリストが空） */
     const isLoadingOrEmpty = isLoading || displayPlaylists.length === 0
 
     /** 常に配列範囲内のインデックス */
@@ -86,16 +86,16 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     const isLoadingRef = useRef(false)
     isLoadingRef.current = isLoading
 
-    /** 現在の天気・時間帯・ジャンルでプレイリストを全件再生成 */
-    const refreshPlaylists = useCallback(async () => {
+    /** 現在の天気・時間帯・ジャンルでプレイリストを全件再構築。autoUpdate: true のときは自動更新（天気・時間帯変化）用の文言を表示 */
+    const refreshPlaylists = useCallback(async (options?: { autoUpdate?: boolean }) => {
         if (selectedGenres.length === 0) return
         if (isLoadingRef.current) return // ローディング中は無視
-        setLoadingMode("all")
+        setLoadingMode(options?.autoUpdate ? "auto" : "all")
         setIsLoading(true)
         try {
             const weather = normalizeWeatherType(weatherType ?? "Clear") as WeatherType
             const calculatedTimeOfDay = getTimeOfDay(displayHour)
-            const time = (isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay) as TimeOfDay
+            const time = (isMoodTuning && moodTuningTimeOfDay ? moodTuningTimeOfDay : calculatedTimeOfDay) as TimeOfDay
             const generated = await generateDashboard(weather, time, selectedGenres as Genre[])
             setPlaylists(generated)
             setCurrentIndex((prev) => Math.min(prev, Math.max(0, generated.length - 1)))
@@ -105,13 +105,13 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
             setIsLoading(false)
             setLoadingMode(null)
         }
-    }, [weatherType, displayHour, isTestMode, testTimeOfDay, selectedGenres])
+    }, [weatherType, displayHour, isMoodTuning, moodTuningTimeOfDay, selectedGenres])
 
     /** パネル閉時トリガー用 effect が refreshPlaylists の参照変更で再実行されないよう ref に保持 */
     const refreshPlaylistsRef = useRef(refreshPlaylists)
     refreshPlaylistsRef.current = refreshPlaylists
 
-    /** 表示中の1ジャンルだけ現在の天気・時間で再生成（レコード右3周で発火） */
+    /** 表示中の1ジャンルだけ現在の天気・時間で再構築（レコード右3周で発火） */
     const refreshPlaylistByGenre = useCallback(async (genre: Genre) => {
         if (!selectedGenres.includes(genre)) return
         if (isLoadingRef.current) return // ローディング中は無視
@@ -120,7 +120,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         try {
             const weather = normalizeWeatherType(weatherType ?? "Clear") as WeatherType
             const calculatedTimeOfDay = getTimeOfDay(displayHour)
-            const time = (isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay) as TimeOfDay
+            const time = (isMoodTuning && moodTuningTimeOfDay ? moodTuningTimeOfDay : calculatedTimeOfDay) as TimeOfDay
             const generated = await generateDashboard(weather, time, [genre])
             const newItem = generated[0]
             if (!newItem) return
@@ -134,7 +134,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
             setIsLoading(false)
             setLoadingMode(null)
         }
-    }, [weatherType, displayHour, isTestMode, testTimeOfDay, selectedGenres])
+    }, [weatherType, displayHour, isMoodTuning, moodTuningTimeOfDay, selectedGenres])
 
     /** ジャンル差分に応じてプレイリストを更新（追加ジャンルのみAPI呼び出し。既存は currentPlaylists を再利用） */
     const updatePlaylistsWithDiff = useCallback(async (
@@ -155,7 +155,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         try {
             const weather = normalizeWeatherType(weatherType ?? "Clear") as WeatherType
             const calculatedTimeOfDay = getTimeOfDay(displayHour)
-            const time = (isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay) as TimeOfDay
+            const time = (isMoodTuning && moodTuningTimeOfDay ? moodTuningTimeOfDay : calculatedTimeOfDay) as TimeOfDay
 
             const existingMap = new Map<string, DashboardItem>()
             if (currentPlaylists) {
@@ -191,9 +191,9 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
             setIsLoading(false)
             setLoadingMode(null)
         }
-    }, [weatherType, displayHour, isTestMode, testTimeOfDay])
+    }, [weatherType, displayHour, isMoodTuning, moodTuningTimeOfDay])
 
-    /** ジャンル選択パネルの開閉（閉じたときにジャンル変更があればプレイリスト再生成）。0件時は閉じない。 */
+    /** ジャンル選択パネルの開閉（閉じたときにジャンル変更があればプレイリスト再構築）。0件時は閉じない。 */
     const handleToggleSettings = useCallback(() => {
         if (openPanel !== "genre") {
             genresOnOpenRef.current = [...selectedGenres]
@@ -220,42 +220,49 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         }
     }, [isGenresInitialized, selectedGenres, playlists, updatePlaylistsWithDiff])
 
-    /** 実時刻の時間帯（朝・昼・夕方・夜）が変わったタイミングでプレイリストを自動更新（手動設定中は行わない） */
+    /** 実時刻の時間帯が変わったタイミングでプレイリストを自動更新（手動設定中は行わない）。常に自動更新ONとして動作。 */
     const calculatedTimeOfDayForEffect = getTimeOfDay(displayHour)
     useEffect(() => {
-        if (!playlistAutoUpdate || isTestMode || !isGenresInitialized || selectedGenres.length === 0) return
+        if (isMoodTuning || !isGenresInitialized || selectedGenres.length === 0) return
         const prev = prevTimeOfDayRef.current
         prevTimeOfDayRef.current = calculatedTimeOfDayForEffect
         if (prev !== null && prev !== calculatedTimeOfDayForEffect) {
-            refreshPlaylists()
+            refreshPlaylists({ autoUpdate: true })
         }
-    }, [calculatedTimeOfDayForEffect, playlistAutoUpdate, isTestMode, isGenresInitialized, selectedGenres.length, refreshPlaylists])
+    }, [calculatedTimeOfDayForEffect, isMoodTuning, isGenresInitialized, selectedGenres.length, refreshPlaylists])
 
-    /** プレイリスト生成中はパネルを閉じ、値変更を防ぐ（同期ずれ防止） */
+    /** プレイリスト構築中はパネルを閉じ、値変更を防ぐ（同期ずれ防止） */
     useEffect(() => {
         if (isLoading) setOpenPanel(null)
     }, [isLoading])
 
-    /** Mood Tuning パネル閉時のみ: トリガーがインクリメントされたときだけ再生成。openPanel を依存に含めない＝パネル開閉で再実行されない（開くだけで全件再生成・Favorite Music 閉じで上書きするバグを防止）。ジャンルパネル開中は選択変更で発火しないよう openPanel === "genre" でガード。 */
+    /** Mood Tuning パネル閉時のみ: トリガーがインクリメントされたときだけ再構築。openPanel を依存に含めない＝パネル開閉で再実行されない（開くだけで全件再構築・Favorite Music 閉じで上書きするバグを防止）。ジャンルパネル開中は選択変更で発火しないよう openPanel === "genre" でガード。 */
     useEffect(() => {
         if (openPanel === "genre") return
         if (playlistRefreshTrigger === 0 || !isGenresInitialized || selectedGenres.length === 0) return
         refreshPlaylistsRef.current()
     }, [playlistRefreshTrigger, isGenresInitialized, selectedGenres.length])
 
-    /** APIが天気の変更を示したタイミングでプレイリストを自動更新（手動設定中は対象外） */
+    /** APIが天気の変更を示したタイミングでプレイリストを自動更新（手動設定中は対象外）。常に自動更新ONとして動作。 */
     useEffect(() => {
-        if (!playlistAutoUpdate || isTestMode || !isGenresInitialized || selectedGenres.length === 0) return
+        if (isMoodTuning || !isGenresInitialized || selectedGenres.length === 0) return
         const current = actualWeatherType ?? null
         const prev = prevActualWeatherRef.current
         prevActualWeatherRef.current = current
         if (prev !== null && prev !== current) {
-            refreshPlaylists()
+            refreshPlaylists({ autoUpdate: true })
         }
-    }, [actualWeatherType, playlistAutoUpdate, isTestMode, isGenresInitialized, selectedGenres.length, refreshPlaylists])
+    }, [actualWeatherType, isMoodTuning, isGenresInitialized, selectedGenres.length, refreshPlaylists])
 
     const calculatedTimeOfDay = getTimeOfDay(displayHour)
-    const timeOfDay = isTestMode && testTimeOfDay ? testTimeOfDay : calculatedTimeOfDay
+    const timeOfDay = isMoodTuning && moodTuningTimeOfDay ? moodTuningTimeOfDay : calculatedTimeOfDay
+
+    /** パネルを閉じたうえで、表示中の天気・時間が実際と異なる場合のみ Mood Tuning 表示を適用 */
+    const actualTimeOfDay = getTimeOfDay(displayHour)
+    const actualWeatherNorm = actualWeatherType ? normalizeWeatherType(actualWeatherType) : null
+    const isMoodTuningApplied =
+        openPanel !== "mood" &&
+        (actualWeatherNorm != null && effectiveWeather !== actualWeatherNorm || effectiveTimeOfDay !== actualTimeOfDay)
     const weather = normalizeWeatherType(weatherType ?? "Clear")
     const backgroundStyle = isTimeInitialized
       ? formatGradientBackground(getWeatherBackground(weather, timeOfDay))
@@ -285,6 +292,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                 setCurrentIndex((prev) => (prev - 1 + length) % length)
             }
         },
+        canPaginate: displayPlaylists.length > 1,
         onRegenerateCurrent:
             displayPlaylists.length > 0 && currentPlaylist.genre !== "---"
                 ? () => refreshPlaylistByGenre(currentPlaylist.genre as Genre)
@@ -306,12 +314,12 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     const regenerateMessage = (() => {
         if (!showRegenerateFeedback) return null
         const abs = Math.abs(cumulativeRotation)
-        if (cumulativeRotation >= REGENERATE_THRESHOLD_DEG) return "離すと再生成"
-        if (cumulativeRotation <= -REGENERATE_THRESHOLD_DEG) return "離すと全件再生成"
+        if (cumulativeRotation >= REGENERATE_THRESHOLD_DEG) return "離すと再構築"
+        if (cumulativeRotation <= -REGENERATE_THRESHOLD_DEG) return "離すと全件再構築"
         const remainingTurns = Math.ceil((REGENERATE_THRESHOLD_DEG - abs) / 360)
         return cumulativeRotation > 0
-            ? `あと${remainingTurns}周で再生成`
-            : `あと${remainingTurns}周で全件再生成`
+            ? `あと${remainingTurns}周で再構築`
+            : `あと${remainingTurns}周で全件再構築`
     })()
 
     return (
@@ -324,15 +332,15 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
             {/* Weather Animation */}
             <WeatherAnimation />
 
-            {/* Weather Test Panel（気分に合わせる）。ジャンルパネル開時または生成中はボタン非表示・生成中はパネルも閉じる */}
-            <WeatherTestPanel
+            {/* Mood Tuning パネル。ジャンルパネル開時または構築中はボタン非表示・構築中はパネルも閉じる */}
+            <WeatherMoodTuningPanel
                 isOpen={openPanel === "mood" && !isLoading}
                 onOpen={() => setOpenPanel("mood")}
                 onClose={() => setOpenPanel(null)}
                 hideToggleButton={openPanel === "genre" || isLoading}
             />
 
-            {/* Settings Toggle Button（ジャンル選択・右下）。気分パネル開時または生成中は非表示 */}
+            {/* Settings Toggle Button（ジャンル選択・右下）。気分パネル開時または構築中は非表示 */}
             {openPanel !== "mood" && !isLoading && (
                 <Button
                     variant="outline"
@@ -350,7 +358,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                 </Button>
             )}
 
-            {/* Settings Panel with Genre Selector（ボタンの上に表示）。生成中は非表示 */}
+            {/* Settings Panel with Genre Selector（ボタンの上に表示）。構築中は非表示 */}
             {openPanel === "genre" && !isLoading && (
                 <div className="fixed bottom-16 right-4 z-50 w-80 max-w-[calc(100vw-2rem)]">
                     <GenreSelector />
@@ -378,11 +386,16 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                         </p>
                         <p className={`text-[9px] font-light whitespace-nowrap ${isDark ? "text-white/60" : "text-muted-foreground/50"}`}>
                             {selectedGenres.length === 0
-                                ? "1つ以上選択するとスピンで再生成できます"
+                                ? "1つ以上選択するとスピンで再構築できます"
                                 : selectedGenres.length === 1
-                                    ? "右3周でプレイリストを再生成"
-                                    : "右3周でプレイリストを再生成・左3周で一括再生成"}
+                                    ? "右3周でプレイリストを再構築"
+                                    : "右3周でプレイリストを再構築・左3周で一括再構築"}
                         </p>
+                        {isMoodTuningApplied && (
+                            <p className="text-base font-semibold text-rainbow whitespace-nowrap mt-2.5">
+                                Mood Tuning
+                            </p>
+                        )}
                     </div>
                 )}
 
@@ -468,16 +481,26 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                         </div>
                     )}
 
-                    {/* Indicator dots（ジャンルごとのテーマカラー。初期同期 stale J-POP または空状態のときはアクティブを現実のレコード色に合わせる） */}
+                    {/* Indicator dots（ジャンルごとのテーマカラー。Mood Tuning 中は非選択ドットが1本の虹になる） */}
                     <div className="absolute -bottom-8 sm:-bottom-12 left-1/2 -translate-x-1/2 flex gap-1.5">
                         {displayPlaylists.map((item, i) => {
                             const colors = (useRealisticVinyl && i === safeCurrentIndex) ? REALISTIC_VINYL_THEME : getGenreThemeColors(item.genre)
                             const isActive = i === safeCurrentIndex
+                            const inactiveCount = Math.max(1, displayPlaylists.length - 1)
+                            const inactiveIndex = i < safeCurrentIndex ? i : i - 1
+                            const rainbowSliceStyle =
+                                isMoodTuningApplied && !isActive
+                                    ? {
+                                          background: "linear-gradient(90deg, #ef4444, #f97316, #eab308, #22c55e, #06b6d4, #8b5cf6, #ec4899, #ef4444)",
+                                          backgroundSize: `${inactiveCount * 100}% 100%`,
+                                          backgroundPosition: `${-inactiveIndex * 100}% 0`,
+                                      }
+                                    : undefined
                             return (
                                 <div
                                     key={i}
-                                    className={`w-1.5 h-1.5 rounded-full transition-all ${isActive ? "w-6" : "bg-border"}`}
-                                    style={isActive ? { backgroundColor: colors.accentColor } : {}}
+                                    className={`w-1.5 h-1.5 rounded-full transition-all ${isActive ? "w-6" : isMoodTuningApplied ? "" : "bg-border"}`}
+                                    style={isActive ? { backgroundColor: colors.accentColor } : rainbowSliceStyle}
                                 />
                             )
                         })}
@@ -485,21 +508,41 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                 </div>
             </div>
 
-            {/* Playlist Info Section（縦幅が狭いときは余白・画像を縮小） */}
+            {/* Playlist Info Section（縦幅が狭いときは余白・画像を縮小）。Mood Tuning 中はタイトル・ジャケに虹色の淵 */}
             <div className="w-full max-w-md shrink-0 space-y-4 sm:space-y-6 pb-4 relative z-10">
                 <div className="text-center space-y-2 sm:space-y-3">
                     <p className={`text-[10px] sm:text-xs uppercase tracking-widest font-light ${genreColorClass}`}>
-                        {isLoadingOrEmpty ? getLoadingGenreText(loadingMode) : currentPlaylist.genre}
+                        {isLoadingOrEmpty ? LOADING_GENRE_TEXT : currentPlaylist.genre}
                     </p>
-                    <h2 className={`text-xl sm:text-2xl font-serif leading-tight text-balance ${titleColorClass}`}>
+                    <h2 className={`text-xl sm:text-2xl font-serif leading-tight text-balance ${isMoodTuningApplied ? "text-rainbow" : titleColorClass}`}>
                         {isLoadingOrEmpty ? getLoadingTitleText(loadingMode) : currentPlaylist.title}
                     </h2>
                 </div>
 
                 <div className="flex items-center justify-center">
                     {isLoadingOrEmpty ? (
-                        <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-lg bg-muted/50 animate-pulse flex items-center justify-center">
-                            <Music className={`w-6 h-6 sm:w-8 sm:h-8 ${isDark ? "text-white/30" : "text-muted-foreground/30"}`} />
+                        isMoodTuningApplied ? (
+                            <div className="bg-rainbow p-[2px] rounded-lg shrink-0">
+                                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-[calc(1rem-2px)] bg-muted/50 animate-pulse flex items-center justify-center">
+                                    <Music className={`w-6 h-6 sm:w-8 sm:h-8 ${isDark ? "text-white/30" : "text-muted-foreground/30"}`} />
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-lg bg-muted/50 animate-pulse flex items-center justify-center">
+                                <Music className={`w-6 h-6 sm:w-8 sm:h-8 ${isDark ? "text-white/30" : "text-muted-foreground/30"}`} />
+                            </div>
+                        )
+                    ) : isMoodTuningApplied ? (
+                        <div className="bg-rainbow p-[2px] rounded-lg shrink-0">
+                            <img
+                                src={getImageUrl(currentPlaylist.imageUrl)}
+                                alt={currentPlaylist.title}
+                                className="w-24 h-24 sm:w-32 sm:h-32 rounded-[calc(1rem-2px)] shadow-lg object-cover"
+                                onError={(e) => {
+                                    const target = e.target as HTMLImageElement
+                                    target.src = "/placeholder.svg"
+                                }}
+                            />
                         </div>
                     ) : (
                         <img

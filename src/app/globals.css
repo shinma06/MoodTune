@@ -266,4 +266,37 @@
   }
 }
 
+/* Mood Tuning: rainbow gradient (虹色) */
+.text-rainbow {
+  background: linear-gradient(
+    90deg,
+    #ef4444,
+    #f97316,
+    #eab308,
+    #22c55e,
+    #06b6d4,
+    #8b5cf6,
+    #ec4899,
+    #ef4444
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Rainbow border wrapper: use with p-[2px] and rounded; inner content uses rounded-[calc(1.1rem-2px)] */
+.bg-rainbow {
+  background: linear-gradient(
+    135deg,
+    #ef4444,
+    #f97316,
+    #eab308,
+    #22c55e,
+    #06b6d4,
+    #8b5cf6,
+    #ec4899,
+    #ef4444
+  );
+}
+
 

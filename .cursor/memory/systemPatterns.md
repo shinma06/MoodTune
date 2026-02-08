@@ -21,7 +21,7 @@ src/
 │   ├── PlaylistExplorer.tsx
 │   ├── WeatherMonitor.tsx
 │   ├── WeatherAnimation.tsx
-│   └── WeatherTestPanel.tsx  # Mood Tuning パネル
+│   └── WeatherMoodTuningPanel.tsx  # Mood Tuning パネル
 ├── contexts/         # React Context
 │   └── WeatherContext.tsx
 ├── hooks/            # カスタムフック
@@ -44,11 +44,11 @@ src/
 
 ### データフロー
 
-1. **WeatherMonitor**: 位置情報取得 → `/api/weather` 呼び出し → WeatherContext 更新（actualWeatherType 等）
-2. **PlaylistExplorer**: WeatherContext から effectiveWeather / effectiveTimeOfDay / isDark 取得 → 背景色計算 → 表示。useSelectedGenres（useLocalStorage）でジャンル取得
+1. **WeatherMonitor**: 位置情報取得 → `/api/weather` 呼び出し → WeatherContext 更新（actualWeatherType 等）。初回成功後は 10 分ごとに同座標でバックグラウンド再取得（Mood Tuning 中はポーリングしない。ローディング表示なし）
+2. **PlaylistExplorer**: WeatherContext から effectiveWeather / effectiveTimeOfDay / isDark 取得 → 背景色計算 → 表示。useSelectedGenres（useLocalStorage）でジャンル取得。天気・時間帯の自動変化時（actualWeatherType / displayHour の effect）は playlistAutoUpdate かつ非 Mood Tuning 時のみ refreshPlaylists({ autoUpdate: true }) で全件再生成し、文言は LoadingMode "auto"（「天気・時間の変化に合わせて再生成中」）を表示
 3. **GenreSelector**: ジャンル選択 → useLocalStorage で localStorage 更新 → 同一ページ内にカスタムイベントで通知。パネル閉じ時は PlaylistExplorer がジャンル差分を計算し追加分のみ generateDashboard 呼び出し
 4. **WeatherAnimation**: WeatherContext から天気取得 → アニメーション表示
-5. **WeatherTestPanel**（Mood Tuning）: 手動設定 → WeatherContext 更新 → 全コンポーネントに反映。パネル閉じ時、開いた時点から変更があれば requestPlaylistRefresh で全件再生成
+5. **WeatherMoodTuningPanel**（Mood Tuning）: 手動設定 → WeatherContext 更新 → 全コンポーネントに反映。パネル閉じ時、開いた時点から変更があれば requestPlaylistRefresh で全件再生成
 6. **初回読み込み後**: PlaylistExplorer が isGenresInitialized 後に localStorage のジャンルと表示プレイリストを比較し、差異があれば updatePlaylistsWithDiff で同期
 
 ## 技術スタック
@@ -69,7 +69,7 @@ src/
 
 ### 状態管理
 
-- **React Context**: WeatherContext（天気データ、表示用 effectiveTimeOfDay / effectiveWeather / isDark、テストモード、playlistRefreshTrigger）
+- **React Context**: WeatherContext（天気データ、表示用 effectiveTimeOfDay / effectiveWeather / isDark、Mood Tuning 状態 isMoodTuning / moodTuningTimeOfDay、playlistRefreshTrigger）
 - **useLocalStorage**: ジャンル選択の永続化（key: selected-genres）。バリデーション（空配列は無効）と初回/他タブ時の修復。同一ページ内の変更では無効値もそのまま state に反映
 - **Local State**: useState（各コンポーネントのローカル状態）
 
