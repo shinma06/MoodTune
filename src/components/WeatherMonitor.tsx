@@ -15,12 +15,15 @@ export default function WeatherMonitor() {
         status: "loading",
         message: "位置情報を取得中...",
     })
-    const { effectiveTimeOfDay, isDark, setWeatherType, setActualWeatherType, weatherType, isTestMode } = useWeather()
-    
-    const isTestModeRef = useRef(isTestMode)
+    const { effectiveTimeOfDay, isDark, setWeatherType, setActualWeatherType, weatherType, isMoodTuning } = useWeather()
+
+    const isMoodTuningRef = useRef(isMoodTuning)
     useEffect(() => {
-        isTestModeRef.current = isTestMode
-    }, [isTestMode])
+        isMoodTuningRef.current = isMoodTuning
+    }, [isMoodTuning])
+
+    /** ポーリング用：最後に取得成功した座標。バックグラウンド再取得で位置情報を再要求しない */
+    const lastCoordsRef = useRef<{ lat: number; lon: number } | null>(null)
 
     useEffect(() => {
         setCurrentTime(new Date())
@@ -30,22 +33,41 @@ export default function WeatherMonitor() {
         return () => clearInterval(timer)
     }, [])
 
-    const handleWeatherFetch = useCallback(async (lat: number, lon: number) => {
+    const handleWeatherFetch = useCallback(async (lat: number, lon: number, options?: { background?: boolean }) => {
+        const isBackground = options?.background === true
         try {
-            setWeatherState({ status: "loading", message: "天気を確認中..." })
+            if (!isBackground) {
+                setWeatherState({ status: "loading", message: "天気を確認中..." })
+            }
             const { weatherData, weatherMain } = await fetchWeatherData(lat, lon)
             setActualWeatherType(weatherMain)
-            if (!isTestModeRef.current) {
+            if (!isMoodTuningRef.current) {
                 setWeatherType(weatherMain)
             }
             setWeatherState({ status: "success", data: weatherData })
+            lastCoordsRef.current = { lat, lon }
         } catch (error) {
-            setWeatherState({
-                status: "error",
-                message: error instanceof Error ? error.message : "エラーが発生しました",
-            })
+            if (!isBackground) {
+                setWeatherState({
+                    status: "error",
+                    message: error instanceof Error ? error.message : "エラーが発生しました",
+                })
+            }
         }
     }, [setWeatherType, setActualWeatherType])
+
+    /** 10分ごとに天気を再取得。Mood Tuning 中は行わない。初回成功後に lastCoordsRef が設定されてから有効。バックグラウンドで実行しローディング表示は出さない。 */
+    useEffect(() => {
+        const intervalMs = 10 * 60 * 1000
+        const timer = setInterval(() => {
+            if (isMoodTuningRef.current) return
+            const coords = lastCoordsRef.current
+            if (coords) {
+                handleWeatherFetch(coords.lat, coords.lon, { background: true })
+            }
+        }, intervalMs)
+        return () => clearInterval(timer)
+    }, [handleWeatherFetch])
 
     const { requestGeolocation } = useGeolocation({
         onSuccess: (position) => {
@@ -69,7 +91,7 @@ export default function WeatherMonitor() {
     const { dateString, timeString } = dateTime
 
     // アイコン・気温表示用（天気取得成功時のみ表示）
-    const displayWeatherType = isTestMode && weatherType
+    const displayWeatherType = isMoodTuning && weatherType
         ? normalizeWeatherType(weatherType)
         : weatherState.status === "success"
         ? normalizeWeatherType(weatherState.data.weatherMain)
