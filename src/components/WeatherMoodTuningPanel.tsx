@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Sparkles } from "lucide-react"
 
-interface WeatherTestPanelProps {
+interface WeatherMoodTuningPanelProps {
   /** 親で制御する場合の開閉状態 */
   isOpen?: boolean
   onOpen?: () => void
@@ -26,12 +26,12 @@ interface WeatherTestPanelProps {
   hideToggleButton?: boolean
 }
 
-export default function WeatherTestPanel({
+export default function WeatherMoodTuningPanel({
   isOpen: controlledIsOpen,
   onOpen: onOpenProp,
   onClose: onCloseProp,
   hideToggleButton = false,
-}: WeatherTestPanelProps = {}) {
+}: WeatherMoodTuningPanelProps = {}) {
   const {
     displayHour,
     effectiveTimeOfDay,
@@ -40,10 +40,10 @@ export default function WeatherTestPanel({
     setWeatherType,
     actualWeatherType,
     setActualWeatherType,
-    testTimeOfDay,
-    setTestTimeOfDay,
-    isTestMode,
-    setIsTestMode,
+    moodTuningTimeOfDay,
+    setMoodTuningTimeOfDay,
+    isMoodTuning,
+    setIsMoodTuning,
     playlistAutoUpdate,
     setPlaylistAutoUpdate,
     requestPlaylistRefresh,
@@ -61,7 +61,7 @@ export default function WeatherTestPanel({
   /** パネルを開く: この時点の天気・時間と「現在の天気・時間」をスナップショットしてから開く */
   const handleOpenPanel = () => {
     openedWeatherTypeRef.current = weatherType
-    openedTimeOfDayRef.current = testTimeOfDay
+    openedTimeOfDayRef.current = moodTuningTimeOfDay
     actualWeatherAtOpenRef.current = actualWeatherType
     actualTimeOfDayAtOpenRef.current = getTimeOfDay(displayHour)
     if (onOpenProp) onOpenProp()
@@ -71,12 +71,12 @@ export default function WeatherTestPanel({
   /** 天気・時間帯は即時Contextに反映（UIのみ。プレイリストは閉じたときのみ更新） */
   const handleWeatherTypeChange = (type: WeatherType) => {
     setWeatherType(type)
-    setIsTestMode(true)
+    setIsMoodTuning(true)
   }
 
   const handleTimeOfDayChange = (timeOfDay: TimeOfDay) => {
-    setTestTimeOfDay(timeOfDay)
-    setIsTestMode(true)
+    setMoodTuningTimeOfDay(timeOfDay)
+    setIsMoodTuning(true)
   }
 
   /** パネルを閉じる: 開いた時点の天気・時間と比べて変わっている場合のみプレイリストを再生成 */
@@ -84,7 +84,7 @@ export default function WeatherTestPanel({
     const openedWeather = openedWeatherTypeRef.current
     const openedTime = openedTimeOfDayRef.current
     const weatherChanged = weatherType !== openedWeather
-    const timeChanged = testTimeOfDay !== openedTime
+    const timeChanged = moodTuningTimeOfDay !== openedTime
     if (weatherChanged || timeChanged) {
       requestPlaylistRefresh()
     }
@@ -108,8 +108,8 @@ export default function WeatherTestPanel({
     } else {
       setWeatherType(null)
     }
-    setTestTimeOfDay(null)
-    setIsTestMode(false)
+    setMoodTuningTimeOfDay(null)
+    setIsMoodTuning(false)
   }
 
   /** 表示用: Context の単一ソースを使用（背景と常に一致） */
@@ -156,9 +156,9 @@ export default function WeatherTestPanel({
             <Button
               variant="outline"
               size="icon"
-              className="size-[2.8rem] rounded-[1.1rem] bg-background/80 backdrop-blur-sm [&_svg]:size-5"
+              className={`size-[2.8rem] rounded-[1.1rem] backdrop-blur-sm [&_svg]:size-5 ${isOpen ? "bg-primary text-primary-foreground border-primary" : "bg-background/80"}`}
               onClick={handleTogglePanel}
-              aria-label="Mood Tuningパネルを開く"
+              aria-label={isOpen ? "Mood Tuningパネルを閉じる" : "Mood Tuningパネルを開く"}
             >
               <Sparkles className="size-5" />
             </Button>
@@ -281,4 +281,3 @@ export default function WeatherTestPanel({
     </>
   )
 }
-
