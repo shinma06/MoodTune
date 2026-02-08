@@ -49,7 +49,13 @@ export const MAX_SELECTED_GENRES = 8
 export const GENRE_STORAGE_KEY = "selected-genres"
 
 // デフォルトで選択されているジャンル（初回アクセス時）
-export const DEFAULT_SELECTED_GENRES: Genre[] = ["J-POP"]
+export const DEFAULT_SELECTED_GENRES: Genre[] = [
+  "J-POP",
+  "J-Rock",
+  "Hip Hop",
+  "City Pop",
+  "K-POP (Girl)",
+]
 
 // 天気タイプの全リスト（日本の主要な気象に絞る）
 export const WEATHER_TYPES: WeatherType[] = [
