@@ -161,3 +161,16 @@
 - 誤操作を防ぐため 3 周という閾値を設ける
 
 **影響**: `useVinylRotation` の `onRegenerateCurrent`, `onRegenerateAll`。PlaylistExplorer で `refreshPlaylistByGenre`, `refreshPlaylists` に接続
+
+---
+
+### ADR-014: 都市名取得に Google Geocoding API（逆ジオコーディング）を採用
+
+**決定**: 天気モニターの都市名表示に、緯度経度から地名を取得する Google Geocoding API（逆ジオコーディング）を使用する。取得失敗・空の場合は OpenWeatherMap の `name` にフォールバックする
+**理由**:
+
+- より正確でローカルな地名表示（市区町村レベル）が可能
+- 天気 API と並列取得することでレイテンシを増やさない
+- 本番では API キーのウェブサイト制限に対応するため Referer を送信、開発では送らない
+
+**影響**: `GET /api/geocode` を新設。`weather-api.ts` で天気と Geocoding を `Promise.all` で並列取得。表示は最もローカルな地名のみ（locality > administrative_area_level_2 > level_1）
