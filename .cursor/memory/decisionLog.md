@@ -174,3 +174,16 @@
 - 本番では API キーのウェブサイト制限に対応するため Referer を送信、開発では送らない
 
 **影響**: `GET /api/geocode` を新設。`weather-api.ts` で天気と Geocoding を `Promise.all` で並列取得。表示は最もローカルな地名のみ（locality > administrative_area_level_2 > level_1）
+
+---
+
+### ADR-015: 天気取得に WxTech API を優先採用（OpenWeatherMap はフォールバック）
+
+**決定**: 天気データの取得を WxTech 優先とする。日本域は 1km メッシュ ピンポイント、海外は 5km メッシュ 世界天気予報を使用。WxTech が失敗または未設定の場合は OpenWeatherMap にフォールバックする
+**理由**:
+
+- 日本では 1km メッシュで高精度、海外でも 5km で世界対応可能
+- レスポンスを OpenWeatherMap 互換に正規化するためクライアント変更不要
+- 既存の OpenWeatherMap キーはフォールバック用に維持
+
+**影響**: `GET /api/weather` で WxTech を先に呼び出し、成功時は wx コードを WeatherType にマッピングして正規化レスポンスを返す。`lib/wxtech-weather.ts` で日本域判定と天気コードマッピングを集約。Base URL は `https://wxtech.weathernews.com`（api. サブドメインなし）

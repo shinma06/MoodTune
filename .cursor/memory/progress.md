@@ -3,7 +3,7 @@
 ## 実装済み機能（現在の実装）
 
 ### コア機能
-- ✅ 位置情報から天気データ取得（OpenWeatherMap API）。都市名は Google Geocoding API（逆ジオコーディング）で取得、失敗時は OpenWeatherMap の地名にフォールバック
+- ✅ 位置情報から天気データ取得（WxTech 優先: 日本は 1km メッシュ ピンポイント、海外は 5km メッシュ 世界天気予報。失敗時は OpenWeatherMap にフォールバック）。都市名は Google Geocoding API（逆ジオコーディング）で取得
 - ✅ 天気タイプ対応（日本の主要気象に絞り: Clear, Clouds, Rain, Drizzle, Thunderstorm, Snow, Mist, Fog, Haze など）
 - ✅ 時間帯（朝/昼/夕方/夜）の自動判定（displayHour で単一ソース、1分ごとに更新）
 - ✅ 天気と時間帯に応じた背景色の動的変化（4色グラデーション）
