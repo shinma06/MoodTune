@@ -131,21 +131,33 @@ export default function WeatherTestPanel({
 
   return (
     <>
-      {/* トグルボタン（ジャンルパネル開時は非表示） */}
+      {/* トグルボタン（ジャンルパネル開時は非表示）。Mood Tuning 中は虹色ボーダーのみ */}
       {!hideToggleButton && (
-      <Button
-        variant="outline"
-        size="icon"
-        className={`
-          fixed bottom-4 left-4 z-50 size-[2.8rem] rounded-[1.1rem] bg-background/80 backdrop-blur-sm
-          [&_svg]:size-5
-          ${isOpen ? "bg-primary text-primary-foreground" : ""}
-        `}
-        onClick={handleTogglePanel}
-        aria-label={isOpen ? "Mood Tuningパネルを閉じる" : "Mood Tuningパネルを開く"}
-      >
-        <Sparkles className="size-5" />
-      </Button>
+        <div className="fixed bottom-4 left-4 z-50">
+          {(isOpen || isTestMode) ? (
+            <div className="bg-rainbow p-[2px] rounded-[1.1rem]">
+              <Button
+                variant="outline"
+                size="icon"
+                className="size-[2.8rem] rounded-[calc(1.1rem-2px)] bg-background/95 backdrop-blur-sm border-0 [&_svg]:size-5"
+                onClick={handleTogglePanel}
+                aria-label={isOpen ? "Mood Tuningパネルを閉じる" : "Mood Tuningパネルを開く"}
+              >
+                <Sparkles className="size-5" />
+              </Button>
+            </div>
+          ) : (
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-[2.8rem] rounded-[1.1rem] bg-background/80 backdrop-blur-sm [&_svg]:size-5"
+              onClick={handleTogglePanel}
+              aria-label="Mood Tuningパネルを開く"
+            >
+              <Sparkles className="size-5" />
+            </Button>
+          )}
+        </div>
       )}
 
       {isOpen && (

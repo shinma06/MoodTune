@@ -384,6 +384,11 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                                     ? "右3周でプレイリストを再生成"
                                     : "右3周でプレイリストを再生成・左3周で一括再生成"}
                         </p>
+                        {isTestMode && (
+                            <p className="text-base font-semibold text-rainbow whitespace-nowrap mt-2.5">
+                                Mood Tuning
+                            </p>
+                        )}
                     </div>
                 )}
 
@@ -469,16 +474,26 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                         </div>
                     )}
 
-                    {/* Indicator dots（ジャンルごとのテーマカラー。初期同期 stale J-POP または空状態のときはアクティブを現実のレコード色に合わせる） */}
+                    {/* Indicator dots（ジャンルごとのテーマカラー。Mood Tuning 中は非選択ドットが1本の虹になる） */}
                     <div className="absolute -bottom-8 sm:-bottom-12 left-1/2 -translate-x-1/2 flex gap-1.5">
                         {displayPlaylists.map((item, i) => {
                             const colors = (useRealisticVinyl && i === safeCurrentIndex) ? REALISTIC_VINYL_THEME : getGenreThemeColors(item.genre)
                             const isActive = i === safeCurrentIndex
+                            const inactiveCount = Math.max(1, displayPlaylists.length - 1)
+                            const inactiveIndex = i < safeCurrentIndex ? i : i - 1
+                            const rainbowSliceStyle =
+                                isTestMode && !isActive
+                                    ? {
+                                          background: "linear-gradient(90deg, #ef4444, #f97316, #eab308, #22c55e, #06b6d4, #8b5cf6, #ec4899, #ef4444)",
+                                          backgroundSize: `${inactiveCount * 100}% 100%`,
+                                          backgroundPosition: `${-inactiveIndex * 100}% 0`,
+                                      }
+                                    : undefined
                             return (
                                 <div
                                     key={i}
-                                    className={`w-1.5 h-1.5 rounded-full transition-all ${isActive ? "w-6" : "bg-border"}`}
-                                    style={isActive ? { backgroundColor: colors.accentColor } : {}}
+                                    className={`w-1.5 h-1.5 rounded-full transition-all ${isActive ? "w-6" : isTestMode ? "" : "bg-border"}`}
+                                    style={isActive ? { backgroundColor: colors.accentColor } : rainbowSliceStyle}
                                 />
                             )
                         })}
@@ -486,21 +501,41 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                 </div>
             </div>
 
-            {/* Playlist Info Section（縦幅が狭いときは余白・画像を縮小） */}
+            {/* Playlist Info Section（縦幅が狭いときは余白・画像を縮小）。Mood Tuning 中はタイトル・ジャケに虹色の淵 */}
             <div className="w-full max-w-md shrink-0 space-y-4 sm:space-y-6 pb-4 relative z-10">
                 <div className="text-center space-y-2 sm:space-y-3">
                     <p className={`text-[10px] sm:text-xs uppercase tracking-widest font-light ${genreColorClass}`}>
                         {isLoadingOrEmpty ? getLoadingGenreText(loadingMode) : currentPlaylist.genre}
                     </p>
-                    <h2 className={`text-xl sm:text-2xl font-serif leading-tight text-balance ${titleColorClass}`}>
+                    <h2 className={`text-xl sm:text-2xl font-serif leading-tight text-balance ${isTestMode ? "text-rainbow" : titleColorClass}`}>
                         {isLoadingOrEmpty ? getLoadingTitleText(loadingMode) : currentPlaylist.title}
                     </h2>
                 </div>
 
                 <div className="flex items-center justify-center">
                     {isLoadingOrEmpty ? (
-                        <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-lg bg-muted/50 animate-pulse flex items-center justify-center">
-                            <Music className={`w-6 h-6 sm:w-8 sm:h-8 ${isDark ? "text-white/30" : "text-muted-foreground/30"}`} />
+                        isTestMode ? (
+                            <div className="bg-rainbow p-[2px] rounded-lg shrink-0">
+                                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-[calc(1rem-2px)] bg-muted/50 animate-pulse flex items-center justify-center">
+                                    <Music className={`w-6 h-6 sm:w-8 sm:h-8 ${isDark ? "text-white/30" : "text-muted-foreground/30"}`} />
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-lg bg-muted/50 animate-pulse flex items-center justify-center">
+                                <Music className={`w-6 h-6 sm:w-8 sm:h-8 ${isDark ? "text-white/30" : "text-muted-foreground/30"}`} />
+                            </div>
+                        )
+                    ) : isTestMode ? (
+                        <div className="bg-rainbow p-[2px] rounded-lg shrink-0">
+                            <img
+                                src={getImageUrl(currentPlaylist.imageUrl)}
+                                alt={currentPlaylist.title}
+                                className="w-24 h-24 sm:w-32 sm:h-32 rounded-[calc(1rem-2px)] shadow-lg object-cover"
+                                onError={(e) => {
+                                    const target = e.target as HTMLImageElement
+                                    target.src = "/placeholder.svg"
+                                }}
+                            />
                         </div>
                     ) : (
                         <img
