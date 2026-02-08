@@ -12,7 +12,7 @@
 - [ ] **コンポーネント間連携**: 変更が他のコンポーネントの表示・動作に影響しないか？
   - `WeatherMonitor` ← → `WeatherContext` ← → `PlaylistExplorer`
   - `GenreSelector` ← → `useLocalStorage` ← → `PlaylistExplorer`
-  - `WeatherTestPanel` ← → `WeatherContext` ← → 全コンポーネント
+  - `WeatherMoodTuningPanel` ← → `WeatherContext` ← → 全コンポーネント
 - [ ] **型の影響**: 新しい型を追加・変更する場合、`types/` 配下に集約されているか？既存型との整合性は？
 
 ### 2. 既存実装の確認
@@ -39,7 +39,7 @@
 
 ```
 actualWeatherType / actualTimeOfDay  → 実際の天気・時間帯
-testWeatherType / testTimeOfDay      → Mood Tuning で設定した値
+weatherType / moodTuningTimeOfDay    → Mood Tuning で設定した値（Context）
 effectiveWeather / effectiveTimeOfDay → 表示用（test があればそちら優先）
 isDark                               → 背景が暗いかどうか
 displayHour                          → 表示用時刻（1分ごと更新）

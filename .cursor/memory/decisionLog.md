@@ -76,7 +76,7 @@
 - 開発フローが簡潔
 - デプロイ時に不要なページを削除する必要がない
 
-**影響**: `WeatherTestPanel`コンポーネントをメイン UI に統合
+**影響**: `WeatherMoodTuningPanel`コンポーネントをメイン UI に統合
 
 ---
 
@@ -88,7 +88,7 @@
 - ユーザー体験の向上（1 タップで変更）
 - 開発効率の向上
 
-**影響**: `WeatherTestPanel`の実装を簡素化
+**影響**: `WeatherMoodTuningPanel`の実装を簡素化
 
 ---
 
@@ -112,7 +112,7 @@
 - 天気取得失敗/ローディング時や Mood Tuning 手動設定時の表示不整合を防ぐ
 - `effectiveTimeOfDay`, `effectiveWeather`, `isDark`, `displayHour` を一箇所で管理し、全コンポーネントが同じ値を参照する
 
-**影響**: `WeatherContext` に上記プロパティを追加。PlaylistExplorer, WeatherMonitor, WeatherTestPanel, WeatherAnimation が Context から取得
+**影響**: `WeatherContext` に上記プロパティを追加。PlaylistExplorer, WeatherMonitor, WeatherMoodTuningPanel, WeatherAnimation が Context から取得
 
 ---
 

@@ -6,6 +6,13 @@ UI/UX 改善とコードベースのリファクタリング、Vibeコーディ�
 
 ## 最近の変更履歴
 
+- 実装の命名を Test から Mood Tuning に統一:
+  - `WeatherContext`: `testTimeOfDay` → `moodTuningTimeOfDay`, `setTestTimeOfDay` → `setMoodTuningTimeOfDay`, `isTestMode` → `isMoodTuning`, `setIsTestMode` → `setIsMoodTuning`
+  - `WeatherTestPanel.tsx` を `WeatherMoodTuningPanel.tsx` にリネーム、コンポーネント名・Props 型も `WeatherMoodTuningPanel` / `WeatherMoodTuningPanelProps` に変更
+  - `PlaylistExplorer`, `WeatherMonitor` およびドキュメント（activeContext, systemPatterns, README, decisionLog, pre-implementation-check）内の参照をすべて上記に合わせて更新
+- 天気の 10 分ポーリングと自動更新の整理:
+  - `WeatherMonitor`: 10 分ポーリングは **Mood Tuning 中（isMoodTuning）は実行しない**（`isMoodTuningRef.current` でスキップ）。初回成功後に `lastCoordsRef` で再取得、バックグラウンド時はローディング表示なし
+  - 自動更新時も天気・時間帯変化時と同様の処理をすべて実行: Context 更新に加え、`playlistAutoUpdate` が有効ならプレイリスト再生成まで実施。再生成時の文言を自動更新専用に分離: `LoadingMode "auto"`、`getLoadingTitleText("auto")` = 「天気・時間の変化に合わせて再生成中」、`getLoadingGenreText("auto")` = 「天気・時間に合わせて更新中...」。時間帯変化 effect と天気変化 effect からは `refreshPlaylists({ autoUpdate: true })` を呼び、ユーザー操作（Mood Tuning パネルからの再生成等）は従来どおり `refreshPlaylists()` で「全件再生成中」
 - 天気取得を WxTech 優先に変更（API 切り替え完了、テスト用表示は削除済み）:
   - `GET /api/weather`: WxTech を優先。日本域は 1km メッシュ ピンポイント（`/api/v1/ss1wx`）、海外は 5km メッシュ 世界天気予報（`/api/v2/global/wx`）。失敗時は OpenWeatherMap にフォールバック。レスポンスは OpenWeatherMap 互換に正規化（クライアント変更不要）
   - Base URL は `https://wxtech.weathernews.com`（api. サブドメインは付けない）。公式エンドポイントは `lib/wxtech-weather.ts` のコメントに記載
@@ -31,10 +38,10 @@ UI/UX 改善とコードベースのリファクタリング、Vibeコーディ�
 
 - Context による単一ソース化（背景・テキスト色・天気・時間帯）:
   - `WeatherContext` に `effectiveTimeOfDay`, `effectiveWeather`, `isDark` を追加
-  - `effectiveTimeOfDay`: `testTimeOfDay` を考慮した表示用時間帯
+  - `effectiveTimeOfDay`: `moodTuningTimeOfDay` を考慮した表示用時間帯
   - `effectiveWeather`: `normalizeWeatherType` を適用した表示用天気
   - `isDark`: 背景が暗いかどうか（`isDarkBackground` の結果）
-  - 全コンポーネント（`PlaylistExplorer`, `WeatherMonitor`, `WeatherTestPanel`, `WeatherAnimation`）が Context から取得し、常に一致
+  - 全コンポーネント（`PlaylistExplorer`, `WeatherMonitor`, `WeatherMoodTuningPanel`, `WeatherAnimation`）が Context から取得し、常に一致
 - テキスト色の視認性を堅牢化:
   - `getTopColor` で dusk 時に暗い扱いにする天気を拡張（Clouds/Drizzle/Mist/Haze を追加し、グラデーション下部の視認性を確保）
 - 表示用時刻の単一ソース（displayHour）:
@@ -59,7 +66,7 @@ UI/UX 改善とコードベースのリファクタリング、Vibeコーディ�
   - try/catch で空配列を返し、クライアントの unexpected response を防止
 - Mood Tuning「実際の天気・時間に戻す」ボタン:
   - 表示条件を「パネルを開いた時点で実際の天気・時間と違う状態を設定していた場合のみ」に変更
-  - `showResetButton` を UI に適用（従来の `isTestMode` から切り替え）
+  - `showResetButton` を UI に適用（従来の `isMoodTuning` から切り替え）
   - 未設定（null）時は「実際と同じ」とみなし、誤表示しないよう算出を修正
 - ジャンルが意図せず0件で保存される対策（堅牢化）:
   - `isValidGenreArray`: 空配列を「永続化として無効」にし、読み込み時は `DEFAULT_SELECTED_GENRES` を使用
