@@ -104,7 +104,7 @@ const DEFAULT_THEME_COLORS: GenreThemeColors = {
   accentColor: "#64748b",
 }
 
-/** 現実の一般的なレコードの色（生成中・空のときのレコード表示用） */
+/** 現実の一般的なレコードの色（構築中・空のときのレコード表示用） */
 export const REALISTIC_VINYL_THEME: GenreThemeColors = {
   vinylColor: "from-neutral-800 to-neutral-950",
   accentColor: "#525252",

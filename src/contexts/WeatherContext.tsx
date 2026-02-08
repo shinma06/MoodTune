@@ -29,7 +29,7 @@ interface WeatherContextType {
   /** 時間帯・天気変更時にプレイリストを自動更新するか */
   playlistAutoUpdate: boolean
   setPlaylistAutoUpdate: (enabled: boolean) => void
-  /** パネルから「プレイリストを再生成」が押されたときのトリガー（インクリメントで発火） */
+  /** パネルから「プレイリストを再構築」が押されたときのトリガー（インクリメントで発火） */
   playlistRefreshTrigger: number
   requestPlaylistRefresh: () => void
 }

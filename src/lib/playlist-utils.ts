@@ -32,23 +32,23 @@ export function getImageUrl(url: string | undefined | null): string {
 export type LoadingMode = "initial" | "all" | "single" | "added" | "auto" | null
 
 /** ローディング中のジャンル表示文言 */
-export const LOADING_GENRE_TEXT = "プレイリストを生成中..."
+export const LOADING_GENRE_TEXT = "プレイリストを構築中..."
 
 /** ローディング中のタイトル表示文言 */
 export function getLoadingTitleText(mode: LoadingMode): string {
   switch (mode) {
     case "initial":
-      return "プレイリストを生成中"
+      return "プレイリストを構築中"
     case "all":
-      return "プレイリストを全件再生成中"
+      return "プレイリストを全件再構築中"
     case "single":
-      return "プレイリストを再生成中"
+      return "プレイリストを再構築中"
     case "added":
-      return "追加ジャンルのプレイリストを生成中"
+      return "追加ジャンルのプレイリストを構築中"
     case "auto":
-      return "天気・時間の変化に合わせて再生成中"
+      return "天気・時間の変化に合わせて再構築中"
     default:
-      return "プレイリストを生成中"
+      return "プレイリストを構築中"
   }
 }
 

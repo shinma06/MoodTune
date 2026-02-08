@@ -43,7 +43,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     const [selectedGenres, isGenresInitialized] = useSelectedGenres()
     const [playlists, setPlaylists] = useState<DashboardItem[] | null>(initialPlaylists ?? null)
     const [isLoading, setIsLoading] = useState(false)
-    /** 生成中の種別（初回 / 全件再生成 / 個別 / 追加ジャンルのみ）。表示文言の切り替え用 */
+    /** 構築中の種別（初回 / 全件再構築 / 個別 / 追加ジャンルのみ）。表示文言の切り替え用 */
     const [loadingMode, setLoadingMode] = useState<LoadingMode>(null)
 
     /** パネルを開いた時点のジャンル（閉じたときの差分計算用） */
@@ -54,12 +54,12 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     const prevTimeOfDayRef = useRef<TimeOfDay | null>(null)
     const prevActualWeatherRef = useRef<string | null>(null)
 
-    /** 生成失敗時は空のままローディング表示を継続（静的フォールバックは使わない） */
+    /** 構築失敗時は空のままローディング表示を継続（静的フォールバックは使わない） */
     const displayPlaylists = useMemo(() => {
         return playlists && playlists.length > 0 ? playlists : []
     }, [playlists])
 
-    /** ローディング表示を出す条件（生成中 or 未取得・失敗でプレイリストが空） */
+    /** ローディング表示を出す条件（構築中 or 未取得・失敗でプレイリストが空） */
     const isLoadingOrEmpty = isLoading || displayPlaylists.length === 0
 
     /** 常に配列範囲内のインデックス */
@@ -86,7 +86,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     const isLoadingRef = useRef(false)
     isLoadingRef.current = isLoading
 
-    /** 現在の天気・時間帯・ジャンルでプレイリストを全件再生成。autoUpdate: true のときは自動更新（天気・時間帯変化）用の文言を表示 */
+    /** 現在の天気・時間帯・ジャンルでプレイリストを全件再構築。autoUpdate: true のときは自動更新（天気・時間帯変化）用の文言を表示 */
     const refreshPlaylists = useCallback(async (options?: { autoUpdate?: boolean }) => {
         if (selectedGenres.length === 0) return
         if (isLoadingRef.current) return // ローディング中は無視
@@ -111,7 +111,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     const refreshPlaylistsRef = useRef(refreshPlaylists)
     refreshPlaylistsRef.current = refreshPlaylists
 
-    /** 表示中の1ジャンルだけ現在の天気・時間で再生成（レコード右3周で発火） */
+    /** 表示中の1ジャンルだけ現在の天気・時間で再構築（レコード右3周で発火） */
     const refreshPlaylistByGenre = useCallback(async (genre: Genre) => {
         if (!selectedGenres.includes(genre)) return
         if (isLoadingRef.current) return // ローディング中は無視
@@ -193,7 +193,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         }
     }, [weatherType, displayHour, isMoodTuning, moodTuningTimeOfDay])
 
-    /** ジャンル選択パネルの開閉（閉じたときにジャンル変更があればプレイリスト再生成）。0件時は閉じない。 */
+    /** ジャンル選択パネルの開閉（閉じたときにジャンル変更があればプレイリスト再構築）。0件時は閉じない。 */
     const handleToggleSettings = useCallback(() => {
         if (openPanel !== "genre") {
             genresOnOpenRef.current = [...selectedGenres]
@@ -231,12 +231,12 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         }
     }, [calculatedTimeOfDayForEffect, isMoodTuning, isGenresInitialized, selectedGenres.length, refreshPlaylists])
 
-    /** プレイリスト生成中はパネルを閉じ、値変更を防ぐ（同期ずれ防止） */
+    /** プレイリスト構築中はパネルを閉じ、値変更を防ぐ（同期ずれ防止） */
     useEffect(() => {
         if (isLoading) setOpenPanel(null)
     }, [isLoading])
 
-    /** Mood Tuning パネル閉時のみ: トリガーがインクリメントされたときだけ再生成。openPanel を依存に含めない＝パネル開閉で再実行されない（開くだけで全件再生成・Favorite Music 閉じで上書きするバグを防止）。ジャンルパネル開中は選択変更で発火しないよう openPanel === "genre" でガード。 */
+    /** Mood Tuning パネル閉時のみ: トリガーがインクリメントされたときだけ再構築。openPanel を依存に含めない＝パネル開閉で再実行されない（開くだけで全件再構築・Favorite Music 閉じで上書きするバグを防止）。ジャンルパネル開中は選択変更で発火しないよう openPanel === "genre" でガード。 */
     useEffect(() => {
         if (openPanel === "genre") return
         if (playlistRefreshTrigger === 0 || !isGenresInitialized || selectedGenres.length === 0) return
@@ -314,12 +314,12 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     const regenerateMessage = (() => {
         if (!showRegenerateFeedback) return null
         const abs = Math.abs(cumulativeRotation)
-        if (cumulativeRotation >= REGENERATE_THRESHOLD_DEG) return "離すと再生成"
-        if (cumulativeRotation <= -REGENERATE_THRESHOLD_DEG) return "離すと全件再生成"
+        if (cumulativeRotation >= REGENERATE_THRESHOLD_DEG) return "離すと再構築"
+        if (cumulativeRotation <= -REGENERATE_THRESHOLD_DEG) return "離すと全件再構築"
         const remainingTurns = Math.ceil((REGENERATE_THRESHOLD_DEG - abs) / 360)
         return cumulativeRotation > 0
-            ? `あと${remainingTurns}周で再生成`
-            : `あと${remainingTurns}周で全件再生成`
+            ? `あと${remainingTurns}周で再構築`
+            : `あと${remainingTurns}周で全件再構築`
     })()
 
     return (
@@ -332,7 +332,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
             {/* Weather Animation */}
             <WeatherAnimation />
 
-            {/* Mood Tuning パネル。ジャンルパネル開時または生成中はボタン非表示・生成中はパネルも閉じる */}
+            {/* Mood Tuning パネル。ジャンルパネル開時または構築中はボタン非表示・構築中はパネルも閉じる */}
             <WeatherMoodTuningPanel
                 isOpen={openPanel === "mood" && !isLoading}
                 onOpen={() => setOpenPanel("mood")}
@@ -340,7 +340,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                 hideToggleButton={openPanel === "genre" || isLoading}
             />
 
-            {/* Settings Toggle Button（ジャンル選択・右下）。気分パネル開時または生成中は非表示 */}
+            {/* Settings Toggle Button（ジャンル選択・右下）。気分パネル開時または構築中は非表示 */}
             {openPanel !== "mood" && !isLoading && (
                 <Button
                     variant="outline"
@@ -358,7 +358,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                 </Button>
             )}
 
-            {/* Settings Panel with Genre Selector（ボタンの上に表示）。生成中は非表示 */}
+            {/* Settings Panel with Genre Selector（ボタンの上に表示）。構築中は非表示 */}
             {openPanel === "genre" && !isLoading && (
                 <div className="fixed bottom-16 right-4 z-50 w-80 max-w-[calc(100vw-2rem)]">
                     <GenreSelector />
@@ -386,10 +386,10 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                         </p>
                         <p className={`text-[9px] font-light whitespace-nowrap ${isDark ? "text-white/60" : "text-muted-foreground/50"}`}>
                             {selectedGenres.length === 0
-                                ? "1つ以上選択するとスピンで再生成できます"
+                                ? "1つ以上選択するとスピンで再構築できます"
                                 : selectedGenres.length === 1
-                                    ? "右3周でプレイリストを再生成"
-                                    : "右3周でプレイリストを再生成・左3周で一括再生成"}
+                                    ? "右3周でプレイリストを再構築"
+                                    : "右3周でプレイリストを再構築・左3周で一括再構築"}
                         </p>
                         {isMoodTuningApplied && (
                             <p className="text-base font-semibold text-rainbow whitespace-nowrap mt-2.5">

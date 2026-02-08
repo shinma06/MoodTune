@@ -79,7 +79,7 @@ export default function WeatherMoodTuningPanel({
     setIsMoodTuning(true)
   }
 
-  /** パネルを閉じる: 開いた時点の天気・時間と比べて変わっている場合のみプレイリストを再生成 */
+  /** パネルを閉じる: 開いた時点の天気・時間と比べて変わっている場合のみプレイリストを再構築 */
   const handleClosePanel = () => {
     const openedWeather = openedWeatherTypeRef.current
     const openedTime = openedTimeOfDayRef.current
@@ -92,7 +92,7 @@ export default function WeatherMoodTuningPanel({
     else setInternalOpen(false)
   }
 
-  /** トグル: 開くときはスナップショット、閉じるときは変更があれば再生成してから閉じる（ジャンル選択パネルと同じ方式） */
+  /** トグル: 開くときはスナップショット、閉じるときは変更があれば再構築してから閉じる（ジャンル選択パネルと同じ方式） */
   const handleTogglePanel = () => {
     if (isOpen) {
       handleClosePanel()
@@ -257,7 +257,7 @@ export default function WeatherMoodTuningPanel({
                   </Button>
                 </div>
                 <p className="text-[10px] text-muted-foreground -mt-1">
-                  実際の時間・天気の変化でプレイリストを自動で再生成します
+                  実際の時間・天気の変化でプレイリストを自動で再構築します
                 </p>
               </>
             )}
