@@ -82,6 +82,10 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         ? REALISTIC_VINYL_THEME
         : getGenreThemeColors(currentPlaylist.genre)
 
+    /** 表示用時間帯の単一ソース（実時刻ベースと Mood Tuning 考慮） */
+    const actualTimeOfDay = getTimeOfDay(displayHour)
+    const timeOfDay = isMoodTuning && moodTuningTimeOfDay ? moodTuningTimeOfDay : actualTimeOfDay
+
     /** ローディング中かどうかを ref で保持（useCallback 内で最新値を参照するため） */
     const isLoadingRef = useRef(false)
     isLoadingRef.current = isLoading
@@ -94,8 +98,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         setIsLoading(true)
         try {
             const weather = normalizeWeatherType(weatherType ?? "Clear") as WeatherType
-            const calculatedTimeOfDay = getTimeOfDay(displayHour)
-            const time = (isMoodTuning && moodTuningTimeOfDay ? moodTuningTimeOfDay : calculatedTimeOfDay) as TimeOfDay
+            const time = timeOfDay as TimeOfDay
             const generated = await generateDashboard(weather, time, selectedGenres as Genre[])
             setPlaylists(generated)
             setCurrentIndex((prev) => Math.min(prev, Math.max(0, generated.length - 1)))
@@ -105,7 +108,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
             setIsLoading(false)
             setLoadingMode(null)
         }
-    }, [weatherType, displayHour, isMoodTuning, moodTuningTimeOfDay, selectedGenres])
+    }, [weatherType, timeOfDay, selectedGenres])
 
     /** パネル閉時トリガー用 effect が refreshPlaylists の参照変更で再実行されないよう ref に保持 */
     const refreshPlaylistsRef = useRef(refreshPlaylists)
@@ -119,8 +122,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         setIsLoading(true)
         try {
             const weather = normalizeWeatherType(weatherType ?? "Clear") as WeatherType
-            const calculatedTimeOfDay = getTimeOfDay(displayHour)
-            const time = (isMoodTuning && moodTuningTimeOfDay ? moodTuningTimeOfDay : calculatedTimeOfDay) as TimeOfDay
+            const time = timeOfDay as TimeOfDay
             const generated = await generateDashboard(weather, time, [genre])
             const newItem = generated[0]
             if (!newItem) return
@@ -134,7 +136,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
             setIsLoading(false)
             setLoadingMode(null)
         }
-    }, [weatherType, displayHour, isMoodTuning, moodTuningTimeOfDay, selectedGenres])
+    }, [weatherType, timeOfDay, selectedGenres])
 
     /** ジャンル差分に応じてプレイリストを更新（追加ジャンルのみAPI呼び出し。既存は currentPlaylists を再利用） */
     const updatePlaylistsWithDiff = useCallback(async (
@@ -154,8 +156,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         setIsLoading(true)
         try {
             const weather = normalizeWeatherType(weatherType ?? "Clear") as WeatherType
-            const calculatedTimeOfDay = getTimeOfDay(displayHour)
-            const time = (isMoodTuning && moodTuningTimeOfDay ? moodTuningTimeOfDay : calculatedTimeOfDay) as TimeOfDay
+            const time = timeOfDay as TimeOfDay
 
             const existingMap = new Map<string, DashboardItem>()
             if (currentPlaylists) {
@@ -191,7 +192,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
             setIsLoading(false)
             setLoadingMode(null)
         }
-    }, [weatherType, displayHour, isMoodTuning, moodTuningTimeOfDay])
+    }, [weatherType, timeOfDay])
 
     /** ジャンル選択パネルの開閉（閉じたときにジャンル変更があればプレイリスト再構築）。0件時は閉じない。 */
     const handleToggleSettings = useCallback(() => {
@@ -221,15 +222,14 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     }, [isGenresInitialized, selectedGenres, playlists, updatePlaylistsWithDiff])
 
     /** 実時刻の時間帯が変わったタイミングでプレイリストを自動更新（手動設定中は行わない）。常に自動更新ONとして動作。 */
-    const calculatedTimeOfDayForEffect = getTimeOfDay(displayHour)
     useEffect(() => {
         if (isMoodTuning || !isGenresInitialized || selectedGenres.length === 0) return
         const prev = prevTimeOfDayRef.current
-        prevTimeOfDayRef.current = calculatedTimeOfDayForEffect
-        if (prev !== null && prev !== calculatedTimeOfDayForEffect) {
+        prevTimeOfDayRef.current = actualTimeOfDay
+        if (prev !== null && prev !== actualTimeOfDay) {
             refreshPlaylists({ autoUpdate: true })
         }
-    }, [calculatedTimeOfDayForEffect, isMoodTuning, isGenresInitialized, selectedGenres.length, refreshPlaylists])
+    }, [actualTimeOfDay, isMoodTuning, isGenresInitialized, selectedGenres.length, refreshPlaylists])
 
     /** プレイリスト構築中はパネルを閉じ、値変更を防ぐ（同期ずれ防止） */
     useEffect(() => {
@@ -254,11 +254,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         }
     }, [actualWeatherType, isMoodTuning, isGenresInitialized, selectedGenres.length, refreshPlaylists])
 
-    const calculatedTimeOfDay = getTimeOfDay(displayHour)
-    const timeOfDay = isMoodTuning && moodTuningTimeOfDay ? moodTuningTimeOfDay : calculatedTimeOfDay
-
     /** パネルを閉じたうえで、表示中の天気・時間が実際と異なる場合のみ Mood Tuning 表示を適用 */
-    const actualTimeOfDay = getTimeOfDay(displayHour)
     const actualWeatherNorm = actualWeatherType ? normalizeWeatherType(actualWeatherType) : null
     const isMoodTuningApplied =
         openPanel !== "mood" &&

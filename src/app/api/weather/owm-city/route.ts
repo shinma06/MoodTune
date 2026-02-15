@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { parseLatLon } from "@/lib/parse-lat-lon"
 
 /**
  * OpenWeatherMap のみを呼び、都市名(name)だけを返す。
@@ -7,22 +8,13 @@ import { NextRequest, NextResponse } from "next/server"
  */
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams
-    const lat = searchParams.get("lat")
-    const lon = searchParams.get("lon")
-
-    if (!lat || !lon) {
-      return NextResponse.json(
-        { error: "緯度(lat)と経度(lon)のパラメータが必要です" },
-        { status: 400 }
-      )
-    }
-
-    const latNum = parseFloat(lat)
-    const lonNum = parseFloat(lon)
-    if (isNaN(latNum) || isNaN(lonNum) || latNum < -90 || latNum > 90 || lonNum < -180 || lonNum > 180) {
+    const parsed = parseLatLon(request.nextUrl.searchParams)
+    if (!parsed.ok) {
       return NextResponse.json({ error: "無効な緯度経度です" }, { status: 400 })
     }
+    const { lat: latNum, lon: lonNum } = parsed
+    const lat = String(latNum)
+    const lon = String(lonNum)
 
     const apiKey = process.env.NEXT_PUBLIC_WEATHER_API_KEY
     if (!apiKey) {

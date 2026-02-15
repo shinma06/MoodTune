@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { parseLatLon } from "@/lib/parse-lat-lon"
 import { isInJapan, wxCodeToWeatherType, WXTECH_API_BASE } from "@/lib/wxtech-weather"
 import { WEATHER_TYPE_LABELS } from "@/lib/constants"
 import type { WeatherType } from "@/lib/weather-background"
@@ -12,40 +13,13 @@ interface NormalizedWeatherResponse {
 
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams
-    const lat = searchParams.get("lat")
-    const lon = searchParams.get("lon")
-
-    if (!lat || !lon) {
-      return NextResponse.json(
-        { error: "緯度(lat)と経度(lon)のパラメータが必要です" },
-        { status: 400 }
-      )
+    const parsed = parseLatLon(request.nextUrl.searchParams)
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: parsed.status })
     }
-
-    const latNum = parseFloat(lat)
-    const lonNum = parseFloat(lon)
-
-    if (isNaN(latNum) || isNaN(lonNum)) {
-      return NextResponse.json(
-        { error: "緯度(lat)と経度(lon)は数値である必要があります" },
-        { status: 400 }
-      )
-    }
-
-    if (latNum < -90 || latNum > 90) {
-      return NextResponse.json(
-        { error: "緯度は-90から90の範囲である必要があります" },
-        { status: 400 }
-      )
-    }
-
-    if (lonNum < -180 || lonNum > 180) {
-      return NextResponse.json(
-        { error: "経度は-180から180の範囲である必要があります" },
-        { status: 400 }
-      )
-    }
+    const { lat: latNum, lon: lonNum } = parsed
+    const lat = String(latNum)
+    const lon = String(lonNum)
 
     const wxTechKey = process.env.WXTECH_API_KEY
     const owmKey = process.env.NEXT_PUBLIC_WEATHER_API_KEY

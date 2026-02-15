@@ -1,5 +1,5 @@
 import type { WeatherApiResponse, WeatherData } from "@/types/weather"
-import { getWeatherIcon, normalizeWeatherType } from "./weather-utils"
+import { normalizeWeatherType } from "./weather-utils"
 
 /** 緯度・経度から天気APIとGeocoding APIを並列で叩き、正規化した天気データを返す。都市名はGoogle Geocodingで取得。 */
 export async function fetchWeatherData(lat: number, lon: number): Promise<{
@@ -35,7 +35,6 @@ export async function fetchWeatherData(lat: number, lon: number): Promise<{
 
   return {
     weatherData: {
-      icon: getWeatherIcon(weatherMain),
       temp: `${Math.round(data.main.temp)}°C`,
       city,
       description: data.weather[0]?.description || "",

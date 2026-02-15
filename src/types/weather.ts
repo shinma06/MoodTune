@@ -1,5 +1,3 @@
-import type { LucideIcon } from "lucide-react"
-
 /** OpenWeatherMap API のレスポンス型 */
 export interface WeatherApiResponse {
   main: {
@@ -25,7 +23,6 @@ export interface WeatherApiResponse {
 
 /** UI表示用の天気データ */
 export interface WeatherData {
-  icon: LucideIcon
   temp: string
   city: string
   description: string
