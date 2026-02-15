@@ -25,6 +25,9 @@ export default function WeatherMonitor() {
     /** ポーリング用：最後に取得成功した座標。バックグラウンド再取得で位置情報を再要求しない */
     const lastCoordsRef = useRef<{ lat: number; lon: number } | null>(null)
 
+    /** 初回のみ位置情報を要求するためのフラグ（再レンダーで getCurrentPosition が繰り返し呼ばれるのを防ぐ） */
+    const initialRequestDoneRef = useRef(false)
+
     useEffect(() => {
         setCurrentTime(new Date())
         const timer = setInterval(() => {
@@ -69,20 +72,25 @@ export default function WeatherMonitor() {
         return () => clearInterval(timer)
     }, [handleWeatherFetch])
 
-    const { requestGeolocation } = useGeolocation({
-        onSuccess: (position) => {
+    const onGeolocationSuccess = useCallback(
+        (position: GeolocationPosition) => {
             const { latitude, longitude } = position.coords
             handleWeatherFetch(latitude, longitude)
         },
-        onError: (error) => {
-            setWeatherState({
-                status: "error",
-                message: error,
-            })
-        },
+        [handleWeatherFetch]
+    )
+    const onGeolocationError = useCallback((error: string) => {
+        setWeatherState({ status: "error", message: error })
+    }, [])
+
+    const { requestGeolocation } = useGeolocation({
+        onSuccess: onGeolocationSuccess,
+        onError: onGeolocationError,
     })
 
     useEffect(() => {
+        if (initialRequestDoneRef.current) return
+        initialRequestDoneRef.current = true
         requestGeolocation()
     }, [requestGeolocation])
 
