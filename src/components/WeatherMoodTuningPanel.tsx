@@ -169,9 +169,9 @@ export default function WeatherMoodTuningPanel({
       {isOpen && (
         <div className="fixed bottom-16 left-4 z-50 w-80 max-w-[calc(100vw-2rem)]">
           <Card className="w-full bg-background/80 backdrop-blur-sm border-border/50">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Sparkles className="w-4 h-4" />
+            <CardHeader>
+              <CardTitle className="text-base font-semibold flex items-center gap-2.5">
+                <Sparkles className="w-5 h-5 shrink-0" />
                 <span className="text-rainbow">Mood Tuning</span>
               </CardTitle>
               <CardDescription className="text-xs">
