@@ -93,10 +93,10 @@ const WEATHER_THEME_COLORS: Record<WeatherType, string> = {
   Rain: "#4682B4", // スチールブルー
   Drizzle: "#87CEEB", // スカイブルー
   Thunderstorm: "#1C1C1C", // ほぼ黒
-  Snow: "#F0F8FF", // アリスブルー
-  Mist: "#D3D3D3", // ライトグレー
-  Fog: "#C0C0C0", // シルバー
-  Haze: "#E0E0E0", // ライトグレー
+  Snow: "#6B8BA3", // 青みのグレー（明るい背景で視認性確保）
+  Mist: "#5C5C5C", // ミディアムグレー
+  Fog: "#4A4A4A", // 濃霧用やや暗め
+  Haze: "#606060", // もや用グレー
 }
 
 /** 天気 → アイコン用テーマカラー（暗い背景用、静的なマッピング） */

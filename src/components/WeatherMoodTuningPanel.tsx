@@ -193,7 +193,7 @@ export default function WeatherMoodTuningPanel({
                       className={`relative flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all ${
                         isSelected
                           ? "border-primary bg-primary/10 ring-2 ring-primary/30 ring-offset-2 ring-offset-background"
-                          : "border-border hover:bg-muted/50"
+                          : "border-muted-foreground/50 hover:bg-muted/50"
                       } ${isActualWeather && !isSelected ? "ring-2 ring-muted-foreground/40 ring-offset-2 ring-offset-background" : ""}`}
                       onClick={() => handleWeatherTypeChange(type)}
                     >
@@ -223,7 +223,7 @@ export default function WeatherMoodTuningPanel({
                       className={`relative flex flex-col items-center gap-0.5 p-2 rounded-lg border-2 transition-all text-xs ${
                         isSelected
                           ? "border-primary bg-primary/10 ring-2 ring-primary/30 ring-offset-2 ring-offset-background"
-                          : "border-border hover:bg-muted/50"
+                          : "border-muted-foreground/50 hover:bg-muted/50"
                       } ${isActualTime && !isSelected ? "ring-2 ring-muted-foreground/40 ring-offset-2 ring-offset-background" : ""}`}
                       onClick={() => handleTimeOfDayChange(option.value)}
                     >
