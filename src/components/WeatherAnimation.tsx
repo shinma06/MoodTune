@@ -5,11 +5,8 @@ import { useEffect, useState } from "react"
 
 export default function WeatherAnimation() {
   // Context の単一ソースを使用（背景と常に一致）
-  const { effectiveWeather, effectiveTimeOfDay, weatherType } = useWeather()
+  const { effectiveWeather, weatherType } = useWeather()
   const [showLightning, setShowLightning] = useState(false)
-
-  // effectiveTimeOfDay は将来的に時間帯に応じたアニメーションで使用可能
-  void effectiveTimeOfDay
 
   useEffect(() => {
     if (effectiveWeather === "Thunderstorm") {
