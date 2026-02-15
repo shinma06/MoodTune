@@ -67,16 +67,17 @@
 
 ---
 
-### ADR-006: テストパネルのメイン UI 統合
+### ADR-006: Mood Tuning パネルのメイン UI 統合
 
-**決定**: 開発専用ページを削除し、メイン UI 上にテストパネルを配置
+**決定**: 開発専用ページを削除し、メイン UI 上に Mood Tuning パネルを配置（旧称: テストパネル）
 **理由**:
 
-- 実際の UI で直接テストできる
+- 実際の UI で直接天気・時間帯を切り替えてテストできる
 - 開発フローが簡潔
 - デプロイ時に不要なページを削除する必要がない
+- ユーザーは「今は夜の雨の気分」などでプレビューにも利用可能
 
-**影響**: `WeatherMoodTuningPanel`コンポーネントをメイン UI に統合
+**影響**: `WeatherMoodTuningPanel` をメイン UI に統合。命名は Test → Mood Tuning に統一済み
 
 ---
 
@@ -187,3 +188,27 @@
 - 既存の OpenWeatherMap キーはフォールバック用に維持
 
 **影響**: `GET /api/weather` で WxTech を先に呼び出し、成功時は wx コードを WeatherType にマッピングして正規化レスポンスを返す。`lib/wxtech-weather.ts` で日本域判定と天気コードマッピングを集約。Base URL は `https://wxtech.weathernews.com`（api. サブドメインなし）
+
+---
+
+### ADR-016: 初回アクセス時の背景・時間帯の初期化（isTimeInitialized）
+
+**決定**: SSR/初回はサーバー時刻に依存せず `displayHour` を 0 で初期化し、クライアントで現地時刻を設定したあと `isTimeInitialized = true` にする。未初期化時は `effectiveTimeOfDay = "day"`, `isDark = false` で中性背景を使う
+**理由**:
+
+- ハイドレーションのずれや一瞬の誤った時間帯表示を防ぐ
+- コンテンツ到着前も白画面を避けるため、`INITIAL_BACKGROUND_GRADIENT` を layout/loading/PlaylistExplorer で統一
+
+**影響**: `WeatherContext` に `isTimeInitialized` を追加。`weather-background-utils.ts` に `INITIAL_BACKGROUND_GRADIENT`。PlaylistExplorer は初期化完了後に天気・時間帯に応じた背景へ切り替え
+
+---
+
+### ADR-017: 天気 10 分ポーリングは Mood Tuning 中は実行しない
+
+**決定**: WeatherMonitor の 10 分ごとの天気再取得は、`isMoodTuning` が true の間はスキップする
+**理由**:
+
+- 手動で天気・時間を設定している最中に実際の天気で上書きされないようにする
+- バックグラウンド再取得時はローディング表示なし（初回成功後の同座標再取得）
+
+**影響**: `WeatherMonitor` で `isMoodTuningRef.current` を参照してポーリングをスキップ。自動更新時は `refreshPlaylists({ autoUpdate: true })` で「天気・時間の変化に合わせて再生成中」を表示

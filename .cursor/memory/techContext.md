@@ -18,9 +18,14 @@
 - **理由**: カスタマイズ可能、アクセシビリティ対応、Radix UIベース
 - **使用方針**: 既存コンポーネントを優先、不足時は`npx shadcn@latest add`で追加
 
-### OpenWeatherMap API
-- **理由**: 無料プランあり、日本語対応、信頼性
-- **実装**: Next.js API Route（/api/weather）でプロキシ（APIキー保護）
+### 天気 API（WxTech 優先・OpenWeatherMap フォールバック）
+- **WxTech**: 日本は 1km メッシュ ピンポイント、海外は 5km メッシュ 世界天気予報。高精度・世界対応
+- **OpenWeatherMap**: WxTech 失敗時または WxTech 未設定時のフォールバック。無料プランあり
+- **実装**: `GET /api/weather` で WxTech を先に呼び出し、レスポンスを OWM 互換に正規化。`lib/wxtech-weather.ts` で日本域判定・天気コード→WeatherType マッピング。API キーはサーバー側のみ（プロキシ）
+
+### Google Geocoding API（逆ジオコーディング）
+- **理由**: 緯度経度から市区町村レベルの地名を取得し、天気モニターに表示
+- **実装**: `GET /api/geocode?lat=&lon=`。天気取得と `Promise.all` で並列呼び出し。失敗時は OWM の `name` にフォールバック。本番では Referer 送信、開発では送らない
 
 ### Vercel AI SDK（OpenAI）
 - **理由**: プレイリストのタイトル・検索クエリをジャンル・天気・時間帯に応じて生成するため
@@ -41,12 +46,14 @@
 | 変数 | 必須 | 説明 |
 |------|------|------|
 | `OPENAI_API_KEY` | **Yes** | プレイリストタイトル・クエリ生成（Vercel AI SDK / OpenAI） |
-| `NEXT_PUBLIC_WEATHER_API_KEY` | 天気利用時 | OpenWeatherMap API |
 | `AUTH_SECRET` | Spotify 利用時 | NextAuth 用のランダム文字列 |
 | `AUTH_SPOTIFY_ID` / `AUTH_SPOTIFY_SECRET` | Spotify 利用時 | Spotify OAuth |
 | `NEXT_PUBLIC_USE_MOCK_SPOTIFY` | No | 省略または `true`: モック（ログイン不要）。`false`: Spotify ログイン有効 |
+| `WXTECH_API_KEY` | 天気推奨 | WxTech API（日本 1km/海外 5km）。未設定時は OWM のみ |
+| `NEXT_PUBLIC_WEATHER_API_KEY` | 天気フォールバック | OpenWeatherMap API（WxTech 失敗時または未設定時） |
+| `GOOGLE_GEOCODING_API_KEY` | 都市名表示時 | Google Geocoding（逆ジオコーディング）。未設定時は OWM の地名にフォールバック |
 
-**最小構成（モック・デプロイ）**: `OPENAI_API_KEY` のみで動作。天気・Spotify はオプション。
+**最小構成（モック・デプロイ）**: `OPENAI_API_KEY` のみで動作。天気・Spotify・都市名はオプション。
 
 ### 開発サーバー
 ```bash

@@ -49,6 +49,16 @@
 - ✅ Spotify 認証（NextAuth）
 - ✅ モックモード（NEXT_PUBLIC_USE_MOCK_SPOTIFY）でログイン不要で利用可能
 
+### 初期化・ポーリング
+- ✅ 初回アクセス時の背景・時間帯の初期化（`isTimeInitialized`、`INITIAL_BACKGROUND_GRADIENT`）
+- ✅ 天気の 10 分ポーリング（Mood Tuning 中はスキップ、バックグラウンド時はローディング表示なし）
+- ✅ 天気・時間帯変化時のプレイリスト自動更新（`playlistAutoUpdate`、LoadingMode `"auto"` 文言）
+
+### コード品質
+- ✅ 背景・天気アイコン・テーマ色の静的定数化（`BACKGROUNDS`, `WEATHER_ICON_MAP`, `WEATHER_THEME_COLORS` 等）
+- ✅ `generateDashboard` の try/catch によるエラーハンドリング（空配列返却）
+- ✅ プレイリスト関連ユーティリティの集約（`playlist-utils.ts`: LoadingMode, getLoadingTitleText, getLoadingGenreText 等）
+
 ---
 
 ## 今後のビジョン（未実装）
