@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from "react"
+import { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from "react"
 import { getTimeOfDay, isDarkBackground, type TimeOfDay, type WeatherType } from "@/lib/weather-background"
 import { normalizeWeatherType } from "@/lib/weather-utils"
 
@@ -75,9 +75,9 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
     return isDarkBackground(effectiveWeather, effectiveTimeOfDay)
   }, [isTimeInitialized, effectiveWeather, effectiveTimeOfDay])
 
-  const requestPlaylistRefresh = () => {
+  const requestPlaylistRefresh = useCallback(() => {
     setPlaylistRefreshTrigger((prev) => prev + 1)
-  }
+  }, [])
 
   return (
     <WeatherContext.Provider
