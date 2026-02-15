@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { parseLatLon } from "@/lib/parse-lat-lon"
 
 /**
  * Google Geocoding API (reverse) で緯度経度から都市名を取得する。
@@ -6,26 +7,11 @@ import { NextRequest, NextResponse } from "next/server"
  */
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams
-    const lat = searchParams.get("lat")
-    const lon = searchParams.get("lon")
-
-    if (!lat || !lon) {
-      return NextResponse.json(
-        { error: "緯度(lat)と経度(lon)のパラメータが必要です" },
-        { status: 400 }
-      )
+    const parsed = parseLatLon(request.nextUrl.searchParams, { validateRange: false })
+    if (!parsed.ok) {
+      return NextResponse.json({ error: parsed.error }, { status: parsed.status })
     }
-
-    const latNum = parseFloat(lat)
-    const lonNum = parseFloat(lon)
-
-    if (isNaN(latNum) || isNaN(lonNum)) {
-      return NextResponse.json(
-        { error: "緯度(lat)と経度(lon)は数値である必要があります" },
-        { status: 400 }
-      )
-    }
+    const { lat: latNum, lon: lonNum } = parsed
 
     const apiKey = process.env.GOOGLE_GEOCODING_API_KEY
     if (!apiKey) {
@@ -36,7 +22,7 @@ export async function GET(request: NextRequest) {
     }
 
     const url = new URL("https://maps.googleapis.com/maps/api/geocode/json")
-    url.searchParams.set("latlng", `${lat},${lon}`)
+    url.searchParams.set("latlng", `${latNum},${lonNum}`)
     url.searchParams.set("key", apiKey)
     url.searchParams.set("language", "ja")
 
