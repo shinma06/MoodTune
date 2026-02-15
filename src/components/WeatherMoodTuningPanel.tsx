@@ -169,9 +169,9 @@ export default function WeatherMoodTuningPanel({
       {isOpen && (
         <div className="fixed bottom-16 left-4 z-50 w-80 max-w-[calc(100vw-2rem)]">
           <Card className="w-full bg-background/80 backdrop-blur-sm border-border/50">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Sparkles className="w-4 h-4" />
+            <CardHeader>
+              <CardTitle className="text-base font-semibold flex items-center gap-2.5">
+                <Sparkles className="w-5 h-5 shrink-0" />
                 <span className="text-rainbow">Mood Tuning</span>
               </CardTitle>
               <CardDescription className="text-xs">
@@ -193,7 +193,7 @@ export default function WeatherMoodTuningPanel({
                       className={`relative flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all ${
                         isSelected
                           ? "border-primary bg-primary/10 ring-2 ring-primary/30 ring-offset-2 ring-offset-background"
-                          : "border-border hover:bg-muted/50"
+                          : "border-muted-foreground/50 hover:bg-muted/50"
                       } ${isActualWeather && !isSelected ? "ring-2 ring-muted-foreground/40 ring-offset-2 ring-offset-background" : ""}`}
                       onClick={() => handleWeatherTypeChange(type)}
                     >
@@ -223,7 +223,7 @@ export default function WeatherMoodTuningPanel({
                       className={`relative flex flex-col items-center gap-0.5 p-2 rounded-lg border-2 transition-all text-xs ${
                         isSelected
                           ? "border-primary bg-primary/10 ring-2 ring-primary/30 ring-offset-2 ring-offset-background"
-                          : "border-border hover:bg-muted/50"
+                          : "border-muted-foreground/50 hover:bg-muted/50"
                       } ${isActualTime && !isSelected ? "ring-2 ring-muted-foreground/40 ring-offset-2 ring-offset-background" : ""}`}
                       onClick={() => handleTimeOfDayChange(option.value)}
                     >
