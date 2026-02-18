@@ -49,6 +49,7 @@ export default function WeatherMoodTuningPanel({
     requestPlaylistRefresh,
   } = useWeather()
   const [internalOpen, setInternalOpen] = useState(false)
+  const isDark = effectiveTimeOfDay === "dusk" || effectiveTimeOfDay === "night"
   /** 親制御時は props を、そうでなければ内部 state を使う */
   const isOpen = onOpenProp !== undefined ? (controlledIsOpen ?? false) : internalOpen
   /** パネルを開いた時点の天気・時間（閉じたときに「開いた時点と変わっているか」の判定用） */
@@ -92,7 +93,7 @@ export default function WeatherMoodTuningPanel({
     else setInternalOpen(false)
   }
 
-  /** トグル: 開くときはスナップショット、閉じるときは変更があれば再構築してから閉じる（ジャンル選択パネルと同じ方式） */
+  /** トグル: 開くときはスナップショット、閉じるときは変更があれば再構築してから閉じる */
   const handleTogglePanel = () => {
     if (isOpen) {
       handleClosePanel()
@@ -135,6 +136,40 @@ export default function WeatherMoodTuningPanel({
     isOpen &&
     (effectiveWeatherAtOpen !== actualWeatherAtOpenNorm || effectiveTimeOfDayAtOpen !== actualTimeAtOpen)
 
+  const weatherBtnClass = (isSelected: boolean, isActual: boolean) => {
+    const base = "relative flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all"
+    const selected = isSelected
+      ? isDark
+        ? "border-white bg-white/10 ring-2 ring-white/30 ring-offset-2 ring-offset-slate-900"
+        : "border-primary bg-primary/10 ring-2 ring-primary/30 ring-offset-2 ring-offset-background"
+      : isDark
+        ? "border-white/20 hover:bg-white/10"
+        : "border-muted-foreground/50 hover:bg-muted/50"
+    const actualRing = isActual && !isSelected
+      ? isDark
+        ? "ring-2 ring-white/20 ring-offset-2 ring-offset-slate-900"
+        : "ring-2 ring-muted-foreground/40 ring-offset-2 ring-offset-background"
+      : ""
+    return `${base} ${selected} ${actualRing}`
+  }
+
+  const timeBtnClass = (isSelected: boolean, isActual: boolean) => {
+    const base = "relative flex flex-col items-center gap-0.5 p-2 rounded-lg border-2 transition-all text-xs"
+    const selected = isSelected
+      ? isDark
+        ? "border-white bg-white/10 ring-2 ring-white/30 ring-offset-2 ring-offset-slate-900"
+        : "border-primary bg-primary/10 ring-2 ring-primary/30 ring-offset-2 ring-offset-background"
+      : isDark
+        ? "border-white/20 hover:bg-white/10"
+        : "border-muted-foreground/50 hover:bg-muted/50"
+    const actualRing = isActual && !isSelected
+      ? isDark
+        ? "ring-2 ring-white/20 ring-offset-2 ring-offset-slate-900"
+        : "ring-2 ring-muted-foreground/40 ring-offset-2 ring-offset-background"
+      : ""
+    return `${base} ${selected} ${actualRing}`
+  }
+
   return (
     <>
       {/* トグルボタン（ジャンルパネル開時は非表示）。Mood Tuning 中は虹色ボーダーのみ */}
@@ -145,7 +180,7 @@ export default function WeatherMoodTuningPanel({
               <Button
                 variant="outline"
                 size="icon"
-                className="size-[2.8rem] rounded-[calc(1.1rem-2px)] bg-background/95 backdrop-blur-sm border-0 [&_svg]:size-5"
+                className={`size-[2.8rem] rounded-[calc(1.1rem-2px)] ${isDark ? "bg-slate-900/95" : "bg-background/95"} backdrop-blur-sm border-0 [&_svg]:size-5`}
                 onClick={handleTogglePanel}
                 aria-label={isOpen ? "Mood Tuningパネルを閉じる" : "Mood Tuningパネルを開く"}
               >
@@ -156,7 +191,7 @@ export default function WeatherMoodTuningPanel({
             <Button
               variant="outline"
               size="icon"
-              className={`size-[2.8rem] rounded-[1.1rem] backdrop-blur-sm [&_svg]:size-5 ${isOpen ? "bg-primary text-primary-foreground border-primary" : "bg-background/80"}`}
+              className={`size-[2.8rem] rounded-[1.1rem] backdrop-blur-sm [&_svg]:size-5 ${isOpen ? "bg-primary text-primary-foreground border-primary" : isDark ? "bg-slate-900/80" : "bg-background/80"}`}
               onClick={handleTogglePanel}
               aria-label={isOpen ? "Mood Tuningパネルを閉じる" : "Mood Tuningパネルを開く"}
             >
@@ -168,98 +203,90 @@ export default function WeatherMoodTuningPanel({
 
       {isOpen && (
         <div className="fixed bottom-16 left-4 z-50 w-80 max-w-[calc(100vw-2rem)]">
-          <Card className="w-full bg-background/80 backdrop-blur-sm border-border/50">
+          <Card className={`w-full backdrop-blur-sm ${isDark ? "bg-slate-900/95 border-white/10" : "bg-background/80 border-border/50"}`}>
             <CardHeader>
-              <CardTitle className="text-base font-semibold flex items-center gap-2.5">
+              <CardTitle className={`text-base font-semibold flex items-center gap-2.5 ${isDark ? "text-white" : ""}`}>
                 <Sparkles className="w-5 h-5 shrink-0" />
                 <span className="text-rainbow">Mood Tuning</span>
               </CardTitle>
-              <CardDescription className="text-xs">
+              <CardDescription className={`text-xs ${isDark ? "text-white/60" : ""}`}>
                 天気や時間帯を選んで、今の気分に合わせたプレイリストを作成
               </CardDescription>
             </CardHeader>
-          <CardContent className="pt-0 space-y-4">
-            <div className="space-y-2">
-              <Label className="text-sm">天気</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {WEATHER_TYPES.map((type) => {
-                  const Icon = getWeatherIcon(type)
-                  const color = getWeatherThemeColor(type)
-                  const isSelected = currentWeatherType === type
-                  const isActualWeather = actualWeatherTypeNormalized === type
-                  return (
-                    <button
-                      key={type}
-                      className={`relative flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all ${
-                        isSelected
-                          ? "border-primary bg-primary/10 ring-2 ring-primary/30 ring-offset-2 ring-offset-background"
-                          : "border-muted-foreground/50 hover:bg-muted/50"
-                      } ${isActualWeather && !isSelected ? "ring-2 ring-muted-foreground/40 ring-offset-2 ring-offset-background" : ""}`}
-                      onClick={() => handleWeatherTypeChange(type)}
-                    >
-                      {isActualWeather && (
-                        <span className="absolute -top-1 -right-1 rounded bg-muted-foreground px-1 text-[9px] font-medium text-background ring-1 ring-background">
-                          現在
-                        </span>
-                      )}
-                      <Icon className="w-5 h-5" style={{ color }} />
-                      <span className="text-xs">{WEATHER_TYPE_LABELS[type]}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* 時間帯選択 */}
-            <div className="space-y-2">
-              <Label className="text-sm">時間帯</Label>
-              <div className="grid grid-cols-4 gap-2">
-                {TIME_OF_DAY_OPTIONS.map((option) => {
-                  const isSelected = effectiveTimeOfDay === option.value
-                  const isActualTime = actualTimeOfDay === option.value
-                  return (
-                    <button
-                      key={option.value}
-                      className={`relative flex flex-col items-center gap-0.5 p-2 rounded-lg border-2 transition-all text-xs ${
-                        isSelected
-                          ? "border-primary bg-primary/10 ring-2 ring-primary/30 ring-offset-2 ring-offset-background"
-                          : "border-muted-foreground/50 hover:bg-muted/50"
-                      } ${isActualTime && !isSelected ? "ring-2 ring-muted-foreground/40 ring-offset-2 ring-offset-background" : ""}`}
-                      onClick={() => handleTimeOfDayChange(option.value)}
-                    >
-                      {isActualTime && (
-                        <span className="absolute -top-1 -right-1 rounded bg-muted-foreground px-1 text-[9px] font-medium text-background ring-1 ring-background">
-                          現在
-                        </span>
-                      )}
-                      <span className={`block leading-tight ${isSelected ? "text-primary font-medium" : ""}`}>
-                        <span className="block">{TIME_OF_DAY_LABELS[option.value]}</span>
-                        <span className="block text-[10px] opacity-90">{option.timeRange}</span>
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-
-            {showResetButton && (
-              <div className="pt-2 flex flex-col gap-2">
-                <Button
-                  onClick={handleReset}
-                  variant="outline"
-                  className="w-full"
-                  size="sm"
-                >
-                  実際の天気・時間に戻す
-                </Button>
-                <div className="pt-2 border-t text-xs text-muted-foreground space-y-1">
-                  <div>
-                    現在の設定: <span className="font-mono">{currentWeatherType ? WEATHER_TYPE_LABELS[currentWeatherType] : "-"}</span> / {currentTimeOfDayLabel}
-                  </div>
+            <CardContent className="pt-0 space-y-4">
+              <div className="space-y-2">
+                <Label className={`text-sm ${isDark ? "text-white" : ""}`}>天気</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {WEATHER_TYPES.map((type) => {
+                    const Icon = getWeatherIcon(type)
+                    const color = getWeatherThemeColor(type)
+                    const isSelected = currentWeatherType === type
+                    const isActualWeather = actualWeatherTypeNormalized === type
+                    return (
+                      <button
+                        key={type}
+                        className={weatherBtnClass(isSelected, isActualWeather)}
+                        onClick={() => handleWeatherTypeChange(type)}
+                      >
+                        {isActualWeather && (
+                          <span className={`absolute -top-1 -right-1 rounded px-1 text-[9px] font-medium ring-1 ${isDark ? "bg-white/30 text-white ring-slate-900" : "bg-muted-foreground text-background ring-background"}`}>
+                            現在
+                          </span>
+                        )}
+                        <Icon className="w-5 h-5" style={{ color }} />
+                        <span className={`text-xs ${isDark ? "text-white/80" : ""}`}>{WEATHER_TYPE_LABELS[type]}</span>
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
-            )}
-          </CardContent>
+
+              {/* 時間帯選択 */}
+              <div className="space-y-2">
+                <Label className={`text-sm ${isDark ? "text-white" : ""}`}>時間帯</Label>
+                <div className="grid grid-cols-4 gap-2">
+                  {TIME_OF_DAY_OPTIONS.map((option) => {
+                    const isSelected = effectiveTimeOfDay === option.value
+                    const isActualTime = actualTimeOfDay === option.value
+                    return (
+                      <button
+                        key={option.value}
+                        className={timeBtnClass(isSelected, isActualTime)}
+                        onClick={() => handleTimeOfDayChange(option.value)}
+                      >
+                        {isActualTime && (
+                          <span className={`absolute -top-1 -right-1 rounded px-1 text-[9px] font-medium ring-1 ${isDark ? "bg-white/30 text-white ring-slate-900" : "bg-muted-foreground text-background ring-background"}`}>
+                            現在
+                          </span>
+                        )}
+                        <span className={`block leading-tight ${isSelected ? isDark ? "text-white font-medium" : "text-primary font-medium" : isDark ? "text-white/70" : ""}`}>
+                          <span className="block">{TIME_OF_DAY_LABELS[option.value]}</span>
+                          <span className="block text-[10px] opacity-90">{option.timeRange}</span>
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {showResetButton && (
+                <div className="pt-2 flex flex-col gap-2">
+                  <Button
+                    onClick={handleReset}
+                    variant="outline"
+                    className={`w-full ${isDark ? "border-white/20 text-white hover:bg-white/10 hover:text-white" : ""}`}
+                    size="sm"
+                  >
+                    実際の天気・時間に戻す
+                  </Button>
+                  <div className={`pt-2 border-t text-xs space-y-1 ${isDark ? "border-white/10 text-white/40" : "text-muted-foreground"}`}>
+                    <div>
+                      現在の設定: <span className="font-mono">{currentWeatherType ? WEATHER_TYPE_LABELS[currentWeatherType] : "-"}</span> / {currentTimeOfDayLabel}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
           </Card>
         </div>
       )}

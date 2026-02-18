@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Check, Music, XCircle } from "lucide-react"
+import { useWeather } from "@/contexts/WeatherContext"
 
 /** localStorage から読み込んだ値が Genre[] として妥当かバリデーション。空配列は永続化として無効（読み込み時にデフォルトへ） */
 function isValidGenreArray(value: unknown): value is Genre[] {
@@ -26,6 +27,8 @@ export default function GenreSelector() {
     DEFAULT_SELECTED_GENRES,
     { validate: isValidGenreArray }
   )
+  const { effectiveTimeOfDay } = useWeather()
+  const isDark = effectiveTimeOfDay === "dusk" || effectiveTimeOfDay === "night"
 
   const toggleGenre = (genre: Genre) => {
     setSelectedGenres((prev) => {
@@ -53,6 +56,68 @@ export default function GenreSelector() {
   const isSelected = (genre: Genre) => selectedGenres.includes(genre)
   const isMaxReached = selectedGenres.length >= MAX_SELECTED_GENRES
   const isEmpty = selectedGenres.length === 0
+
+  if (isDark) {
+    return (
+      <div className="w-full rounded-2xl bg-slate-900/95 border border-white/10 shadow-xl">
+        <div className="px-4 pt-4 pb-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-sm font-medium text-white">
+              <Music className="w-4 h-4" />
+              Favorite Music
+              <span className="text-xs font-normal text-white/40">
+                {selectedGenres.length}/{MAX_SELECTED_GENRES}
+              </span>
+            </div>
+            <button
+              onClick={clearAll}
+              disabled={isEmpty}
+              className="flex items-center gap-1 text-xs text-white/40 hover:text-white/70 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <XCircle className="w-3.5 h-3.5" />
+              選択解除
+            </button>
+          </div>
+        </div>
+        <div className="px-4 pb-4">
+          {isEmpty && (
+            <p className="mb-3 text-xs text-amber-400">
+              好みのジャンルを1つ以上選択してください
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {AVAILABLE_GENRES.map((genre) => {
+              const selected = isSelected(genre)
+              const disabled = !selected && isMaxReached
+              return (
+                <button
+                  key={genre}
+                  onClick={() => toggleGenre(genre)}
+                  disabled={disabled}
+                  className={`
+                    h-7 px-3 text-xs font-medium rounded-full border transition-all
+                    ${selected
+                      ? "bg-white text-slate-900 border-white"
+                      : "bg-transparent text-white/60 border-white/20 hover:border-white/50 hover:text-white/90"
+                    }
+                    ${disabled ? "opacity-30 cursor-not-allowed" : ""}
+                  `}
+                >
+                  {selected && <Check className="w-3 h-3 mr-1 inline" />}
+                  {genre}
+                </button>
+              )
+            })}
+          </div>
+          {isMaxReached && (
+            <p className="mt-3 text-xs text-white/40">
+              最大{MAX_SELECTED_GENRES}個まで選択できます。変更するには選択済みのジャンルを解除してください。
+            </p>
+          )}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <Card className="w-full bg-background/80 backdrop-blur-sm border-border/50">
@@ -88,7 +153,7 @@ export default function GenreSelector() {
           {AVAILABLE_GENRES.map((genre) => {
             const selected = isSelected(genre)
             const disabled = !selected && isMaxReached
-            
+
             return (
               <Button
                 key={genre}
@@ -98,8 +163,8 @@ export default function GenreSelector() {
                 disabled={disabled}
                 className={`
                   h-7 px-3 text-xs font-medium rounded-full transition-all
-                  ${selected 
-                    ? "bg-primary text-primary-foreground shadow-sm" 
+                  ${selected
+                    ? "bg-primary text-primary-foreground shadow-sm"
                     : "hover:bg-muted/50"
                   }
                   ${disabled ? "opacity-50 cursor-not-allowed" : ""}
