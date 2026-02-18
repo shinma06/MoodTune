@@ -248,7 +248,8 @@
 }
 
 @keyframes water-drop-appear {
-  0%, 90% {
+  0%,
+  90% {
     opacity: 0;
     transform: scale(0);
   }
@@ -299,4 +300,26 @@
   );
 }
 
+/* Responsive spacing for record section: narrow height = small gap, enough height = more distance */
+.record-section-gap {
+  gap: 0.5rem;
+}
+
+@media (min-height: 700px) {
+  .record-section-gap {
+    gap: 1.5rem;
+  }
+}
+
+@media (min-height: 850px) {
+  .record-section-gap {
+    gap: 2.5rem;
+  }
+}
+
+@media (min-height: 950px) {
+  .record-section-gap {
+    gap: 3rem;
+  }
+}
 

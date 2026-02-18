@@ -174,35 +174,35 @@ export default function WeatherMoodTuningPanel({
     <>
       {/* トグルボタン（ジャンルパネル開時は非表示）。時間帯に依存せず常に同じ見た目で表示 */}
       {!hideToggleButton && (
-        <div className="fixed bottom-4 left-4 z-50">
+        <div className="fixed bottom-12 left-4 z-50">
           {isMoodTuningApplied ? (
-            <div className="bg-rainbow p-[2px] rounded-[1.1rem]">
+            <div className="bg-rainbow p-[2px] rounded-[1.2rem]">
               <Button
                 variant="outline"
                 size="icon"
-                className="size-[2.8rem] rounded-[calc(1.1rem-2px)] bg-background/95 backdrop-blur-sm border-0 text-foreground [&_svg]:size-5"
+                className="size-[3.1rem] rounded-[calc(1.2rem-2px)] bg-background/95 backdrop-blur-sm border-0 text-foreground [&_svg]:size-6"
                 onClick={handleTogglePanel}
                 aria-label={isOpen ? "Mood Tuningパネルを閉じる" : "Mood Tuningパネルを開く"}
               >
-                <Sparkles className="size-5" />
+                <Sparkles className="size-6" />
               </Button>
             </div>
           ) : (
             <Button
               variant="outline"
               size="icon"
-              className={`size-[2.8rem] rounded-[1.1rem] backdrop-blur-sm border-border text-foreground [&_svg]:size-5 ${isOpen ? "bg-primary text-primary-foreground border-primary" : "bg-background/80 hover:bg-background/90"}`}
+              className={`size-[3.1rem] rounded-[1.2rem] backdrop-blur-sm border-border text-foreground [&_svg]:size-6 ${isOpen ? "bg-primary text-primary-foreground border-primary" : "bg-background/80 hover:bg-background/90"}`}
               onClick={handleTogglePanel}
               aria-label={isOpen ? "Mood Tuningパネルを閉じる" : "Mood Tuningパネルを開く"}
             >
-              <Sparkles className="size-5" />
+              <Sparkles className="size-6" />
             </Button>
           )}
         </div>
       )}
 
       {isOpen && (
-        <div className="fixed bottom-16 left-4 z-50 w-80 max-w-[calc(100vw-2rem)]">
+        <div className="fixed bottom-24 left-4 z-50 w-80 max-w-[calc(100vw-2rem)]">
           <Card className={`w-full backdrop-blur-sm ${isDark ? "bg-slate-900/95 border-white/10" : "bg-background/80 border-border/50"}`}>
             <CardHeader>
               <CardTitle className={`text-base font-semibold flex items-center gap-2.5 ${isDark ? "text-white" : ""}`}>

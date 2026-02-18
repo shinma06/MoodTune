@@ -367,19 +367,19 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
                     onClick={handleToggleSettings}
                     disabled={openPanel === "genre" && selectedGenres.length === 0}
                     className={`
-                    fixed bottom-4 right-4 z-50 size-[2.8rem] rounded-[1.1rem] bg-background/80 backdrop-blur-sm
-                    [&_svg]:size-5
-                    ${openPanel === "genre" ? "bg-primary text-primary-foreground" : ""}
-                `}
-                aria-label={openPanel === "genre" && selectedGenres.length === 0 ? "1つ以上ジャンルを選択すると閉じられます" : openPanel === "genre" ? "Favorite Musicパネルを閉じる" : "Favorite Musicパネルを開く"}
+                      fixed bottom-12 right-4 z-50 size-[3.1rem] rounded-[1.2rem] bg-background/80 backdrop-blur-sm
+                      [&_svg]:size-6
+                      ${openPanel === "genre" ? "bg-primary text-primary-foreground" : ""}
+                    `}
+                    aria-label={openPanel === "genre" && selectedGenres.length === 0 ? "1つ以上ジャンルを選択すると閉じられます" : openPanel === "genre" ? "Favorite Musicパネルを閉じる" : "Favorite Musicパネルを開く"}
                 >
-                    <Music className="size-5" />
+                    <Music className="size-6" />
                 </Button>
             )}
 
             {/* Settings Panel with Genre Selector（ボタンの上に表示）。構築中は非表示 */}
             {openPanel === "genre" && !isLoading && (
-                <div className="fixed bottom-16 right-4 z-50 w-80 max-w-[calc(100vw-2rem)]">
+                <div className="fixed bottom-24 right-4 z-50 w-80 max-w-[calc(100vw-2rem)]">
                     <GenreSelector />
                 </div>
             )}
@@ -390,9 +390,9 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
             </div>
 
             {/* Vinyl Record Section（縦幅が狭いときはレコードを縮小して重なりを防止） */}
-            <div className="flex-1 min-h-0 flex items-center justify-center w-full max-w-md relative z-10 py-2">
+            <div className="flex-1 min-h-0 flex flex-col items-center justify-center w-full max-w-md relative z-10 py-2 record-section-gap">
                 {!(isLoading || openPanel === "mood" || openPanel === "genre") && (
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 text-center space-y-0.5">
+                    <div className="text-center space-y-0.5 shrink-0">
                         <p className={`text-[10px] font-light whitespace-nowrap flex items-center justify-center gap-1 ${isDark ? "text-white/80" : "text-muted-foreground/70"}`}>
                             {selectedGenres.length <= 1 ? (
                                 <>
@@ -419,7 +419,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
                 )}
 
                 <div
-                    className="relative w-[min(18rem,42vh)] h-[min(18rem,42vh)] rounded-full transition-shadow duration-200"
+                    className="relative w-[min(18rem,42vh)] h-[min(18rem,42vh)] rounded-full transition-shadow duration-200 shrink-0"
                     style={
                         showRegenerateFeedback
                             ? {
@@ -537,31 +537,31 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
                             </span>
                         </div>
                     )}
+                </div>
 
-                    {/* Indicator dots（ジャンルごとのテーマカラー。Mood Tuning 中は非選択ドットが1本の虹になる） */}
-                    <div className="absolute -bottom-8 sm:-bottom-12 left-1/2 -translate-x-1/2 flex gap-1.5">
-                        {displayPlaylists.map((item, i) => {
-                            const colors = (useRealisticVinyl && i === safeCurrentIndex) ? REALISTIC_VINYL_THEME : getGenreThemeColors(item.genre)
-                            const isActive = i === safeCurrentIndex
-                            const inactiveCount = Math.max(1, displayPlaylists.length - 1)
-                            const inactiveIndex = i < safeCurrentIndex ? i : i - 1
-                            const rainbowSliceStyle =
-                                isMoodTuningApplied && !isActive
-                                    ? {
-                                          background: "linear-gradient(90deg, #ef4444, #f97316, #eab308, #22c55e, #06b6d4, #8b5cf6, #ec4899, #ef4444)",
-                                          backgroundSize: `${inactiveCount * 100}% 100%`,
-                                          backgroundPosition: `${-inactiveIndex * 100}% 0`,
-                                      }
-                                    : undefined
-                            return (
-                                <div
-                                    key={i}
-                                    className={`w-1.5 h-1.5 rounded-full transition-all ${isActive ? "w-6" : isMoodTuningApplied ? "" : "bg-border"}`}
-                                    style={isActive ? { backgroundColor: colors.accentColor } : rainbowSliceStyle}
-                                />
-                            )
-                        })}
-                    </div>
+                {/* Indicator dots（ジャンルごとのテーマカラー。Mood Tuning 中は非選択ドットが1本の虹になる） */}
+                <div className="flex gap-1.5 shrink-0">
+                    {displayPlaylists.map((item, i) => {
+                        const colors = (useRealisticVinyl && i === safeCurrentIndex) ? REALISTIC_VINYL_THEME : getGenreThemeColors(item.genre)
+                        const isActive = i === safeCurrentIndex
+                        const inactiveCount = Math.max(1, displayPlaylists.length - 1)
+                        const inactiveIndex = i < safeCurrentIndex ? i : i - 1
+                        const rainbowSliceStyle =
+                          isMoodTuningApplied && !isActive
+                            ? {
+                                background: "linear-gradient(90deg, #ef4444, #f97316, #eab308, #22c55e, #06b6d4, #8b5cf6, #ec4899, #ef4444)",
+                                backgroundSize: `${inactiveCount * 100}% 100%`,
+                                backgroundPosition: `${-inactiveIndex * 100}% 0`,
+                              }
+                            : undefined
+                        return (
+                          <div
+                            key={i}
+                            className={`w-1.5 h-1.5 rounded-full transition-all ${isActive ? "w-6" : isMoodTuningApplied ? "" : "bg-border"}`}
+                            style={isActive ? { backgroundColor: colors.accentColor } : rainbowSliceStyle}
+                          />
+                        )
+                    })}
                 </div>
             </div>
 
@@ -626,7 +626,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
                                 <Loader2 className="w-4 h-4 animate-spin" />
                             ) : (
                                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+                                    <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
                                 </svg>
                             )}
                             {isSaving ? "保存中..." : "Spotifyで再生"}
