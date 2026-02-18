@@ -34,9 +34,11 @@ import type { Genre } from "@/lib/constants"
 
 interface PlaylistExplorerProps {
     playlists?: DashboardItem[]
+    /** true の間はプレイリスト初期構築をスキップ（ジャンル選択モーダル表示中に使用） */
+    suspended?: boolean
 }
 
-export default function PlaylistExplorer({ playlists: initialPlaylists }: PlaylistExplorerProps) {
+export default function PlaylistExplorer({ playlists: initialPlaylists, suspended = false }: PlaylistExplorerProps) {
     const [currentIndex, setCurrentIndex] = useState(0)
     const { isTimeInitialized, displayHour, weatherType, actualWeatherType, moodTuningTimeOfDay, isMoodTuning, effectiveWeather, effectiveTimeOfDay, playlistRefreshTrigger, isDark } = useWeather()
     /** 開いているパネル（null = 両方閉じている）。同時に1つだけ開く */
@@ -231,9 +233,9 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         }
     }, [openPanel, selectedGenres, playlists, updatePlaylistsWithDiff])
 
-    /** localStorage のジャンル読み込み完了後、保存値と表示プレイリストが食い違っていれば同期 */
+    /** localStorage のジャンル読み込み完了後、保存値と表示プレイリストが食い違っていれば同期。suspended 中はスキップ */
     useEffect(() => {
-        if (!isGenresInitialized || hasPerformedInitialSyncRef.current) return
+        if (suspended || !isGenresInitialized || hasPerformedInitialSyncRef.current) return
         hasPerformedInitialSyncRef.current = true
 
         const currentPlaylistGenres = playlists?.map(p => p.genre) ?? []
@@ -241,7 +243,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
             const diff = getGenresDiff(currentPlaylistGenres, selectedGenres)
             updatePlaylistsWithDiff(selectedGenres, diff, playlists, true)
         }
-    }, [isGenresInitialized, selectedGenres, playlists, updatePlaylistsWithDiff])
+    }, [suspended, isGenresInitialized, selectedGenres, playlists, updatePlaylistsWithDiff])
 
     /** 実時刻の時間帯が変わったタイミングでプレイリストを自動更新（手動設定中は行わない）。常に自動更新ONとして動作。 */
     useEffect(() => {
