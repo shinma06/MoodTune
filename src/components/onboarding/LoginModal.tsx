@@ -12,8 +12,7 @@ interface Props {
 export default function LoginModal({ loginAction }: Props) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
-  const { effectiveTimeOfDay } = useWeather()
-  const isDark = effectiveTimeOfDay === "dusk" || effectiveTimeOfDay === "night"
+  const { isDark } = useWeather()
 
   const handleLogin = () => {
     setError(null)

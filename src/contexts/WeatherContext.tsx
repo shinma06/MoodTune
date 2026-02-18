@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from "react"
-import { getTimeOfDay, isDarkBackground, type TimeOfDay, type WeatherType } from "@/lib/weather-background"
+import { getTimeOfDay, type TimeOfDay, type WeatherType } from "@/lib/weather-background"
 import { normalizeWeatherType } from "@/lib/weather-utils"
 
 interface WeatherContextType {
@@ -9,11 +9,13 @@ interface WeatherContextType {
   isTimeInitialized: boolean
   /** 表示用の現在時（0–23）。マウント時と1分ごとに更新。 */
   displayHour: number
-  /** moodTuningTimeOfDay を考慮した表示用時間帯（単一ソース） */
+  /** 実際の時間帯（displayHour から算出）。UI の明暗・背景はこれにのみ従う。 */
+  actualTimeOfDay: TimeOfDay
+  /** moodTuningTimeOfDay を考慮した表示用時間帯（プレイリスト生成・選択状態用） */
   effectiveTimeOfDay: TimeOfDay
   /** normalizeWeatherType を適用した表示用天気（単一ソース） */
   effectiveWeather: WeatherType
-  /** 背景が暗いかどうか（単一ソース） */
+  /** UIが暗いかどうか。時間帯のみで判定（6〜17時＝ライト、それ以外＝ダーク）。背景・天気には紐づけない。 */
   isDark: boolean
   weatherType: string | null
   setWeatherType: (weather: string | null) => void
@@ -55,7 +57,13 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(timer)
   }, [])
 
-  /** moodTuningTimeOfDay を考慮した表示用時間帯（単一ソース）。未初期化時は day を返し UI を明るいテーマに揃える。 */
+  /** 実際の時間帯（displayHour から算出）。UI の明暗・背景はこれにのみ従う。 */
+  const actualTimeOfDay = useMemo<TimeOfDay>(() => {
+    if (!isTimeInitialized) return "day"
+    return getTimeOfDay(displayHour)
+  }, [isTimeInitialized, displayHour])
+
+  /** moodTuningTimeOfDay を考慮した表示用時間帯（プレイリスト生成・選択状態用）。未初期化時は day。 */
   const effectiveTimeOfDay = useMemo<TimeOfDay>(() => {
     if (!isTimeInitialized) return "day"
     if (isMoodTuning && moodTuningTimeOfDay) {
@@ -69,11 +77,11 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
     return normalizeWeatherType(weatherType ?? "Clear")
   }, [weatherType])
 
-  /** 背景が暗いかどうか（単一ソース）。未初期化時は false で中性背景時の UI と揃える。 */
+  /** UIの明暗。実際の時間帯のみで判定（夕方・夜＝ダーク）。背景の明暗や天気には影響されない。 */
   const isDark = useMemo(() => {
     if (!isTimeInitialized) return false
-    return isDarkBackground(effectiveWeather, effectiveTimeOfDay)
-  }, [isTimeInitialized, effectiveWeather, effectiveTimeOfDay])
+    return actualTimeOfDay === "dusk" || actualTimeOfDay === "night"
+  }, [isTimeInitialized, actualTimeOfDay])
 
   const requestPlaylistRefresh = useCallback(() => {
     setPlaylistRefreshTrigger((prev) => prev + 1)
@@ -84,6 +92,7 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
       value={{
         isTimeInitialized,
         displayHour,
+        actualTimeOfDay,
         effectiveTimeOfDay,
         effectiveWeather,
         isDark,

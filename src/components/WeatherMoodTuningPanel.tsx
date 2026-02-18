@@ -36,6 +36,7 @@ export default function WeatherMoodTuningPanel({
     displayHour,
     effectiveTimeOfDay,
     effectiveWeather,
+    isDark,
     weatherType,
     setWeatherType,
     actualWeatherType,
@@ -49,7 +50,6 @@ export default function WeatherMoodTuningPanel({
     requestPlaylistRefresh,
   } = useWeather()
   const [internalOpen, setInternalOpen] = useState(false)
-  const isDark = effectiveTimeOfDay === "dusk" || effectiveTimeOfDay === "night"
   /** 親制御時は props を、そうでなければ内部 state を使う */
   const isOpen = onOpenProp !== undefined ? (controlledIsOpen ?? false) : internalOpen
   /** パネルを開いた時点の天気・時間（閉じたときに「開いた時点と変わっているか」の判定用） */
@@ -172,7 +172,7 @@ export default function WeatherMoodTuningPanel({
 
   return (
     <>
-      {/* トグルボタン（ジャンルパネル開時は非表示）。Mood Tuning 中は虹色ボーダーのみ */}
+      {/* トグルボタン（ジャンルパネル開時は非表示）。時間帯に依存せず常に同じ見た目で表示 */}
       {!hideToggleButton && (
         <div className="fixed bottom-4 left-4 z-50">
           {isMoodTuningApplied ? (
@@ -180,7 +180,7 @@ export default function WeatherMoodTuningPanel({
               <Button
                 variant="outline"
                 size="icon"
-                className={`size-[2.8rem] rounded-[calc(1.1rem-2px)] ${isDark ? "bg-slate-900/95" : "bg-background/95"} backdrop-blur-sm border-0 [&_svg]:size-5`}
+                className="size-[2.8rem] rounded-[calc(1.1rem-2px)] bg-background/95 backdrop-blur-sm border-0 text-foreground [&_svg]:size-5"
                 onClick={handleTogglePanel}
                 aria-label={isOpen ? "Mood Tuningパネルを閉じる" : "Mood Tuningパネルを開く"}
               >
@@ -191,7 +191,7 @@ export default function WeatherMoodTuningPanel({
             <Button
               variant="outline"
               size="icon"
-              className={`size-[2.8rem] rounded-[1.1rem] backdrop-blur-sm [&_svg]:size-5 ${isOpen ? "bg-primary text-primary-foreground border-primary" : isDark ? "bg-slate-900/80" : "bg-background/80"}`}
+              className={`size-[2.8rem] rounded-[1.1rem] backdrop-blur-sm border-border text-foreground [&_svg]:size-5 ${isOpen ? "bg-primary text-primary-foreground border-primary" : "bg-background/80 hover:bg-background/90"}`}
               onClick={handleTogglePanel}
               aria-label={isOpen ? "Mood Tuningパネルを閉じる" : "Mood Tuningパネルを開く"}
             >
@@ -274,12 +274,12 @@ export default function WeatherMoodTuningPanel({
                   <Button
                     onClick={handleReset}
                     variant="outline"
-                    className={`w-full ${isDark ? "border-white/20 text-white hover:bg-white/10 hover:text-white" : ""}`}
+                    className={`w-full ${isDark ? "border-white/50 bg-white/15 text-white hover:bg-white/25 hover:text-white hover:border-white/60" : ""}`}
                     size="sm"
                   >
                     実際の天気・時間に戻す
                   </Button>
-                  <div className={`pt-2 border-t text-xs space-y-1 ${isDark ? "border-white/10 text-white/40" : "text-muted-foreground"}`}>
+                  <div className={`pt-2 border-t text-xs space-y-1 ${isDark ? "border-white/20 text-white/60" : "text-muted-foreground"}`}>
                     <div>
                       現在の設定: <span className="font-mono">{currentWeatherType ? WEATHER_TYPE_LABELS[currentWeatherType] : "-"}</span> / {currentTimeOfDayLabel}
                     </div>

@@ -27,8 +27,7 @@ export default function GenreSelector() {
     DEFAULT_SELECTED_GENRES,
     { validate: isValidGenreArray }
   )
-  const { effectiveTimeOfDay } = useWeather()
-  const isDark = effectiveTimeOfDay === "dusk" || effectiveTimeOfDay === "night"
+  const { isDark } = useWeather()
 
   const toggleGenre = (genre: Genre) => {
     setSelectedGenres((prev) => {

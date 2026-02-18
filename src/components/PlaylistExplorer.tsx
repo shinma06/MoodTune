@@ -6,7 +6,7 @@ import WeatherAnimation from "./WeatherAnimation"
 import WeatherMoodTuningPanel from "./WeatherMoodTuningPanel"
 import GenreSelector, { useSelectedGenres } from "./GenreSelector"
 import { useWeather } from "@/contexts/WeatherContext"
-import { getWeatherBackground, getTimeOfDay, type WeatherType } from "@/lib/weather-background"
+import { getWeatherBackground, type WeatherType } from "@/lib/weather-background"
 import { normalizeWeatherType } from "@/lib/weather-utils"
 import { formatGradientBackground, INITIAL_BACKGROUND_GRADIENT } from "@/lib/weather-background-utils"
 import {
@@ -40,7 +40,7 @@ interface PlaylistExplorerProps {
 
 export default function PlaylistExplorer({ playlists: initialPlaylists, suspended = false }: PlaylistExplorerProps) {
     const [currentIndex, setCurrentIndex] = useState(0)
-    const { isTimeInitialized, displayHour, weatherType, actualWeatherType, moodTuningTimeOfDay, isMoodTuning, effectiveWeather, effectiveTimeOfDay, playlistRefreshTrigger, isDark } = useWeather()
+    const { isTimeInitialized, displayHour, weatherType, actualWeatherType, actualTimeOfDay, moodTuningTimeOfDay, isMoodTuning, effectiveWeather, effectiveTimeOfDay, playlistRefreshTrigger, isDark } = useWeather()
     /** 開いているパネル（null = 両方閉じている）。同時に1つだけ開く */
     const [openPanel, setOpenPanel] = useState<null | "mood" | "genre">(null)
     const [selectedGenres, isGenresInitialized] = useSelectedGenres()
@@ -88,7 +88,6 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
         : getGenreThemeColors(currentPlaylist.genre)
 
     /** 表示用時間帯の単一ソース（実時刻ベースと Mood Tuning 考慮） */
-    const actualTimeOfDay = getTimeOfDay(displayHour)
     const timeOfDay = isMoodTuning && moodTuningTimeOfDay ? moodTuningTimeOfDay : actualTimeOfDay
 
     /** ローディング中かどうかを ref で保持（useCallback 内で最新値を参照するため） */
@@ -285,7 +284,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
         (actualWeatherNorm != null && effectiveWeather !== actualWeatherNorm || effectiveTimeOfDay !== actualTimeOfDay)
     const weather = normalizeWeatherType(weatherType ?? "Clear")
     const backgroundStyle = isTimeInitialized
-      ? formatGradientBackground(getWeatherBackground(weather, timeOfDay))
+      ? formatGradientBackground(getWeatherBackground(weather, actualTimeOfDay))
       : INITIAL_BACKGROUND_GRADIENT
     const genreColorClass = isDark ? "text-white/80" : "text-muted-foreground"
     const titleColorClass = isDark ? "text-white" : "text-foreground"

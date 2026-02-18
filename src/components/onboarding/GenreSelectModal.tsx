@@ -47,8 +47,8 @@ interface Props {
 
 export default function GenreSelectModal({ onComplete }: Props) {
   const [selectedGenres, setSelectedGenres] = useState<Genre[]>(DEFAULT_SELECTED_GENRES)
-  const { effectiveTimeOfDay } = useWeather()
-  const s = effectiveTimeOfDay === "dusk" || effectiveTimeOfDay === "night" ? DARK_STYLES : LIGHT_STYLES
+  const { isDark } = useWeather()
+  const s = isDark ? DARK_STYLES : LIGHT_STYLES
 
   const toggleGenre = (genre: Genre) => {
     setSelectedGenres((prev) => {

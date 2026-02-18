@@ -62,8 +62,7 @@ interface Props {
 
 export default function TutorialModal({ onComplete }: Props) {
   const [currentStep, setCurrentStep] = useState(0)
-  const { effectiveTimeOfDay } = useWeather()
-  const isDark = effectiveTimeOfDay === "dusk" || effectiveTimeOfDay === "night"
+  const { isDark } = useWeather()
 
   const step = TUTORIAL_STEPS[currentStep]
   const isFirstStep = currentStep === 0
