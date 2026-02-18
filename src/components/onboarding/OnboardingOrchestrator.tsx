@@ -40,13 +40,13 @@ function readGenresFromStorage(): Genre[] {
 function determineInitialModal(isUnauthenticated: boolean): ModalType {
   if (isUnauthenticated) return "login"
 
+  const completed = localStorage.getItem(ONBOARDING_COMPLETED_KEY) === "true"
+  if (completed) return null
+
   const genres = readGenresFromStorage()
   if (isDefaultGenres(genres)) return "genre-select"
 
-  const completed = localStorage.getItem(ONBOARDING_COMPLETED_KEY) === "true"
-  if (!completed) return "tutorial"
-
-  return null
+  return "tutorial"
 }
 
 interface Props {
