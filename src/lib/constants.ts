@@ -48,6 +48,9 @@ export const MAX_SELECTED_GENRES = 8
 // ジャンル選択のlocalStorageキー
 export const GENRE_STORAGE_KEY = "selected-genres"
 
+// オンボーディング完了フラグのlocalStorageキー
+export const ONBOARDING_COMPLETED_KEY = "onboarding-completed"
+
 // デフォルトで選択されているジャンル（初回アクセス時）
 export const DEFAULT_SELECTED_GENRES: Genre[] = [
   "J-POP",
