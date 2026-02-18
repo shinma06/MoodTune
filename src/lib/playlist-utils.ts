@@ -57,6 +57,6 @@ export const EMPTY_PLAYLIST: DashboardItem = {
   id: "empty",
   genre: "---",
   title: "プレイリストがありません",
-  query: "",
   imageUrl: "",
+  trackUris: [],
 }
