@@ -24,35 +24,34 @@ export interface BackgroundGradient {
 const BACKGROUND_TOP_COLOR_BRIGHT = "#FAFAFA"
 
 /**
- * 天気×時間帯 → グラデーション最上部の色（静的なテーブル）
- * ヘッダー・UIのテキスト色はこの値が明るいかどうかで固定で紐づく
+ * 天気×時間帯 → グラデーション最上部の色（単一ソース。UIの明暗はこの値の明度から動的算出）
+ * 晴れ・雪の夕方も暗いトーンにし、UIを暗テーマで統一
  */
 const TOP_COLOR: Record<WeatherType, Record<TimeOfDay, string>> = {
-    Clear: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#FAFAFA", night: "#2A2A4A" },
+    Clear: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#2A2A3A", night: "#2A2A4A" },
     Clouds: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#2F2F2F", night: "#1C1C1C" },
     Rain: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#2F2F2F", night: "#1A1A2A" },
     Drizzle: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#2F2F2F", night: "#1A1A2A" },
     Thunderstorm: { dawn: "#1C1C1C", day: "#1C1C1C", dusk: "#1C1C1C", night: "#0A0A0A" },
-    Snow: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#FAFAFA", night: "#2A2A2A" },
+    Snow: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#2A2A2A", night: "#2A2A2A" },
     Mist: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#2F2F2F", night: "#1C1C1C" },
     Fog: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#2F2F2F", night: "#1C1C1C" },
     Haze: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#2F2F2F", night: "#1C1C1C" },
 }
 
-/**
- * 天気×時間帯 → ヘッダー/UIを暗いテーマ（白文字）にするか（静的なテーブル）
- * TOP_COLOR が明るい色でない組み合わせは true
- */
-const IS_DARK: Record<WeatherType, Record<TimeOfDay, boolean>> = {
-    Clear: { dawn: false, day: false, dusk: false, night: true },
-    Clouds: { dawn: false, day: false, dusk: true, night: true },
-    Rain: { dawn: false, day: false, dusk: true, night: true },
-    Drizzle: { dawn: false, day: false, dusk: true, night: true },
-    Thunderstorm: { dawn: true, day: true, dusk: true, night: true },
-    Snow: { dawn: false, day: false, dusk: false, night: true },
-    Mist: { dawn: false, day: false, dusk: true, night: true },
-    Fog: { dawn: false, day: false, dusk: true, night: true },
-    Haze: { dawn: false, day: false, dusk: true, night: true },
+/** 相対輝度の閾値（これ未満なら暗い背景として白文字UI） */
+const LUMINANCE_DARK_THRESHOLD = 0.4
+
+/** hex (#RRGGBB) の相対輝度を 0–1 で返す */
+function getLuminance(hex: string): number {
+    const n = parseInt(hex.slice(1), 16)
+    const r = ((n >> 16) & 0xff) / 255
+    const g = ((n >> 8) & 0xff) / 255
+    const b = (n & 0xff) / 255
+    const [rs, gs, bs] = [r, g, b].map((c) =>
+        c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
+    )
+    return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs
 }
 
 /** 天気と時間帯に応じた top 色を取得（テーブル参照） */
@@ -61,10 +60,12 @@ function getTopColor(weather: WeatherType, timeOfDay: TimeOfDay): string {
 }
 
 /**
- * 背景が暗いかどうか（ヘッダー/UIのテキスト色を白にするか）を取得（テーブル参照）
+ * 背景が暗いかどうか（ヘッダー/UIのテキスト色を白にするか）を取得
+ * TOP_COLOR の相対輝度から動的算出（単一ソースで不整合を防止）
  */
 export function isDarkBackground(weather: WeatherType, timeOfDay: TimeOfDay): boolean {
-    return IS_DARK[weather]?.[timeOfDay] ?? false
+    const topColor = getTopColor(weather, timeOfDay)
+    return getLuminance(topColor) < LUMINANCE_DARK_THRESHOLD
 }
 
 // 時間帯の判定
