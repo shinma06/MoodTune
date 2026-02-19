@@ -9,11 +9,8 @@ import type { DashboardItem } from "@/types/dashboard"
 
 export type { DashboardItem }
 
-/** Spotify 未連携時は true。明示的に "false" でない限りモック画像を使用 */
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK_SPOTIFY !== "false"
-
 /**
- * ジャンル名に基づいてモック画像URLを生成
+ * ジャンル名に基づくフォールバック画像URL（Spotify で画像が取れない場合用）
  */
 function getMockImageUrl(genre: string): string {
   const genreHash = genre
@@ -144,12 +141,10 @@ export async function generateDashboard(
     }
 
     let spotifyClient: Awaited<ReturnType<typeof getSpotifyClient>> = null
-    if (!USE_MOCK) {
-      try {
-        spotifyClient = await getSpotifyClient()
-      } catch {
-        spotifyClient = null
-      }
+    try {
+      spotifyClient = await getSpotifyClient()
+    } catch {
+      spotifyClient = null
     }
 
     const dashboardItems: DashboardItem[] = await Promise.all(
@@ -157,7 +152,7 @@ export async function generateDashboard(
         let imageUrl = getMockImageUrl(info?.genre ?? "")
         let trackUris: string[] = []
 
-        if (!USE_MOCK && spotifyClient && Array.isArray(info.tracks) && info.tracks.length > 0) {
+        if (spotifyClient && Array.isArray(info.tracks) && info.tracks.length > 0) {
           // 全楽曲を並列検索
           const results = await Promise.all(
             info.tracks.map((t) => searchTrack(spotifyClient!, t.artist, t.title))

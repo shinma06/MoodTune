@@ -21,7 +21,7 @@
 
 ### プレイリスト生成・更新
 - ✅ AI（OpenAI / Vercel AI SDK）によるジャンル別タイトル・検索クエリ生成
-- ✅ Spotify API でカバー画像取得（モック時は picsum）
+- ✅ Spotify API でカバー画像・トラック URI 取得（検索ヒットしない場合はフォールバック画像）
 - ✅ ジャンル選択の localStorage 永続化（空配列は永続化として無効、読み込み時にデフォルトへ修復）
 - ✅ パネル閉じ時のジャンル差分更新（追加ジャンルのみ API 呼び出し）
 - ✅ レコード右 3 周で表示中ジャンル単体再生成、左 3 周で全件再生成
@@ -48,7 +48,6 @@
 ### 認証・モード
 - ✅ Spotify 認証（PKCE: Authorization Code with PKCE）。セッションは暗号化クッキー、トークンリフレッシュは spotify-session で自動
 - ✅ プレイリストの Spotify 保存（saveToSpotify: MoodTune プレイリスト 1 本の上書き or 新規作成、PUT /items・100曲超はチャンク）
-- ✅ モックモード（NEXT_PUBLIC_USE_MOCK_SPOTIFY）でログイン不要で利用可能
 
 ### 初期化・ポーリング
 - ✅ 初回アクセス時の背景・時間帯の初期化（`isTimeInitialized`、`INITIAL_BACKGROUND_GRADIENT`）

@@ -84,7 +84,6 @@ UI/UX 改善とコードベースのリファクタリング、Vibeコーディ�
 
 - Spotify 認証（PKCE）とセッション・トークンリフレッシュが実装済み
 - プレイリストの Spotify 保存（saveToSpotify）が実装済み（MoodTune プレイリスト 1 本の上書き or 新規作成、PUT /items とチャンク送信）
-- モックモード（NEXT_PUBLIC_USE_MOCK_SPOTIFY=true）で開発可能
 - AI 生成によるプレイリスト提案機能が動作
 - ジャンル選択のパネル閉時に差分更新が動作
 - リロード時の localStorage 読み込み完了後にプレイリストを自動同期
@@ -112,7 +111,6 @@ AUTH_SPOTIFY_ID=your_spotify_client_id
 AUTH_SPOTIFY_SECRET=your_spotify_client_secret
 AUTH_SECRET=your_random_secret_string
 OPENAI_API_KEY=your_openai_api_key
-NEXT_PUBLIC_USE_MOCK_SPOTIFY=true  # モックモード有効化
 NEXT_PUBLIC_WEATHER_API_KEY=...    # OpenWeatherMap（天気取得）
 GOOGLE_GEOCODING_API_KEY=...       # Google Geocoding（都市名取得、サーバー側のみ）
 WXTECH_API_KEY=...                 # WxTech（天気・日本1km/世界5km）。未設定時は OWM のみ

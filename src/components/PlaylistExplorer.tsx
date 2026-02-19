@@ -596,9 +596,8 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
                     )}
                 </div>
 
-                {/* Spotify 再生ボタン（Spotifyモード かつ trackUris がある場合のみ表示） */}
-                {process.env.NEXT_PUBLIC_USE_MOCK_SPOTIFY === "false" && (
-                    <div className="flex flex-col items-center gap-2">
+                {/* Spotify 再生ボタン（trackUris があるとき有効） */}
+                <div className="flex flex-col items-center gap-2">
                         <Button
                             onClick={handleSaveToSpotify}
                             disabled={isLoadingOrEmpty || isSaving || currentPlaylist.trackUris.length === 0}
@@ -617,7 +616,6 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
                             <p className="text-xs text-red-400">{saveError}</p>
                         )}
                     </div>
-                )}
             </div>
         </div>
     )

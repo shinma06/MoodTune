@@ -32,11 +32,11 @@
 - **使用方針**: Server Action（generateDashboard）内で `generateText` によりジャンル別のタイトル/クエリを生成
 
 ### Spotify PKCE（Authorization Code with PKCE）
-- **理由**: Spotify 連携時はログインが必要。モック時は `NEXT_PUBLIC_USE_MOCK_SPOTIFY !== "false"` でログイン不要
+- **理由**: Spotify ログイン必須（PKCE）
 - **実装**: `lib/spotify-pkce.ts` で認可URL・トークン交換。`lib/spotify-session.ts` でセッション暗号化クッキーとトークンリフレッシュ。`auth.ts` は `getSession()` をラップして `auth()` でセッション取得。`GET /api/auth/spotify`, `GET /api/auth/spotify/callback`, `GET /api/auth/signout`
 
 ### Spotify Web API
-- **理由**: プレイリストカバー画像の取得（モック時は picsum）、プレイリスト保存（MoodTune 1 本の上書き or 新規作成）
+- **理由**: プレイリストカバー画像の取得（Spotify Search。ヒットしない場合はフォールバック画像）、プレイリスト保存（MoodTune 1 本の上書き or 新規作成）
 - **実装**: `lib/spotify-server.ts` で generateDashboard の Search 用。saveToSpotify はセッショントークンで直接 fetch（PUT /playlists/{id}/items、100曲超はチャンク）
 
 ## 開発環境
@@ -48,12 +48,11 @@
 | `OPENAI_API_KEY` | **Yes** | プレイリストタイトル・クエリ生成（Vercel AI SDK / OpenAI） |
 | `AUTH_SECRET` | Spotify 利用時 | セッション暗号化用（32文字以上推奨） |
 | `AUTH_SPOTIFY_ID` / `AUTH_SPOTIFY_SECRET` | Spotify 利用時 | Spotify PKCE（トークン交換・リフレッシュ） |
-| `NEXT_PUBLIC_USE_MOCK_SPOTIFY` | No | 省略または `true`: モック（ログイン不要）。`false`: Spotify ログイン有効 |
 | `WXTECH_API_KEY` | 天気推奨 | WxTech API（日本 1km/海外 5km）。未設定時は OWM のみ |
 | `NEXT_PUBLIC_WEATHER_API_KEY` | 天気フォールバック | OpenWeatherMap API（WxTech 失敗時または未設定時） |
 | `GOOGLE_GEOCODING_API_KEY` | 都市名表示時 | Google Geocoding（逆ジオコーディング）。未設定時は OWM の地名にフォールバック |
 
-**最小構成（モック・デプロイ）**: `OPENAI_API_KEY` のみで動作。天気・Spotify・都市名はオプション。
+**最小構成**: `OPENAI_API_KEY` 必須。Spotify 利用時は認証関連も設定。天気・都市名はオプション。
 
 ### 開発サーバー
 ```bash
