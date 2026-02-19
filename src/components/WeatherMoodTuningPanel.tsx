@@ -45,8 +45,6 @@ export default function WeatherMoodTuningPanel({
     setMoodTuningTimeOfDay,
     isMoodTuning,
     setIsMoodTuning,
-    playlistAutoUpdate,
-    setPlaylistAutoUpdate,
     requestPlaylistRefresh,
   } = useWeather()
   const [internalOpen, setInternalOpen] = useState(false)

@@ -28,9 +28,6 @@ interface WeatherContextType {
   /** Mood Tuning で手動設定中か（天気・時間帯を上書きしているか） */
   isMoodTuning: boolean
   setIsMoodTuning: (enabled: boolean) => void
-  /** 時間帯・天気変更時にプレイリストを自動更新するか */
-  playlistAutoUpdate: boolean
-  setPlaylistAutoUpdate: (enabled: boolean) => void
   /** パネルから「プレイリストを再構築」が押されたときのトリガー（インクリメントで発火） */
   playlistRefreshTrigger: number
   requestPlaylistRefresh: () => void
@@ -46,7 +43,6 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
   const [actualWeatherType, setActualWeatherType] = useState<string | null>(null)
   const [moodTuningTimeOfDay, setMoodTuningTimeOfDay] = useState<TimeOfDay | null>(null)
   const [isMoodTuning, setIsMoodTuning] = useState(false)
-  const [playlistAutoUpdate, setPlaylistAutoUpdate] = useState(true)
   const [playlistRefreshTrigger, setPlaylistRefreshTrigger] = useState(0)
 
   /** 表示用時刻の単一ソース。マウント時にクライアント現地時刻で設定し、1分ごとに更新。SSR のサーバー時刻に依存しない。 */
@@ -104,8 +100,6 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
         setMoodTuningTimeOfDay,
         isMoodTuning,
         setIsMoodTuning,
-        playlistAutoUpdate,
-        setPlaylistAutoUpdate,
         playlistRefreshTrigger,
         requestPlaylistRefresh,
       }}
