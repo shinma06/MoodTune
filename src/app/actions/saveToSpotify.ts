@@ -1,12 +1,75 @@
 "use server"
 
-import { getSpotifyClient } from "@/lib/spotify-server"
+import { getSession } from "@/lib/spotify-session"
 
 const PLAYLIST_NAME = "MoodTune"
+const SPOTIFY_API = "https://api.spotify.com/v1"
+const MAX_TRACKS_PER_REQUEST = 100
 
 export type SaveToSpotifyResult =
   | { success: true; playlistUrl: string }
   | { success: false; error: string }
+
+function formatSpotifyError(error?: string, status?: number): string {
+  if (error) return `Spotify: ${error}`
+  return status === 401
+    ? "Spotify の認証が切れています。再度ログインしてください。"
+    : "Spotify でエラーが発生しました。しばらくしてからお試しください。"
+}
+
+type SpotifyErrorBody = {
+  error?: { status?: number; message?: string }
+}
+
+async function spotifyFetch<T>(
+  token: string,
+  path: string,
+  options: RequestInit = {}
+): Promise<{ ok: boolean; status: number; data?: T; error?: string }> {
+  const url = path.startsWith("http") ? path : `${SPOTIFY_API}${path}`
+  const res = await fetch(url, {
+    ...options,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      ...(options.headers as Record<string, string>),
+    },
+  })
+  const text = await res.text()
+  let data: T | SpotifyErrorBody | undefined
+  try {
+    data = text ? (JSON.parse(text) as T | SpotifyErrorBody) : undefined
+  } catch {
+    // ignore
+  }
+  if (!res.ok) {
+    const errBody = data as SpotifyErrorBody | undefined
+    const errMsg =
+      errBody?.error?.message ??
+      (typeof data === "object" && data && "error" in data
+        ? String((data as { error: unknown }).error)
+        : undefined)
+    return { ok: false, status: res.status, error: errMsg }
+  }
+  return { ok: true, status: res.status, data: data as T }
+}
+
+/** Add tracks in chunks (Spotify allows max 100 per request). */
+async function addTracksInChunks(
+  token: string,
+  playlistId: string,
+  uris: string[]
+): Promise<{ ok: boolean; status: number; error?: string }> {
+  for (let i = 0; i < uris.length; i += MAX_TRACKS_PER_REQUEST) {
+    const chunk = uris.slice(i, i + MAX_TRACKS_PER_REQUEST)
+    const res = await spotifyFetch(token, `/playlists/${playlistId}/tracks`, {
+      method: "POST",
+      body: JSON.stringify({ uris: chunk }),
+    })
+    if (!res.ok) return res
+  }
+  return { ok: true, status: 200 }
+}
 
 /**
  * Spotify プレイリスト "MoodTune" を上書き or 新規作成してトラックを追加する
@@ -19,72 +82,111 @@ export async function saveToSpotify(
     return { success: false, error: "再生できる楽曲がありません" }
   }
 
-  const spotifyClient = await getSpotifyClient()
-  if (!spotifyClient) {
+  const session = await getSession()
+  if (!session) {
     return { success: false, error: "Spotifyにログインしてください" }
   }
 
-  try {
-    // ユーザーIDを取得
-    const meResponse = await spotifyClient.getMe()
-    const userId = meResponse.body.id
+  const token = session.accessToken
 
-    // 既存の "MoodTune" プレイリストを検索
-    const existingPlaylistId = await findMoodTunePlaylist(spotifyClient, userId)
-
-    let playlistId: string
-
-    if (existingPlaylistId) {
-      // 既存プレイリストのタイトルと曲を上書き
-      await spotifyClient.changePlaylistDetails(existingPlaylistId, {
-        name: `${PLAYLIST_NAME}: ${title}`,
-      })
-      await spotifyClient.replaceTracksInPlaylist(existingPlaylistId, trackUris)
-      playlistId = existingPlaylistId
-    } else {
-      // 新規プレイリスト作成 (v5 API: createPlaylist(name, options))
-      const createResponse = await spotifyClient.createPlaylist(`${PLAYLIST_NAME}: ${title}`, {
-        public: false,
-        description: "MoodTuneが天気と時間帯に合わせて生成したプレイリスト",
-      })
-      playlistId = createResponse.body.id
-      await spotifyClient.addTracksToPlaylist(playlistId, trackUris)
-    }
-
+  const meRes = await spotifyFetch<{ id: string }>(token, "/me")
+  if (!meRes.ok) {
     return {
-      success: true,
-      playlistUrl: `https://open.spotify.com/playlist/${playlistId}`,
+      success: false,
+      error: formatSpotifyError(meRes.error, meRes.status),
     }
-  } catch (error) {
-    console.error("Failed to save to Spotify:", error)
-    return { success: false, error: "Spotifyへの保存に失敗しました" }
+  }
+  const userId = meRes.data!.id
+
+  const existingId = await findMoodTunePlaylist(token, userId)
+  const playlistName = `${PLAYLIST_NAME}: ${title}`
+  const description = "MoodTuneが天気と時間帯に合わせて生成したプレイリスト"
+
+  let playlistId: string
+
+  if (existingId) {
+    const updateRes = await spotifyFetch(token, `/playlists/${existingId}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        name: playlistName,
+        description,
+        public: true,
+      }),
+    })
+    if (!updateRes.ok) {
+      return { success: false, error: formatSpotifyError(updateRes.error, updateRes.status) }
+    }
+
+    const firstChunk = trackUris.slice(0, MAX_TRACKS_PER_REQUEST)
+    const replaceRes = await spotifyFetch(
+      token,
+      `/playlists/${existingId}/items`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ uris: firstChunk }),
+      }
+    )
+    if (!replaceRes.ok) {
+      return { success: false, error: formatSpotifyError(replaceRes.error, replaceRes.status) }
+    }
+    const rest = trackUris.slice(MAX_TRACKS_PER_REQUEST)
+    if (rest.length > 0) {
+      const addRes = await addTracksInChunks(token, existingId, rest)
+      if (!addRes.ok) {
+        return { success: false, error: formatSpotifyError(addRes.error, addRes.status) }
+      }
+    }
+    playlistId = existingId
+  } else {
+    const createRes = await spotifyFetch<{ id: string }>(
+      token,
+      `/users/${userId}/playlists`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          name: playlistName,
+          public: true,
+          description,
+        }),
+      }
+    )
+    if (!createRes.ok) {
+      return { success: false, error: formatSpotifyError(createRes.error, createRes.status) }
+    }
+    playlistId = createRes.data!.id
+
+    const addRes = await addTracksInChunks(token, playlistId, trackUris)
+    if (!addRes.ok) {
+      return { success: false, error: formatSpotifyError(addRes.error, addRes.status) }
+    }
+  }
+
+  return {
+    success: true,
+    playlistUrl: `https://open.spotify.com/playlist/${playlistId}`,
   }
 }
 
-/**
- * ユーザーのプレイリスト一覧から "MoodTune" プレイリストを検索する
- */
 async function findMoodTunePlaylist(
-  spotifyClient: NonNullable<Awaited<ReturnType<typeof getSpotifyClient>>>,
-  userId: string
+  token: string,
+  _userId: string
 ): Promise<string | null> {
-  try {
-    let offset = 0
-    const limit = 50
+  let offset = 0
+  const limit = 50
 
-    while (true) {
-      const response = await spotifyClient.getUserPlaylists(userId, { limit, offset })
-      const playlists = response.body.items
+  while (true) {
+    const res = await spotifyFetch<{
+      items: Array<{ id: string; name: string }>;
+    }>(token, `/me/playlists?limit=${limit}&offset=${offset}`)
 
-      const found = playlists.find((p) => p.name.startsWith(PLAYLIST_NAME))
-      if (found) return found.id
+    if (!res.ok || !res.data) return null
 
-      if (playlists.length < limit) break
-      offset += limit
-    }
+    const found = res.data.items.find((p) => p.name.startsWith(PLAYLIST_NAME))
+    if (found) return found.id
 
-    return null
-  } catch {
-    return null
+    if (res.data.items.length < limit) break
+    offset += limit
   }
+
+  return null
 }

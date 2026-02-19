@@ -3,8 +3,13 @@ import crypto from "node:crypto"
 const SPOTIFY_AUTHORIZE = "https://accounts.spotify.com/authorize"
 const SPOTIFY_TOKEN = "https://accounts.spotify.com/api/token"
 
-export const SPOTIFY_SCOPES =
-  "playlist-modify-public playlist-modify-private user-read-email"
+/** プレイリスト取得・作成・更新に必要なスコープ（Spotify Web API） */
+export const SPOTIFY_SCOPES = [
+  "playlist-read-private", // ユーザーのプレイリスト一覧取得（既存 MoodTune 検索）
+  "playlist-modify-public", // 公開プレイリストの作成・更新
+  "playlist-modify-private", // 非公開プレイリストの作成・更新
+  "user-read-email", // ユーザー情報
+].join(" ")
 
 /** PKCE: code verifier (43–128 chars, high-entropy). */
 export function generateCodeVerifier(length = 64): string {
@@ -52,6 +57,7 @@ export async function buildAuthorizeUrl(state: string): Promise<{
     code_challenge_method: "S256",
     code_challenge: codeChallenge,
     state,
+    show_dialog: "true", // 毎回同意画面を表示し、最新スコープでトークンを発行させる
   })
   const url = `${SPOTIFY_AUTHORIZE}?${params.toString()}`
   return { url, codeVerifier }
@@ -68,6 +74,7 @@ export async function exchangeCodeForTokens(
   access_token: string
   refresh_token?: string
   expires_in: number
+  scope?: string
 }> {
   const clientId = process.env.AUTH_SPOTIFY_ID
   if (!clientId) throw new Error("AUTH_SPOTIFY_ID is not set")
@@ -95,5 +102,6 @@ export async function exchangeCodeForTokens(
     access_token: string
     refresh_token?: string
     expires_in: number
+    scope?: string
   }>
 }
