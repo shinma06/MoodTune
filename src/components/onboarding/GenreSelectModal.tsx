@@ -71,7 +71,7 @@ export default function GenreSelectModal({ onComplete }: Props) {
       <div className={`w-full max-w-md rounded-2xl ${s.container} border shadow-2xl flex flex-col max-h-[90vh]`}>
         <div className="px-6 pt-6 pb-4">
           <h2 className={`text-lg font-semibold ${s.title}`}>好きなジャンルを選ぼう</h2>
-          <p className={`${s.desc} text-sm mt-1`}>最大8つまで選択できます。</p>
+          <p className={`${s.desc} text-sm mt-1`}>最大{MAX_SELECTED_GENRES}つまで選択できます。</p>
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 pb-2">

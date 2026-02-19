@@ -42,8 +42,8 @@ export const GENRE_THEME_COLORS: Record<Genre, GenreThemeColors> = Object.fromEn
   GENRE_DEFINITIONS.map((g) => [g.id, g.themeColors])
 ) as Record<Genre, GenreThemeColors>
 
-// ユーザーが選択できる最大ジャンル数
-export const MAX_SELECTED_GENRES = 8
+// ユーザーが選択できる最大ジャンル数（Spotify レート制限・生成時間を考慮）
+export const MAX_SELECTED_GENRES = 4
 
 // ジャンル選択のlocalStorageキー
 export const GENRE_STORAGE_KEY = "selected-genres"
@@ -51,11 +51,10 @@ export const GENRE_STORAGE_KEY = "selected-genres"
 // オンボーディング完了フラグのlocalStorageキー
 export const ONBOARDING_COMPLETED_KEY = "onboarding-completed"
 
-// デフォルトで選択されているジャンル（初回アクセス時）
+// デフォルトで選択されているジャンル（初回アクセス時。MAX_SELECTED_GENRES 以下にすること）
 export const DEFAULT_SELECTED_GENRES: Genre[] = [
   "J-POP",
   "J-Rock",
-  "Hip Hop",
   "City Pop",
   "K-POP (Girl)",
 ]
