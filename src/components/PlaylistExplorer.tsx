@@ -375,32 +375,34 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
 
             {/* Vinyl Record Section（縦幅が狭いときはレコードを縮小して重なりを防止） */}
             <div className="flex-1 min-h-0 flex flex-col items-center justify-center w-full max-w-md relative z-10 py-2 record-section-gap">
-                {!(isLoading || openPanel === "mood" || openPanel === "genre") && (
-                    <div className="text-center space-y-0.5 shrink-0">
-                        <p className={`text-[10px] font-light whitespace-nowrap flex items-center justify-center gap-1 ${isDark ? "text-white/80" : "text-muted-foreground/70"}`}>
-                            {selectedGenres.length <= 1 ? (
-                                <>
-                                    <Music className="w-3 h-3 shrink-0" aria-hidden />
-                                    お気に入りのジャンルを追加
-                                </>
-                            ) : (
-                                "左右にスピンして他のプレイリストへ"
-                            )}
-                        </p>
-                        <p className={`text-[9px] font-light whitespace-nowrap ${isDark ? "text-white/60" : "text-muted-foreground/50"}`}>
-                            {selectedGenres.length === 0
-                                ? "1つ以上選択するとスピンで再構築できます"
-                                : selectedGenres.length === 1
-                                    ? "右3周でプレイリストを再構築"
-                                    : "右3周でプレイリストを再構築・左3周で一括再構築"}
-                        </p>
-                        {isMoodTuningApplied && (
-                            <p className="text-base font-semibold text-rainbow whitespace-nowrap mt-2.5">
-                                Mood Tuning
-                            </p>
+                {/* ヒントは常にレイアウトを占有し、パネル開閉でレコードが動かないようにする（非表示時は invisible） */}
+                <div
+                    className={`text-center space-y-0.5 shrink-0 ${isLoading || openPanel === "mood" || openPanel === "genre" ? "invisible" : ""}`}
+                    aria-hidden={isLoading || openPanel === "mood" || openPanel === "genre"}
+                >
+                    <p className={`text-[10px] font-light whitespace-nowrap flex items-center justify-center gap-1 ${isDark ? "text-white/80" : "text-muted-foreground/70"}`}>
+                        {selectedGenres.length <= 1 ? (
+                            <>
+                                <Music className="w-3 h-3 shrink-0" aria-hidden />
+                                お気に入りのジャンルを追加
+                            </>
+                        ) : (
+                            "左右にスピンして他のプレイリストへ"
                         )}
-                    </div>
-                )}
+                    </p>
+                    <p className={`text-[9px] font-light whitespace-nowrap ${isDark ? "text-white/60" : "text-muted-foreground/50"}`}>
+                        {selectedGenres.length === 0
+                            ? "1つ以上選択するとスピンで再構築できます"
+                            : selectedGenres.length === 1
+                                ? "右3周でプレイリストを再構築"
+                                : "右3周でプレイリストを再構築・左3周で一括再構築"}
+                    </p>
+                    {isMoodTuningApplied && (
+                        <p className="text-base font-semibold text-rainbow whitespace-nowrap mt-2.5">
+                            Mood Tuning
+                        </p>
+                    )}
+                </div>
 
                 <div
                     className="relative w-[min(18rem,42vh)] h-[min(18rem,42vh)] rounded-full transition-shadow duration-200 shrink-0"
