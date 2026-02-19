@@ -1,8 +1,7 @@
 import { getSession as getSpotifySession } from "@/lib/spotify-session"
 
 /**
- * Session shape compatible with previous NextAuth usage.
- * Used by page.tsx (isUnauthenticated) and spotify-server.ts (accessToken).
+ * Session shape used by page.tsx (isUnauthenticated) and spotify-server.ts (accessToken).
  */
 export interface Session {
   accessToken?: string
