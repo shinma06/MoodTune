@@ -212,3 +212,16 @@
 - バックグラウンド再取得時はローディング表示なし（初回成功後の同座標再取得）
 
 **影響**: `WeatherMonitor` で `isMoodTuningRef.current` を参照してポーリングをスキップ。自動更新時は `refreshPlaylists({ autoUpdate: true })` で「天気・時間の変化に合わせて再生成中」を表示
+
+---
+
+### ADR-018: Spotify 認証を PKCE に統一、プレイリスト保存は直接 fetch
+
+**決定**: NextAuth を使わず、Spotify の Authorization Code with PKCE で自前実装。認可は `GET /api/auth/spotify`、コールバックでトークン交換・セッションは暗号化クッキー（`spotify-session.ts`）、リフレッシュは同一モジュールで自動。プレイリスト保存（saveToSpotify）は spotify-web-api-node の一部エンドポイントで 403 が出るため、セッショントークンで Spotify Web API を直接 fetch し、既存プレイリストの上書きは `PUT /playlists/{id}/items`（非推奨の `/tracks` は 403）、100 曲超はチャンク送信
+
+**理由**:
+
+- PKCE でクライアントシークレットをフロントに露出せず、サーバー側でトークン交換・リフレッシュを一元管理できる
+- プレイリスト replace で 403 を避けるため新エンドポイント（/items）と直接 fetch を採用
+
+**影響**: `lib/spotify-pkce.ts`, `lib/spotify-session.ts`, `app/api/auth/spotify`, `app/api/auth/spotify/callback`, `app/api/auth/signout`, `auth.ts`（getSession のラップ）。`saveToSpotify` は getSession + fetch、PUT /items と 100 曲チャンク

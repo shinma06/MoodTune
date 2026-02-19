@@ -7,16 +7,15 @@
 ```
 src/
 ├── app/              # Next.js App Router
-│   ├── actions/      # Server Actions
-│   │   └── generateDashboard.ts
+│   ├── actions/      # Server Actions（generateDashboard, saveToSpotify）
 │   ├── api/          # API Routes
-│   │   ├── auth/[...nextauth]/  # NextAuth (Spotify)
+│   │   ├── auth/     # Spotify PKCE: spotify（認可）, spotify/callback（トークン交換）, signout, spotify/error
 │   │   ├── geocode/  # 逆ジオコーディング（都市名取得）
 │   │   └── weather/  # 天気 API プロキシ（WxTech 優先 → OWM フォールバック）
 │   ├── page.tsx      # メインページ
 │   ├── layout.tsx    # ルートレイアウト
 │   └── loading.tsx   # ローディングフォールバック
-├── auth.ts           # NextAuth 設定
+├── auth.ts           # セッション取得（auth()）。Spotify PKCE ログイン対応
 ├── components/       # React コンポーネント
 │   ├── ui/           # shadcn/ui コンポーネント
 │   ├── GenreSelector.tsx   # Favorite Music パネル
@@ -33,7 +32,9 @@ src/
 ├── lib/
 │   ├── constants.ts          # 定数・ジャンル定義
 │   ├── playlist-utils.ts     # プレイリスト関連ユーティリティ
-│   ├── spotify-server.ts     # Spotify API クライアント
+│   ├── spotify-pkce.ts       # Spotify PKCE（認可URL・トークン交換）
+│   ├── spotify-server.ts     # Spotify API クライアント（generateDashboard の Search 用）
+│   ├── spotify-session.ts   # セッション暗号化クッキー・トークンリフレッシュ
 │   ├── weather-api.ts       # 天気・Geocoding 取得（Promise.all 並列）
 │   ├── weather-background.ts # 背景グラデーション（BACKGROUNDS 等）
 │   ├── weather-background-utils.ts # 背景ユーティリティ（INITIAL_BACKGROUND_GRADIENT 等）
@@ -41,7 +42,6 @@ src/
 │   └── wxtech-weather.ts   # WxTech API（日本域判定・天気コード→WeatherType）
 └── types/
     ├── dashboard.ts   # DashboardItem
-    ├── next-auth.d.ts
     ├── spotify-web-api-node.d.ts
     └── weather.ts     # WeatherApiResponse, WeatherData
 ```
@@ -68,7 +68,7 @@ src/
 
 ### バックエンド/API
 
-- **API Route**: Next.js API Routes（`/api/weather`, `/api/geocode`, `/api/auth/[...nextauth]`）
+- **API Route**: Next.js API Routes（`/api/weather`, `/api/geocode`, `/api/auth/spotify`, `/api/auth/spotify/callback`, `/api/auth/signout`）
 - **天気**: WxTech 優先（日本: 1km メッシュ ピンポイント、海外: 5km メッシュ）。失敗時は OpenWeatherMap にフォールバック
 - **都市名**: Google Geocoding API（逆ジオコーディング）。失敗時は OWM の `name` にフォールバック
 

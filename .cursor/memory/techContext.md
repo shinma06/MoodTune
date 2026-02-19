@@ -31,13 +31,13 @@
 - **理由**: プレイリストのタイトル・検索クエリをジャンル・天気・時間帯に応じて生成するため
 - **使用方針**: Server Action（generateDashboard）内で `generateText` によりジャンル別のタイトル/クエリを生成
 
-### NextAuth（Spotify）
+### Spotify PKCE（Authorization Code with PKCE）
 - **理由**: Spotify 連携時はログインが必要。モック時は `NEXT_PUBLIC_USE_MOCK_SPOTIFY !== "false"` でログイン不要
-- **実装**: `auth.ts` で Spotify Provider を設定。`app/api/auth/[...nextauth]` でルート
+- **実装**: `lib/spotify-pkce.ts` で認可URL・トークン交換。`lib/spotify-session.ts` でセッション暗号化クッキーとトークンリフレッシュ。`auth.ts` は `getSession()` をラップして `auth()` でセッション取得。`GET /api/auth/spotify`, `GET /api/auth/spotify/callback`, `GET /api/auth/signout`
 
 ### Spotify Web API
-- **理由**: プレイリストカバー画像の取得（モック時は picsum）。今後のビジョンで再生・保存にも利用予定
-- **実装**: `lib/spotify-server.ts` でサーバー側クライアント。Server Action から呼び出し
+- **理由**: プレイリストカバー画像の取得（モック時は picsum）、プレイリスト保存（MoodTune 1 本の上書き or 新規作成）
+- **実装**: `lib/spotify-server.ts` で generateDashboard の Search 用。saveToSpotify はセッショントークンで直接 fetch（PUT /playlists/{id}/items、100曲超はチャンク）
 
 ## 開発環境
 
@@ -46,8 +46,8 @@
 | 変数 | 必須 | 説明 |
 |------|------|------|
 | `OPENAI_API_KEY` | **Yes** | プレイリストタイトル・クエリ生成（Vercel AI SDK / OpenAI） |
-| `AUTH_SECRET` | Spotify 利用時 | NextAuth 用のランダム文字列 |
-| `AUTH_SPOTIFY_ID` / `AUTH_SPOTIFY_SECRET` | Spotify 利用時 | Spotify OAuth |
+| `AUTH_SECRET` | Spotify 利用時 | セッション暗号化用（32文字以上推奨） |
+| `AUTH_SPOTIFY_ID` / `AUTH_SPOTIFY_SECRET` | Spotify 利用時 | Spotify PKCE（トークン交換・リフレッシュ） |
 | `NEXT_PUBLIC_USE_MOCK_SPOTIFY` | No | 省略または `true`: モック（ログイン不要）。`false`: Spotify ログイン有効 |
 | `WXTECH_API_KEY` | 天気推奨 | WxTech API（日本 1km/海外 5km）。未設定時は OWM のみ |
 | `NEXT_PUBLIC_WEATHER_API_KEY` | 天気フォールバック | OpenWeatherMap API（WxTech 失敗時または未設定時） |
