@@ -51,14 +51,13 @@ function determineInitialModal(isUnauthenticated: boolean): ModalType {
 
 interface Props {
   isUnauthenticated: boolean
-  loginAction: () => Promise<void>
   /** 初期化完了時に呼ばれる。needsGenreSelect: ジャンル選択モーダルが必要か */
   onInitialized?: (needsGenreSelect: boolean) => void
   /** ジャンル選択モーダルが完了したときに呼ばれる */
   onGenreSelectDone?: () => void
 }
 
-export default function OnboardingOrchestrator({ isUnauthenticated, loginAction, onInitialized, onGenreSelectDone }: Props) {
+export default function OnboardingOrchestrator({ isUnauthenticated, onInitialized, onGenreSelectDone }: Props) {
   const [modal, setModal] = useState<ModalType>(null)
   const [initialized, setInitialized] = useState(false)
   const onInitializedRef = useRef(onInitialized)
@@ -85,7 +84,7 @@ export default function OnboardingOrchestrator({ isUnauthenticated, loginAction,
   if (!initialized) return null
 
   if (modal === "login") {
-    return <LoginModal loginAction={loginAction} />
+    return <LoginModal />
   }
 
   if (modal === "genre-select") {

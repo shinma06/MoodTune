@@ -6,10 +6,9 @@ import OnboardingOrchestrator from "@/components/onboarding/OnboardingOrchestrat
 
 interface Props {
   isUnauthenticated: boolean
-  loginAction: () => Promise<void>
 }
 
-export default function PageClient({ isUnauthenticated, loginAction }: Props) {
+export default function PageClient({ isUnauthenticated }: Props) {
   /** ジャンル選択モーダルが必要かどうかが確定するまで true（プレイリスト構築をブロック） */
   const [genreSelectPending, setGenreSelectPending] = useState(true)
 
@@ -18,7 +17,6 @@ export default function PageClient({ isUnauthenticated, loginAction }: Props) {
       <PlaylistExplorer suspended={genreSelectPending} />
       <OnboardingOrchestrator
         isUnauthenticated={isUnauthenticated}
-        loginAction={loginAction}
         onInitialized={(needsGenreSelect) => setGenreSelectPending(needsGenreSelect)}
         onGenreSelectDone={() => setGenreSelectPending(false)}
       />

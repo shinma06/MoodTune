@@ -1,4 +1,4 @@
-import { auth, signIn } from "@/auth"
+import { auth } from "@/auth"
 import PageClient from "./PageClient"
 
 /** Spotify 未連携時は true。明示的に "false" でない限りモック（ログイン不要） */
@@ -8,12 +8,7 @@ export default async function Page() {
   const session = USE_MOCK ? null : await auth()
   const isUnauthenticated = !USE_MOCK && !session
 
-  const loginAction = async () => {
-    "use server"
-    await signIn("spotify")
-  }
-
   return (
-    <PageClient isUnauthenticated={isUnauthenticated} loginAction={loginAction} />
+    <PageClient isUnauthenticated={isUnauthenticated} />
   )
 }

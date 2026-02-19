@@ -1,28 +1,17 @@
 "use client"
 
-import { useTransition, useState } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 import { useWeather } from "@/contexts/WeatherContext"
 
-interface Props {
-  loginAction: () => Promise<void>
-}
-
-export default function LoginModal({ loginAction }: Props) {
-  const [isPending, startTransition] = useTransition()
-  const [error, setError] = useState<string | null>(null)
+export default function LoginModal() {
+  const [isPending, setIsPending] = useState(false)
   const { isDark } = useWeather()
 
   const handleLogin = () => {
-    setError(null)
-    startTransition(async () => {
-      try {
-        await loginAction()
-      } catch {
-        setError("ログインに失敗しました。もう一度お試しください。")
-      }
-    })
+    setIsPending(true)
+    window.location.href = "/api/auth/spotify"
   }
 
   return (
@@ -57,9 +46,6 @@ export default function LoginModal({ loginAction }: Props) {
               )}
               {isPending ? "接続中..." : "Spotifyでログイン"}
             </Button>
-            {error && (
-              <p className={`text-xs ${isDark ? "text-red-400" : "text-red-500"}`}>{error}</p>
-            )}
           </div>
         </div>
       </div>
