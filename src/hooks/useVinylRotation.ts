@@ -118,7 +118,6 @@ export function useVinylRotation({
     setCumulativeRotation(0)
     setStartRotation(0)
     cumulativeRotationRef.current = 0
-    setCumulativeRotation(0)
   }, [])
 
   /** 指定角度から 0° まで、CSS transition（linear）で回した角度分を逆方向に戻す。角速度一定で滑らかに一貫した制御。 */
