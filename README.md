@@ -24,7 +24,7 @@
 | Framework | Next.js 15 (App Router) |
 | Language | TypeScript |
 | Styling | Tailwind CSS 4, shadcn/ui (Radix UI), Lucide React |
-| Auth | NextAuth v5 (Spotify) |
+| Auth | Spotify PKCE (Authorization Code with PKCE) |
 | AI | Vercel AI SDK + OpenAI |
 | External API | WxTech（天気・日本/世界）, OpenWeatherMap（天気フォールバック）, Google Geocoding API（都市名）, Spotify Web API（オプション） |
 
@@ -54,15 +54,24 @@ npm install
 | 変数名 | 必須 | 説明 |
 |--------|------|------|
 | `OPENAI_API_KEY` | **Yes** | プレイリストのタイトル・検索クエリ生成用 OpenAI API キー |
-| `AUTH_SECRET` | 認証時 | NextAuth 用のランダム文字列（例: `openssl rand -base64 32`）。Spotify ログインを有効にする場合に必要 |
+| `AUTH_SECRET` | 認証時 | セッション暗号化用（32 文字以上推奨。例: `openssl rand -base64 32`）。Spotify ログインを有効にする場合に必要 |
 | `AUTH_SPOTIFY_ID` | Spotify 時 | Spotify Developer の Client ID |
-| `AUTH_SPOTIFY_SECRET` | Spotify 時 | Spotify Developer の Client Secret |
+| `AUTH_SPOTIFY_SECRET` | Spotify 時 | トークンリフレッシュ用。Spotify Developer の Client Secret |
+| `AUTH_URL` / `NEXTAUTH_URL` | Spotify 時 | アプリのベース URL（例: `http://127.0.0.1:3000` または `http://127.0.0.1:3001`）。コールバック URL の算出に使用 |
 | `NEXT_PUBLIC_USE_MOCK_SPOTIFY` | No | 未設定または `true`: モックモード（ログイン不要）。`false` で Spotify ログインを有効化 |
 | `WXTECH_API_KEY` | 天気 API 推奨 | WxTech API キー（日本: 1km メッシュ、海外: 5km メッシュ）。未設定時は OpenWeatherMap のみ使用 |
 | `NEXT_PUBLIC_WEATHER_API_KEY` | 天気フォールバック | OpenWeatherMap API キー（WxTech 失敗時または WxTech 未設定時に使用） |
 | `GOOGLE_GEOCODING_API_KEY` | 都市名表示時 | Google Geocoding API キー（逆ジオコーディングで都市名取得）。未設定時は OpenWeatherMap の地名を表示 |
 
 **最小構成（Spotify なし・モックで動かす場合）:** `OPENAI_API_KEY` のみ設定すれば起動できます。
+
+**Spotify ログイン時:**
+
+1. **`AUTH_SECRET`** — 必須。32 文字以上推奨（例: `openssl rand -base64 32`）。
+2. **`AUTH_SPOTIFY_ID`** と **`AUTH_SPOTIFY_SECRET`** — 両方設定し、余分なスペースやクォートを含めない。
+3. **`AUTH_URL` または `NEXTAUTH_URL`** — 起動するポートと一致させる（例: `http://127.0.0.1:3001`）。
+4. **Spotify Developer Dashboard** — [Redirect URIs](https://developer.spotify.com/dashboard) に **`http://127.0.0.1:3001/api/auth/spotify/callback`**（使用ポートに合わせる）を追加。`127.0.0.1` と `localhost` は別扱いのため、ブラウザは **`http://127.0.0.1:3001`** で開くことを推奨。
+5. `.env.local` 変更後は開発サーバーを再起動する。
 
 ### 3. 開発サーバーの起動
 
@@ -91,12 +100,14 @@ npm run dev
 src/
 ├── app/                    # Next.js App Router
 │   ├── actions/            # Server Actions（generateDashboard 等）
-│   ├── api/                # API Routes（auth, weather, geocode プロキシ）
+│   ├── api/                # API Routes
+│   │   ├── auth/           # Spotify PKCE: spotify（認可）, spotify/callback（トークン交換）, signout
+│   │   ├── weather/        # 天気・geocode プロキシ
 │   ├── page.tsx            # メインページ
 │   ├── layout.tsx
 │   └── loading.tsx
-├── auth.ts                 # NextAuth 設定
-├── components/              # React コンポーネント
+├── auth.ts                 # セッション取得（auth()）。Spotify PKCE ログイン対応
+├── components/             # React コンポーネント
 │   ├── ui/                 # shadcn/ui
 │   ├── PlaylistExplorer.tsx # レコード盤・プレイリスト表示
 │   ├── GenreSelector.tsx   # Favorite Music パネル
@@ -109,10 +120,12 @@ src/
 │   ├── useGeolocation.ts
 │   ├── useLocalStorage.ts  # ジャンル選択の永続化
 │   └── useVinylRotation.ts # レコード回転・3 周で再生成
-├── lib/                    # ユーティリティ・API クライアント
+├── lib/
 │   ├── constants.ts        # ジャンル定義・定数
 │   ├── playlist-utils.ts
-│   ├── spotify-server.ts
+│   ├── spotify-pkce.ts     # Spotify PKCE（認可 URL・トークン交換）
+│   ├── spotify-server.ts   # Spotify API クライアント（サーバー側）
+│   ├── spotify-session.ts  # セッション暗号化クッキー・リフレッシュ
 │   ├── weather-api.ts
 │   ├── weather-background.ts
 │   └── weather-utils.ts
@@ -150,7 +163,6 @@ npm run build
 
 - プレイリストの実際の音楽再生
 - プレイリストの Spotify 保存
-- トークンリフレッシュの本番対応
 - ユーザー設定（位置情報の再取得、天気更新間隔など）
 
 ---
@@ -161,6 +173,7 @@ npm run build
 - [shadcn/ui](https://ui.shadcn.com/)
 - [OpenWeatherMap API](https://openweathermap.org/api)
 - [Spotify Web API](https://developer.spotify.com/documentation/web-api)
+- [Spotify Authorization Code with PKCE](https://developer.spotify.com/documentation/web-api/tutorials/code-pkce-flow)
 
 ---
 
