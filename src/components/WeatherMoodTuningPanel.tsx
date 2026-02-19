@@ -199,7 +199,7 @@ export default function WeatherMoodTuningPanel({
                 <div className="grid grid-cols-3 gap-2">
                   {WEATHER_TYPES.map((type) => {
                     const Icon = getWeatherIcon(type)
-                    const color = getWeatherThemeColor(type)
+                    const color = getWeatherThemeColor(type, undefined, isDark)
                     const isSelected = currentWeatherType === type
                     const isActualWeather = actualWeatherTypeNormalized === type
                     return (
