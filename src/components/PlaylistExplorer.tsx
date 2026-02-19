@@ -404,6 +404,8 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
                     )}
                 </div>
 
+                {/* レコードと3周メッセージをひとまとまりにし、下はページネーションに隙間なし */}
+                <div className="flex flex-col items-center shrink-0">
                 <div
                     className="relative w-[min(18rem,42vh)] h-[min(18rem,42vh)] rounded-full transition-shadow duration-200 shrink-0"
                     style={
@@ -503,23 +505,20 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
                             <path d="M221.045 11.7671C221.513 9.02436 224.13 7.19152 226.868 7.68925L238.712 9.8427C241.53 10.355 243.342 13.125 242.683 15.9122L231.692 62.4163C231.212 64.4431 229.527 65.9607 227.461 66.2256L218.097 67.4262C214.764 67.8535 211.967 64.9374 212.532 61.6253L221.045 11.7671Z" fill={REALISTIC_VINYL_THEME.accentColor} />
                         </svg>
                     </div>
+                </div>
 
-                    {/* 3周フィードバック文言（1周超で表示、3周に近づくほど強調） */}
-                    {regenerateMessage && (
-                        <div
-                            className="absolute left-1/2 -translate-x-1/2 -bottom-6 sm:-bottom-9 w-full text-center pointer-events-none transition-opacity duration-150"
-                            style={{
-                                opacity: 0.7 + regenerateProgress * 0.3,
-                            }}
-                        >
-                            <span
-                                className={`text-xs font-medium whitespace-nowrap ${isDark ? "text-white/90" : "text-foreground/90"
-                                    }`}
-                            >
-                                {regenerateMessage}
-                            </span>
-                        </div>
-                    )}
+                {/* 3周フィードバック文言（レコードとは少しあけ、ページネーションとは詰める。1行分のスペースは常に確保） */}
+                <div
+                    className={`mt-1.5 -mb-0.5 min-h-4 flex items-center justify-center w-full text-center shrink-0 transition-opacity duration-150 leading-none ${regenerateMessage ? "" : "invisible"}`}
+                    style={regenerateMessage ? { opacity: 0.7 + regenerateProgress * 0.3 } : undefined}
+                    aria-hidden={!regenerateMessage}
+                >
+                    <span
+                        className={`text-xs font-medium whitespace-nowrap ${isDark ? "text-white/90" : "text-foreground/90"}`}
+                    >
+                        {regenerateMessage ?? "\u00A0"}
+                    </span>
+                </div>
                 </div>
 
                 {/* Indicator dots（ジャンルごとのテーマカラー。Mood Tuning 中は非選択ドットが1本の虹になる） */}
@@ -548,8 +547,8 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
                 </div>
             </div>
 
-            {/* Playlist Info Section（縦幅が狭いときは余白・画像を縮小）。Mood Tuning 中はタイトル・ジャケに虹色の淵 */}
-            <div className="w-full max-w-md shrink-0 space-y-4 sm:space-y-6 pb-4 relative z-10">
+            {/* Playlist Info Section（ページネーションとの幅を確保するため上に余白。ジャンル名〜Spotifyボタンの位置関係は固定） */}
+            <div className="w-full max-w-md shrink-0 mt-5 sm:mt-6 space-y-4 sm:space-y-6 pb-4 relative z-10">
                 <div className="text-center space-y-2 sm:space-y-3">
                     <p className={`text-[10px] sm:text-xs uppercase tracking-widest font-light ${genreColorClass}`}>
                         {isLoadingOrEmpty ? LOADING_GENRE_TEXT : currentPlaylist.genre}
