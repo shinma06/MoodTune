@@ -12,15 +12,10 @@ export async function getSpotifyClient(): Promise<SpotifyWebApi | null> {
   try {
     const session = await auth()
 
-    if (!session) {
-      return null
-    }
+    if (!session) return null
 
     const accessToken = session.accessToken
-
-    if (!accessToken || typeof accessToken !== "string") {
-      return null
-    }
+    if (!accessToken || typeof accessToken !== "string") return null
 
     const spotifyApi = new SpotifyWebApi()
     spotifyApi.setAccessToken(accessToken)
