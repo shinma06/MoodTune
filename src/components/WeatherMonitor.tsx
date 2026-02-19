@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { useWeather } from "@/contexts/WeatherContext"
 import type { WeatherState } from "@/types/weather"
-import { formatDateTime, getWeatherIcon, getWeatherThemeColor, getWeatherThemeColorForDark, normalizeWeatherType } from "@/lib/weather-utils"
+import { formatDateTime, getWeatherIcon, getWeatherThemeColor, normalizeWeatherType } from "@/lib/weather-utils"
 import { fetchWeatherData } from "@/lib/weather-api"
 import { useGeolocation } from "@/hooks/useGeolocation"
 
@@ -103,9 +103,7 @@ export default function WeatherMonitor() {
     
     // isDark は Context の単一ソースから取得（背景と常に一致）
     const iconColor = displayWeatherType
-        ? isDark
-            ? getWeatherThemeColorForDark(displayWeatherType, effectiveTimeOfDay)
-            : getWeatherThemeColor(displayWeatherType, effectiveTimeOfDay)
+        ? getWeatherThemeColor(displayWeatherType, effectiveTimeOfDay, isDark)
         : undefined
     
     const textColorClass = isDark ? "text-white" : ""
