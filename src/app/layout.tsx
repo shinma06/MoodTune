@@ -53,10 +53,9 @@ export default function RootLayout({
   return (
     <html lang="ja" suppressHydrationWarning>
       <body
-        className={`font-sans antialiased ${_cormorant.variable}`}
+        className={`font-sans antialiased h-dvh min-h-0 overflow-hidden ${_cormorant.variable}`}
         style={{
           background: INITIAL_BACKGROUND_GRADIENT,
-          minHeight: "100vh",
         }}
       >
         <WeatherProvider>
