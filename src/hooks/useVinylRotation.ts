@@ -84,21 +84,9 @@ export function useVinylRotation({
 
   const calculateRotationFromDrag = useCallback(
     (clientX: number, clientY: number): number => {
-      if (!vinylRef.current) return 0
-
-      const rect = vinylRef.current.getBoundingClientRect()
-      const centerX = rect.left + rect.width / 2
-      const centerY = rect.top + rect.height / 2
-
-      const startAngleRad = Math.atan2(startY - centerY, startX - centerX)
-      const currentAngleRad = Math.atan2(clientY - centerY, clientX - centerX)
-
-      const startAngleDeg = (startAngleRad * 180) / Math.PI
-      const currentAngleDeg = (currentAngleRad * 180) / Math.PI
-
-      return getAngleDifference(startAngleDeg, currentAngleDeg)
+      return getAngleDifference(getAngleFromCenter(startX, startY), getAngleFromCenter(clientX, clientY))
     },
-    [startX, startY, getAngleDifference]
+    [startX, startY, getAngleFromCenter, getAngleDifference]
   )
 
   const resetRotation = useCallback(() => {
