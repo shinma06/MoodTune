@@ -52,19 +52,22 @@ export default function WeatherMoodTuningPanel({
   const [internalOpen, setInternalOpen] = useState(false)
   /** 親制御時は props を、そうでなければ内部 state を使う */
   const isOpen = onOpenProp !== undefined ? (controlledIsOpen ?? false) : internalOpen
-  /** パネルを開いた時点の天気・時間（閉じたときに「開いた時点と変わっているか」の判定用） */
-  const openedWeatherTypeRef = useRef<string | null>(null)
-  const openedTimeOfDayRef = useRef<TimeOfDay | null>(null)
-  /** パネルを開いた時点の「現在の天気・時間」（リセットボタン表示判定用） */
-  const actualWeatherAtOpenRef = useRef<string | null>(null)
-  const actualTimeOfDayAtOpenRef = useRef<TimeOfDay | null>(null)
+  /** パネルを開いた時点のスナップショット（開閉時の変更判定・リセットボタン表示判定用） */
+  const snapshotRef = useRef<{
+    openedWeather: string | null
+    openedTimeOfDay: TimeOfDay | null
+    actualWeatherAtOpen: string | null
+    actualTimeOfDayAtOpen: TimeOfDay | null
+  }>({ openedWeather: null, openedTimeOfDay: null, actualWeatherAtOpen: null, actualTimeOfDayAtOpen: null })
 
   /** パネルを開く: この時点の天気・時間と「現在の天気・時間」をスナップショットしてから開く */
   const handleOpenPanel = () => {
-    openedWeatherTypeRef.current = weatherType
-    openedTimeOfDayRef.current = moodTuningTimeOfDay
-    actualWeatherAtOpenRef.current = actualWeatherType
-    actualTimeOfDayAtOpenRef.current = getTimeOfDay(displayHour)
+    snapshotRef.current = {
+      openedWeather: weatherType,
+      openedTimeOfDay: moodTuningTimeOfDay,
+      actualWeatherAtOpen: actualWeatherType,
+      actualTimeOfDayAtOpen: getTimeOfDay(displayHour),
+    }
     if (onOpenProp) onOpenProp()
     else setInternalOpen(true)
   }
@@ -82,11 +85,8 @@ export default function WeatherMoodTuningPanel({
 
   /** パネルを閉じる: 開いた時点の天気・時間と比べて変わっている場合のみプレイリストを再構築 */
   const handleClosePanel = () => {
-    const openedWeather = openedWeatherTypeRef.current
-    const openedTime = openedTimeOfDayRef.current
-    const weatherChanged = weatherType !== openedWeather
-    const timeChanged = moodTuningTimeOfDay !== openedTime
-    if (weatherChanged || timeChanged) {
+    const { openedWeather, openedTimeOfDay } = snapshotRef.current
+    if (weatherType !== openedWeather || moodTuningTimeOfDay !== openedTimeOfDay) {
       requestPlaylistRefresh()
     }
     if (onCloseProp) onCloseProp()
@@ -127,34 +127,16 @@ export default function WeatherMoodTuningPanel({
       effectiveTimeOfDay !== actualTimeOfDay)
 
   /** パネルを開いた時点で「現在の天気・時間」と違う状態を設定していた場合のみリセットボタンを表示 */
-  const actualWeatherAtOpenNorm = normalizeWeatherType(actualWeatherAtOpenRef.current ?? "Clear")
-  const actualTimeAtOpen = actualTimeOfDayAtOpenRef.current ?? actualTimeOfDay
-  const effectiveWeatherAtOpen =
-    openedWeatherTypeRef.current != null ? normalizeWeatherType(openedWeatherTypeRef.current) : actualWeatherAtOpenNorm
-  const effectiveTimeOfDayAtOpen = openedTimeOfDayRef.current ?? actualTimeAtOpen
+  const { openedWeather, openedTimeOfDay, actualWeatherAtOpen, actualTimeOfDayAtOpen } = snapshotRef.current
+  const actualWeatherAtOpenNorm = normalizeWeatherType(actualWeatherAtOpen ?? "Clear")
+  const actualTimeAtOpen = actualTimeOfDayAtOpen ?? actualTimeOfDay
+  const effectiveWeatherAtOpen = openedWeather != null ? normalizeWeatherType(openedWeather) : actualWeatherAtOpenNorm
+  const effectiveTimeOfDayAtOpen = openedTimeOfDay ?? actualTimeAtOpen
   const showResetButton =
     isOpen &&
     (effectiveWeatherAtOpen !== actualWeatherAtOpenNorm || effectiveTimeOfDayAtOpen !== actualTimeAtOpen)
 
-  const weatherBtnClass = (isSelected: boolean, isActual: boolean) => {
-    const base = "relative flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all"
-    const selected = isSelected
-      ? isDark
-        ? "border-white bg-white/10 ring-2 ring-white/30 ring-offset-2 ring-offset-slate-900"
-        : "border-primary bg-primary/10 ring-2 ring-primary/30 ring-offset-2 ring-offset-background"
-      : isDark
-        ? "border-white/20 hover:bg-white/10"
-        : "border-muted-foreground/50 hover:bg-muted/50"
-    const actualRing = isActual && !isSelected
-      ? isDark
-        ? "ring-2 ring-white/20 ring-offset-2 ring-offset-slate-900"
-        : "ring-2 ring-muted-foreground/40 ring-offset-2 ring-offset-background"
-      : ""
-    return `${base} ${selected} ${actualRing}`
-  }
-
-  const timeBtnClass = (isSelected: boolean, isActual: boolean) => {
-    const base = "relative flex flex-col items-center gap-0.5 p-2 rounded-lg border-2 transition-all text-xs"
+  const btnClass = (base: string, isSelected: boolean, isActual: boolean) => {
     const selected = isSelected
       ? isDark
         ? "border-white bg-white/10 ring-2 ring-white/30 ring-offset-2 ring-offset-slate-900"
@@ -225,7 +207,7 @@ export default function WeatherMoodTuningPanel({
                     return (
                       <button
                         key={type}
-                        className={weatherBtnClass(isSelected, isActualWeather)}
+                        className={btnClass("relative flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all", isSelected, isActualWeather)}
                         onClick={() => handleWeatherTypeChange(type)}
                       >
                         {isActualWeather && (
@@ -251,7 +233,7 @@ export default function WeatherMoodTuningPanel({
                     return (
                       <button
                         key={option.value}
-                        className={timeBtnClass(isSelected, isActualTime)}
+                        className={btnClass("relative flex flex-col items-center gap-0.5 p-2 rounded-lg border-2 transition-all text-xs", isSelected, isActualTime)}
                         onClick={() => handleTimeOfDayChange(option.value)}
                       >
                         {isActualTime && (
