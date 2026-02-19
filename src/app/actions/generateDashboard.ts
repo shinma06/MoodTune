@@ -112,6 +112,24 @@ async function searchTrack(
   }
 }
 
+/** 同時実行数を制限して Promise を実行（429 レート制限回避） */
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length)
+  let index = 0
+  async function worker(): Promise<void> {
+    while (index < items.length) {
+      const i = index++
+      results[i] = await fn(items[i], i)
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => worker()))
+  return results
+}
+
 /**
  * ダッシュボードデータを生成
  * エラー時は空配列を返し、Server Action が常に正常レスポンスを返すようにする（クライアントの "unexpected response" を防ぐ）
@@ -147,35 +165,38 @@ export async function generateDashboard(
       spotifyClient = null
     }
 
-    const dashboardItems: DashboardItem[] = await Promise.all(
-      playlistInfos.map(async (info, index) => {
-        let imageUrl = getMockImageUrl(info?.genre ?? "")
-        let trackUris: string[] = []
+    // レート制限(429)回避: ジャンルごとに直列、曲検索は同時2件まで
+    const SPOTIFY_SEARCH_CONCURRENCY = 2
+    const dashboardItems: DashboardItem[] = []
 
-        if (spotifyClient && Array.isArray(info.tracks) && info.tracks.length > 0) {
-          // 全楽曲を並列検索
-          const results = await Promise.all(
-            info.tracks.map((t) => searchTrack(spotifyClient!, t.artist, t.title))
-          )
+    for (let index = 0; index < playlistInfos.length; index++) {
+      const info = playlistInfos[index]
+      let imageUrl = getMockImageUrl(info?.genre ?? "")
+      let trackUris: string[] = []
 
-          for (const result of results) {
-            if (result) trackUris.push(result.uri)
-          }
+      if (spotifyClient && Array.isArray(info.tracks) && info.tracks.length > 0) {
+        const results = await mapWithConcurrency(
+          info.tracks,
+          SPOTIFY_SEARCH_CONCURRENCY,
+          (t) => searchTrack(spotifyClient!, t.artist, t.title)
+        )
 
-          // 先頭曲のジャケ写をカード画像として使用
-          const firstImage = results.find((r) => r?.imageUrl)?.imageUrl
-          if (firstImage) imageUrl = firstImage
+        for (const result of results) {
+          if (result) trackUris.push(result.uri)
         }
 
-        return {
-          id: `playlist-${index + 1}`,
-          genre: String(info?.genre ?? ""),
-          title: String(info?.title ?? ""),
-          imageUrl,
-          trackUris,
-        }
+        const firstImage = results.find((r) => r?.imageUrl)?.imageUrl
+        if (firstImage) imageUrl = firstImage
+      }
+
+      dashboardItems.push({
+        id: `playlist-${index + 1}`,
+        genre: String(info?.genre ?? ""),
+        title: String(info?.title ?? ""),
+        imageUrl,
+        trackUris,
       })
-    )
+    }
 
     return dashboardItems
   } catch (error) {
