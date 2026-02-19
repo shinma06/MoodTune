@@ -6,7 +6,7 @@ import WeatherAnimation from "./WeatherAnimation"
 import WeatherMoodTuningPanel from "./WeatherMoodTuningPanel"
 import GenreSelector, { useSelectedGenres } from "./GenreSelector"
 import { useWeather } from "@/contexts/WeatherContext"
-import { getWeatherBackground, type WeatherType } from "@/lib/weather-background"
+import { getWeatherBackground, type TimeOfDay } from "@/lib/weather-background"
 import { normalizeWeatherType } from "@/lib/weather-utils"
 import { formatGradientBackground, INITIAL_BACKGROUND_GRADIENT } from "@/lib/weather-background-utils"
 import {
@@ -29,7 +29,6 @@ import { Button } from "@/components/ui/button"
 import { generateDashboard } from "@/app/actions/generateDashboard"
 import { saveToSpotify } from "@/app/actions/saveToSpotify"
 import type { DashboardItem } from "@/types/dashboard"
-import type { TimeOfDay } from "@/lib/weather-background"
 import type { Genre } from "@/lib/constants"
 
 interface PlaylistExplorerProps {
@@ -40,7 +39,7 @@ interface PlaylistExplorerProps {
 
 export default function PlaylistExplorer({ playlists: initialPlaylists, suspended = false }: PlaylistExplorerProps) {
     const [currentIndex, setCurrentIndex] = useState(0)
-    const { isTimeInitialized, displayHour, weatherType, actualWeatherType, actualTimeOfDay, moodTuningTimeOfDay, isMoodTuning, effectiveWeather, effectiveTimeOfDay, playlistRefreshTrigger, isDark } = useWeather()
+    const { isTimeInitialized, actualWeatherType, actualTimeOfDay, isMoodTuning, effectiveWeather, effectiveTimeOfDay, playlistRefreshTrigger, isDark } = useWeather()
     /** 開いているパネル（null = 両方閉じている）。同時に1つだけ開く */
     const [openPanel, setOpenPanel] = useState<null | "mood" | "genre">(null)
     const [selectedGenres, isGenresInitialized] = useSelectedGenres()
@@ -87,9 +86,6 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
         ? REALISTIC_VINYL_THEME
         : getGenreThemeColors(currentPlaylist.genre)
 
-    /** 表示用時間帯の単一ソース（実時刻ベースと Mood Tuning 考慮） */
-    const timeOfDay = isMoodTuning && moodTuningTimeOfDay ? moodTuningTimeOfDay : actualTimeOfDay
-
     /** ローディング中かどうかを ref で保持（useCallback 内で最新値を参照するため） */
     const isLoadingRef = useRef(false)
     isLoadingRef.current = isLoading
@@ -101,9 +97,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
         setLoadingMode(options?.autoUpdate ? "auto" : "all")
         setIsLoading(true)
         try {
-            const weather = normalizeWeatherType(weatherType ?? "Clear") as WeatherType
-            const time = timeOfDay as TimeOfDay
-            const generated = await generateDashboard(weather, time, selectedGenres as Genre[])
+            const generated = await generateDashboard(effectiveWeather, effectiveTimeOfDay, selectedGenres as Genre[])
             setPlaylists(generated)
             setCurrentIndex((prev) => Math.min(prev, Math.max(0, generated.length - 1)))
         } catch (error) {
@@ -112,7 +106,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
             setIsLoading(false)
             setLoadingMode(null)
         }
-    }, [weatherType, timeOfDay, selectedGenres])
+    }, [effectiveWeather, effectiveTimeOfDay, selectedGenres])
 
     /** パネル閉時トリガー用 effect が refreshPlaylists の参照変更で再実行されないよう ref に保持 */
     const refreshPlaylistsRef = useRef(refreshPlaylists)
@@ -144,9 +138,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
         setLoadingMode("single")
         setIsLoading(true)
         try {
-            const weather = normalizeWeatherType(weatherType ?? "Clear") as WeatherType
-            const time = timeOfDay as TimeOfDay
-            const generated = await generateDashboard(weather, time, [genre])
+            const generated = await generateDashboard(effectiveWeather, effectiveTimeOfDay, [genre])
             const newItem = generated[0]
             if (!newItem) return
             setPlaylists((prev) => {
@@ -159,7 +151,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
             setIsLoading(false)
             setLoadingMode(null)
         }
-    }, [weatherType, timeOfDay, selectedGenres])
+    }, [effectiveWeather, effectiveTimeOfDay, selectedGenres])
 
     /** ジャンル差分に応じてプレイリストを更新（追加ジャンルのみAPI呼び出し。既存は currentPlaylists を再利用） */
     const updatePlaylistsWithDiff = useCallback(async (
@@ -178,9 +170,6 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
         setLoadingMode(isInitialSync ? "initial" : "added")
         setIsLoading(true)
         try {
-            const weather = normalizeWeatherType(weatherType ?? "Clear") as WeatherType
-            const time = timeOfDay as TimeOfDay
-
             const existingMap = new Map<string, DashboardItem>()
             if (currentPlaylists) {
                 currentPlaylists.forEach(p => existingMap.set(p.genre, p))
@@ -192,11 +181,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
 
             let newPlaylists: DashboardItem[] = []
             if (diff.added.length > 0) {
-                newPlaylists = await generateDashboard(
-                    weather,
-                    time,
-                    diff.added as Genre[]
-                )
+                newPlaylists = await generateDashboard(effectiveWeather, effectiveTimeOfDay, diff.added as Genre[])
             }
 
             const allMap = new Map<string, DashboardItem>()
@@ -215,7 +200,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
             setIsLoading(false)
             setLoadingMode(null)
         }
-    }, [weatherType, timeOfDay])
+    }, [effectiveWeather, effectiveTimeOfDay])
 
     /** ジャンル選択パネルの開閉（閉じたときにジャンル変更があればプレイリスト再構築）。0件時は閉じない。 */
     const handleToggleSettings = useCallback(() => {
@@ -282,9 +267,8 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
     const isMoodTuningApplied =
         openPanel !== "mood" &&
         (actualWeatherNorm != null && effectiveWeather !== actualWeatherNorm || effectiveTimeOfDay !== actualTimeOfDay)
-    const weather = normalizeWeatherType(weatherType ?? "Clear")
     const backgroundStyle = isTimeInitialized
-      ? formatGradientBackground(getWeatherBackground(weather, actualTimeOfDay))
+      ? formatGradientBackground(getWeatherBackground(effectiveWeather, actualTimeOfDay))
       : INITIAL_BACKGROUND_GRADIENT
     const genreColorClass = isDark ? "text-white/80" : "text-muted-foreground"
     const titleColorClass = isDark ? "text-white" : "text-foreground"
