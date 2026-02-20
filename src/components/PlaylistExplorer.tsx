@@ -38,7 +38,7 @@ interface PlaylistExplorerProps {
 
 export default function PlaylistExplorer({ playlists: initialPlaylists, suspended = false }: PlaylistExplorerProps) {
     const [currentIndex, setCurrentIndex] = useState(0)
-    const { isTimeInitialized, actualWeatherType, actualTimeOfDay, isMoodTuning, effectiveWeather, effectiveTimeOfDay, playlistRefreshTrigger, isCanvasBackgroundDark, isMoodTuningApplied } = useWeather()
+    const { isTimeInitialized, actualWeatherType, actualTimeOfDay, isMoodTuning, effectiveWeather, effectiveTimeOfDay, playlistRefreshTrigger, isCanvasBackgroundDark, isOverlayThemeDark, isMoodTuningApplied } = useWeather()
     /** 開いているパネル（null = 両方閉じている）。同時に1つだけ開く */
     const [openPanel, setOpenPanel] = useState<null | "mood" | "genre">(null)
     const [selectedGenres, isGenresInitialized] = useSelectedGenres()
@@ -347,7 +347,14 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
                     className={`
                       fixed bottom-12 right-4 z-50 size-[3.1rem] rounded-[1.2rem] bg-background/80 backdrop-blur-sm
                       [&_svg]:size-6
-                      ${openPanel === "genre" ? "bg-primary text-primary-foreground" : ""}
+                      ${openPanel === "genre"
+                        ? isOverlayThemeDark
+                          ? "bg-white/15 text-white border-white/40 hover:bg-white/25 hover:text-white"
+                          : "bg-primary text-primary-foreground hover:bg-primary/90"
+                        : isOverlayThemeDark
+                          ? "hover:bg-white/10 hover:text-white/90 hover:border-white/40"
+                          : "hover:bg-background hover:text-foreground hover:border-border"
+                      }
                     `}
                     aria-label={openPanel === "genre" && selectedGenres.length === 0 ? "1つ以上ジャンルを選択すると閉じられます" : openPanel === "genre" ? "Favorite Musicパネルを閉じる" : "Favorite Musicパネルを開く"}
                 >
@@ -357,7 +364,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
 
             {/* Settings Panel with Genre Selector（ボタンの上に表示）。構築中は非表示 */}
             {openPanel === "genre" && !isLoading && (
-                <div className="fixed bottom-24 right-4 z-50 w-80 max-w-[calc(100vw-2rem)]">
+                <div className="fixed bottom-26 right-4 z-50 w-80 max-w-[calc(100vw-2rem)]">
                     <GenreSelector />
                 </div>
             )}

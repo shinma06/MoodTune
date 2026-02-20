@@ -162,7 +162,14 @@ export default function WeatherMoodTuningPanel({
             className={`
               size-[3.1rem] bg-background/80 backdrop-blur-sm [&_svg]:size-6
               ${showRainbowButton ? "rounded-[calc(1.2rem-2px)] border-0" : "rounded-[1.2rem]"}
-              ${isOpen ? "bg-primary text-primary-foreground" : ""}
+              ${isOpen
+                ? isOverlayThemeDark
+                  ? "bg-white/15 text-white border-white/40 hover:bg-white/25 hover:text-white"
+                  : "bg-primary text-primary-foreground hover:bg-primary/90"
+                : isOverlayThemeDark
+                  ? "hover:bg-white/10 hover:text-white/90 hover:border-white/40"
+                  : "hover:bg-background hover:text-foreground hover:border-border"
+              }
             `}
             onClick={handleTogglePanel}
             aria-label={isOpen ? "Mood Tuningパネルを閉じる" : "Mood Tuningパネルを開く"}
@@ -173,7 +180,7 @@ export default function WeatherMoodTuningPanel({
       )}
 
       {isOpen && (
-        <div className="fixed bottom-24 left-4 z-50 w-80 max-w-[calc(100vw-2rem)]">
+        <div className="fixed bottom-26 left-4 z-50 w-80 max-w-[calc(100vw-2rem)]">
           <Card className={`w-full backdrop-blur-sm ${isOverlayThemeDark ? "bg-slate-900/95 border-white/10" : "bg-background/80 border-border/50"}`}>
             <CardHeader>
               <CardTitle className={`text-base font-semibold flex items-center gap-2.5 ${isOverlayThemeDark ? "text-white" : ""}`}>
