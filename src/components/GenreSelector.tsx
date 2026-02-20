@@ -27,7 +27,7 @@ export default function GenreSelector() {
     DEFAULT_SELECTED_GENRES,
     { validate: isValidGenreArray }
   )
-  const { isDark } = useWeather()
+  const { isOverlayThemeDark } = useWeather()
 
   const toggleGenre = (genre: Genre) => {
     setSelectedGenres((prev) => {
@@ -56,7 +56,7 @@ export default function GenreSelector() {
   const isMaxReached = selectedGenres.length >= MAX_SELECTED_GENRES
   const isEmpty = selectedGenres.length === 0
 
-  if (isDark) {
+  if (isOverlayThemeDark) {
     return (
       <div className="w-full rounded-2xl bg-slate-900/95 border border-white/10 shadow-xl">
         <div className="px-4 pt-4 pb-3">

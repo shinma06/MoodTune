@@ -39,7 +39,7 @@ interface PlaylistExplorerProps {
 
 export default function PlaylistExplorer({ playlists: initialPlaylists, suspended = false }: PlaylistExplorerProps) {
     const [currentIndex, setCurrentIndex] = useState(0)
-    const { isTimeInitialized, actualWeatherType, actualTimeOfDay, isMoodTuning, effectiveWeather, effectiveTimeOfDay, playlistRefreshTrigger, isDark } = useWeather()
+    const { isTimeInitialized, actualWeatherType, actualTimeOfDay, isMoodTuning, effectiveWeather, effectiveTimeOfDay, playlistRefreshTrigger, isCanvasBackgroundDark } = useWeather()
     /** 開いているパネル（null = 両方閉じている）。同時に1つだけ開く */
     const [openPanel, setOpenPanel] = useState<null | "mood" | "genre">(null)
     const [selectedGenres, isGenresInitialized] = useSelectedGenres()
@@ -269,8 +269,8 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
     const backgroundStyle = isTimeInitialized
       ? formatGradientBackground(getWeatherBackground(effectiveWeather, effectiveTimeOfDay))
       : INITIAL_BACKGROUND_GRADIENT
-    const genreColorClass = isDark ? "text-white/80" : "text-muted-foreground"
-    const titleColorClass = isDark ? "text-white" : "text-foreground"
+    const genreColorClass = isCanvasBackgroundDark ? "text-white/80" : "text-muted-foreground"
+    const titleColorClass = isCanvasBackgroundDark ? "text-white" : "text-foreground"
 
     const {
         rotation,
@@ -379,7 +379,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
                     className={`text-center space-y-0.5 shrink-0 min-h-12 ${isLoading || openPanel === "mood" || openPanel === "genre" ? "invisible" : ""}`}
                     aria-hidden={isLoading || openPanel === "mood" || openPanel === "genre"}
                 >
-                    <p className={`text-[10px] font-light whitespace-nowrap flex items-center justify-center gap-1 ${isDark ? "text-white/80" : "text-muted-foreground/70"}`}>
+                    <p className={`text-[10px] font-light whitespace-nowrap flex items-center justify-center gap-1 ${isCanvasBackgroundDark ? "text-white/80" : "text-muted-foreground/70"}`}>
                         {selectedGenres.length <= 1 ? (
                             <>
                                 <Music className="w-3 h-3 shrink-0" aria-hidden />
@@ -390,7 +390,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
                         )}
                     </p>
                     <div className="flex items-center justify-center gap-2 flex-wrap">
-                        <p className={`text-[9px] font-light whitespace-nowrap ${isDark ? "text-white/60" : "text-muted-foreground/50"}`}>
+                        <p className={`text-[9px] font-light whitespace-nowrap ${isCanvasBackgroundDark ? "text-white/60" : "text-muted-foreground/50"}`}>
                             {selectedGenres.length === 0
                                 ? "1つ以上選択するとスピンで再構築できます"
                                 : selectedGenres.length === 1
@@ -513,7 +513,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
                     aria-hidden={!regenerateMessage}
                 >
                     <span
-                        className={`text-xs font-medium whitespace-nowrap ${isDark ? "text-white/90" : "text-foreground/90"}`}
+                        className={`text-xs font-medium whitespace-nowrap ${isCanvasBackgroundDark ? "text-white/90" : "text-foreground/90"}`}
                     >
                         {regenerateMessage ?? "\u00A0"}
                     </span>
@@ -562,7 +562,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
                     <div className={`p-[2px] rounded-lg shrink-0 w-[calc(6rem+4px)] h-[calc(6rem+4px)] sm:w-[calc(8rem+4px)] sm:h-[calc(8rem+4px)] ${isMoodTuningApplied ? "bg-rainbow" : ""}`}>
                         {isLoadingOrEmpty ? (
                             <div className={`w-24 h-24 sm:w-32 sm:h-32 bg-muted/50 animate-pulse flex items-center justify-center ${isMoodTuningApplied ? "rounded-[calc(1rem-2px)]" : "rounded-lg"}`}>
-                                <Music className={`w-6 h-6 sm:w-8 sm:h-8 ${isDark ? "text-white/30" : "text-muted-foreground/30"}`} />
+                                <Music className={`w-6 h-6 sm:w-8 sm:h-8 ${isCanvasBackgroundDark ? "text-white/30" : "text-muted-foreground/30"}`} />
                             </div>
                         ) : (
                             <img

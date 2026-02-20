@@ -62,7 +62,7 @@ interface Props {
 
 export default function TutorialModal({ onComplete }: Props) {
   const [currentStep, setCurrentStep] = useState(0)
-  const { isDark } = useWeather()
+  const { isOverlayThemeDark } = useWeather()
 
   const step = TUTORIAL_STEPS[currentStep]
   const isFirstStep = currentStep === 0
@@ -70,7 +70,7 @@ export default function TutorialModal({ onComplete }: Props) {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center backdrop-blur-sm bg-black/50 p-4">
-      <div className={`w-full max-w-md rounded-2xl border shadow-2xl flex flex-col max-h-[90vh] ${isDark ? "bg-slate-900/95 border-white/10" : "bg-background/95 border-border/50"}`}>
+      <div className={`w-full max-w-md rounded-2xl border shadow-2xl flex flex-col max-h-[90vh] ${isOverlayThemeDark ? "bg-slate-900/95 border-white/10" : "bg-background/95 border-border/50"}`}>
         {/* ヘッダー */}
         <div className="flex items-center justify-between px-6 pt-5 pb-3">
           <div className="flex gap-1.5">
@@ -79,17 +79,17 @@ export default function TutorialModal({ onComplete }: Props) {
                 key={i}
                 className={`rounded-full transition-all duration-300 ${
                   i === currentStep
-                    ? `w-4 h-1.5 ${isDark ? "bg-white" : "bg-primary"}`
+                    ? `w-4 h-1.5 ${isOverlayThemeDark ? "bg-white" : "bg-primary"}`
                     : i < currentStep
-                    ? `w-1.5 h-1.5 ${isDark ? "bg-white/60" : "bg-primary/50"}`
-                    : `w-1.5 h-1.5 ${isDark ? "bg-white/20" : "bg-border"}`
+                    ? `w-1.5 h-1.5 ${isOverlayThemeDark ? "bg-white/60" : "bg-primary/50"}`
+                    : `w-1.5 h-1.5 ${isOverlayThemeDark ? "bg-white/20" : "bg-border"}`
                 }`}
               />
             ))}
           </div>
           <button
             onClick={onComplete}
-            className={`text-xs transition-colors ${isDark ? "text-white/40 hover:text-white/70" : "text-muted-foreground hover:text-foreground"}`}
+            className={`text-xs transition-colors ${isOverlayThemeDark ? "text-white/40 hover:text-white/70" : "text-muted-foreground hover:text-foreground"}`}
           >
             スキップ
           </button>
@@ -102,7 +102,7 @@ export default function TutorialModal({ onComplete }: Props) {
           </div>
 
           <div className="space-y-2 mb-4">
-            <h2 className={`text-lg font-semibold ${isDark ? "text-white" : "text-foreground"}`}>
+            <h2 className={`text-lg font-semibold ${isOverlayThemeDark ? "text-white" : "text-foreground"}`}>
               {step.title.includes("Mood Tuning") ? (
                 <>
                   <span className="text-rainbow">Mood Tuning</span>
@@ -110,7 +110,7 @@ export default function TutorialModal({ onComplete }: Props) {
                 </>
               ) : step.title}
             </h2>
-            <p className={`text-sm leading-relaxed ${isDark ? "text-white/60" : "text-muted-foreground"}`}>{step.description}</p>
+            <p className={`text-sm leading-relaxed ${isOverlayThemeDark ? "text-white/60" : "text-muted-foreground"}`}>{step.description}</p>
           </div>
         </div>
 
@@ -119,14 +119,14 @@ export default function TutorialModal({ onComplete }: Props) {
           {!isFirstStep && (
             <Button
               onClick={() => setCurrentStep((prev) => prev - 1)}
-              className={`flex-1 rounded-full font-semibold ${isDark ? "bg-white/10 text-white hover:bg-white/20" : "bg-foreground/5 text-foreground hover:bg-foreground/10"}`}
+              className={`flex-1 rounded-full font-semibold ${isOverlayThemeDark ? "bg-white/10 text-white hover:bg-white/20" : "bg-foreground/5 text-foreground hover:bg-foreground/10"}`}
             >
               戻る
             </Button>
           )}
           <Button
             onClick={isLastStep ? onComplete : () => setCurrentStep((prev) => prev + 1)}
-            className={`flex-1 rounded-full font-semibold ${isDark ? "bg-white text-slate-900 hover:bg-white/90" : "bg-primary text-primary-foreground hover:bg-primary/90"}`}
+            className={`flex-1 rounded-full font-semibold ${isOverlayThemeDark ? "bg-white text-slate-900 hover:bg-white/90" : "bg-primary text-primary-foreground hover:bg-primary/90"}`}
           >
             {isLastStep ? "はじめる" : "次へ"}
           </Button>

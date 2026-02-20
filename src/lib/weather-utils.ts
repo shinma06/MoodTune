@@ -101,17 +101,17 @@ const WEATHER_THEME_COLORS: Record<WeatherType, { light: string; dark: string }>
 
 /**
  * 天気タイプごとのアイコン用テーマカラーを返す。
- * @param isDark true のとき暗い背景用の色を返す（視認性を確保）
+ * @param darkBackground true のとき暗い背景用の色を返す（視認性確保）。キャンバス上のテキスト・アイコンには isCanvasBackgroundDark、モーダル・パネル内には isOverlayThemeDark を渡す。
  */
 export function getWeatherThemeColor(
   weatherType: WeatherType,
   timeOfDay?: TimeOfDay,
-  isDark = false
+  darkBackground = false
 ): string {
   if (weatherType === "Clear" && timeOfDay === "night") {
-    return isDark ? "#B0B0FF" : "#C0C0FF"
+    return darkBackground ? "#B0B0FF" : "#C0C0FF"
   }
   const colors = WEATHER_THEME_COLORS[weatherType]
-  return colors ? (isDark ? colors.dark : colors.light) : (isDark ? "#FFE55C" : "#FFD700")
+  return colors ? (darkBackground ? colors.dark : colors.light) : (darkBackground ? "#FFE55C" : "#FFD700")
 }
 

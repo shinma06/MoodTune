@@ -36,7 +36,7 @@ export default function WeatherMoodTuningPanel({
     displayHour,
     effectiveTimeOfDay,
     effectiveWeather,
-    isDark,
+    isOverlayThemeDark,
     weatherType,
     setWeatherType,
     actualWeatherType,
@@ -135,14 +135,14 @@ export default function WeatherMoodTuningPanel({
 
   const btnClass = (base: string, isSelected: boolean, isActual: boolean) => {
     const selected = isSelected
-      ? isDark
+      ? isOverlayThemeDark
         ? "border-white bg-white/10 ring-2 ring-white/30 ring-offset-2 ring-offset-slate-900"
         : "border-primary bg-primary/10 ring-2 ring-primary/30 ring-offset-2 ring-offset-background"
-      : isDark
+      : isOverlayThemeDark
         ? "border-white/20 hover:bg-white/10"
         : "border-muted-foreground/50 hover:bg-muted/50"
     const actualRing = isActual && !isSelected
-      ? isDark
+      ? isOverlayThemeDark
         ? "ring-2 ring-white/20 ring-offset-2 ring-offset-slate-900"
         : "ring-2 ring-muted-foreground/40 ring-offset-2 ring-offset-background"
       : ""
@@ -174,23 +174,23 @@ export default function WeatherMoodTuningPanel({
 
       {isOpen && (
         <div className="fixed bottom-24 left-4 z-50 w-80 max-w-[calc(100vw-2rem)]">
-          <Card className={`w-full backdrop-blur-sm ${isDark ? "bg-slate-900/95 border-white/10" : "bg-background/80 border-border/50"}`}>
+          <Card className={`w-full backdrop-blur-sm ${isOverlayThemeDark ? "bg-slate-900/95 border-white/10" : "bg-background/80 border-border/50"}`}>
             <CardHeader>
-              <CardTitle className={`text-base font-semibold flex items-center gap-2.5 ${isDark ? "text-white" : ""}`}>
+              <CardTitle className={`text-base font-semibold flex items-center gap-2.5 ${isOverlayThemeDark ? "text-white" : ""}`}>
                 <Sparkles className="w-5 h-5 shrink-0" />
                 <span className="text-rainbow">Mood Tuning</span>
               </CardTitle>
-              <CardDescription className={`text-xs ${isDark ? "text-white/60" : ""}`}>
+              <CardDescription className={`text-xs ${isOverlayThemeDark ? "text-white/60" : ""}`}>
                 天気や時間帯を選んで、今の気分に合わせたプレイリストを作成
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0 space-y-4">
               <div className="space-y-2">
-                <Label className={`text-sm ${isDark ? "text-white" : ""}`}>天気</Label>
+                <Label className={`text-sm ${isOverlayThemeDark ? "text-white" : ""}`}>天気</Label>
                 <div className="grid grid-cols-3 gap-2">
                   {WEATHER_TYPES.map((type) => {
                     const Icon = getWeatherIcon(type)
-                    const color = getWeatherThemeColor(type, undefined, isDark)
+                    const color = getWeatherThemeColor(type, undefined, isOverlayThemeDark)
                     const isSelected = currentWeatherType === type
                     const isActualWeather = actualWeatherTypeNormalized === type
                     return (
@@ -200,12 +200,12 @@ export default function WeatherMoodTuningPanel({
                         onClick={() => handleWeatherTypeChange(type)}
                       >
                         {isActualWeather && (
-                          <span className={`absolute -top-1 -right-1 rounded px-1 text-[9px] font-medium ring-1 ${isDark ? "bg-white/30 text-white ring-slate-900" : "bg-muted-foreground text-background ring-background"}`}>
+                          <span className={`absolute -top-1 -right-1 rounded px-1 text-[9px] font-medium ring-1 ${isOverlayThemeDark ? "bg-white/30 text-white ring-slate-900" : "bg-muted-foreground text-background ring-background"}`}>
                             現在
                           </span>
                         )}
                         <Icon className="w-5 h-5" style={{ color }} />
-                        <span className={`text-xs ${isDark ? "text-white/80" : ""}`}>{WEATHER_TYPE_LABELS[type]}</span>
+                        <span className={`text-xs ${isOverlayThemeDark ? "text-white/80" : ""}`}>{WEATHER_TYPE_LABELS[type]}</span>
                       </button>
                     )
                   })}
@@ -214,7 +214,7 @@ export default function WeatherMoodTuningPanel({
 
               {/* 時間帯選択 */}
               <div className="space-y-2">
-                <Label className={`text-sm ${isDark ? "text-white" : ""}`}>時間帯</Label>
+                <Label className={`text-sm ${isOverlayThemeDark ? "text-white" : ""}`}>時間帯</Label>
                 <div className="grid grid-cols-4 gap-2">
                   {TIME_OF_DAY_OPTIONS.map((option) => {
                     const isSelected = effectiveTimeOfDay === option.value
@@ -226,11 +226,11 @@ export default function WeatherMoodTuningPanel({
                         onClick={() => handleTimeOfDayChange(option.value)}
                       >
                         {isActualTime && (
-                          <span className={`absolute -top-1 -right-1 rounded px-1 text-[9px] font-medium ring-1 ${isDark ? "bg-white/30 text-white ring-slate-900" : "bg-muted-foreground text-background ring-background"}`}>
+                          <span className={`absolute -top-1 -right-1 rounded px-1 text-[9px] font-medium ring-1 ${isOverlayThemeDark ? "bg-white/30 text-white ring-slate-900" : "bg-muted-foreground text-background ring-background"}`}>
                             現在
                           </span>
                         )}
-                        <span className={`block leading-tight ${isSelected ? isDark ? "text-white font-medium" : "text-primary font-medium" : isDark ? "text-white/70" : ""}`}>
+                        <span className={`block leading-tight ${isSelected ? isOverlayThemeDark ? "text-white font-medium" : "text-primary font-medium" : isOverlayThemeDark ? "text-white/70" : ""}`}>
                           <span className="block">{TIME_OF_DAY_LABELS[option.value]}</span>
                           <span className="block text-[10px] opacity-90">{option.timeRange}</span>
                         </span>
@@ -245,12 +245,12 @@ export default function WeatherMoodTuningPanel({
                   <Button
                     onClick={handleReset}
                     variant="outline"
-                    className={`w-full ${isDark ? "border-white/50 bg-white/15 text-white hover:bg-white/25 hover:text-white hover:border-white/60" : ""}`}
+                    className={`w-full ${isOverlayThemeDark ? "border-white/50 bg-white/15 text-white hover:bg-white/25 hover:text-white hover:border-white/60" : ""}`}
                     size="sm"
                   >
                     実際の天気・時間に戻す
                   </Button>
-                  <div className={`pt-2 border-t text-xs space-y-1 ${isDark ? "border-white/20 text-white/60" : "text-muted-foreground"}`}>
+                  <div className={`pt-2 border-t text-xs space-y-1 ${isOverlayThemeDark ? "border-white/20 text-white/60" : "text-muted-foreground"}`}>
                     <div>
                       現在の設定: <span className="font-mono">{currentWeatherType ? WEATHER_TYPE_LABELS[currentWeatherType] : "-"}</span> / {currentTimeOfDayLabel}
                     </div>

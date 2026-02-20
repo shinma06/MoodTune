@@ -15,7 +15,7 @@ export default function WeatherMonitor() {
         status: "loading",
         message: "位置情報を取得中...",
     })
-    const { effectiveTimeOfDay, isDark, setWeatherType, setActualWeatherType, weatherType, isMoodTuning } = useWeather()
+    const { effectiveTimeOfDay, isCanvasBackgroundDark, setWeatherType, setActualWeatherType, weatherType, isMoodTuning } = useWeather()
 
     const isMoodTuningRef = useRef(isMoodTuning)
     useEffect(() => {
@@ -101,15 +101,15 @@ export default function WeatherMonitor() {
         ? getWeatherIcon(displayWeatherType, effectiveTimeOfDay)
         : null
     
-    // isDark は Context の単一ソースから取得（背景と常に一致）
+    // isCanvasBackgroundDark: キャンバス背景の明暗に連動（画面上のテキスト・アイコン視認性用）
     const iconColor = displayWeatherType
-        ? getWeatherThemeColor(displayWeatherType, effectiveTimeOfDay, isDark)
+        ? getWeatherThemeColor(displayWeatherType, effectiveTimeOfDay, isCanvasBackgroundDark)
         : undefined
     
-    const textColorClass = isDark ? "text-white" : ""
-    const mutedTextColorClass = isDark ? "text-white/80" : "text-muted-foreground/60"
-    const mutedTextColorClass2 = isDark ? "text-white/70" : "text-muted-foreground/70"
-    const mutedTextColorClass3 = isDark ? "text-white/60" : "text-muted-foreground/80"
+    const textColorClass = isCanvasBackgroundDark ? "text-white" : ""
+    const mutedTextColorClass = isCanvasBackgroundDark ? "text-white/80" : "text-muted-foreground/60"
+    const mutedTextColorClass2 = isCanvasBackgroundDark ? "text-white/70" : "text-muted-foreground/70"
+    const mutedTextColorClass3 = isCanvasBackgroundDark ? "text-white/60" : "text-muted-foreground/80"
 
     const handleRetry = () => {
         setWeatherState({ status: "loading", message: "位置情報を取得中..." })

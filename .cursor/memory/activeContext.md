@@ -23,7 +23,7 @@ UI/UX 改善とコードベースのリファクタリング、Vibeコーディ�
   - `fetchWeatherData`: 天気と Geocoding を `Promise.all` で並列取得。都市名は Geocoding の `city` を優先し、失敗・空の場合は天気APIの `name`（OWM 時のみ）にフォールバック
 - 初回アクセス時の背景・時間帯の初期化修正:
   - `WeatherContext`: `isTimeInitialized` を追加。SSR/初回はサーバー時刻に依存せず、`displayHour` を 0 で初期化。`useEffect` でクライアント現地時刻を設定したあと `isTimeInitialized = true` にし、時間帯に応じた背景を有効化
-  - 未初期化時は `effectiveTimeOfDay = "day"`, `isDark = false` で中性背景時の UI と揃える
+  - 未初期化時は `effectiveTimeOfDay = "day"`, `isCanvasBackgroundDark` / `isOverlayThemeDark` ともに false で中性背景時の UI と揃える
   - `weather-background-utils.ts`: `INITIAL_BACKGROUND_GRADIENT` 定数を追加（中性グラデーション）
   - `PlaylistExplorer`: `isTimeInitialized` が true になるまで `INITIAL_BACKGROUND_GRADIENT` を使用し、確定後に天気・時間帯に応じた背景へ切り替え
   - `layout.tsx`: body に `INITIAL_BACKGROUND_GRADIENT` を付与し、コンテンツ到着前も白画面を避ける
@@ -37,11 +37,11 @@ UI/UX 改善とコードベースのリファクタリング、Vibeコーディ�
   - `weather-utils.ts`: `WEATHER_ICON_MAP`, `WEATHER_THEME_COLORS`, `WEATHER_THEME_COLORS_DARK` を静的定数化
 
 - Context による単一ソース化（背景・テキスト色・天気・時間帯）:
-  - `WeatherContext` に `effectiveTimeOfDay`, `effectiveWeather`, `isDark` を追加
+  - `WeatherContext` に `effectiveTimeOfDay`, `effectiveWeather`, `isCanvasBackgroundDark`, `isOverlayThemeDark` を提供
   - `effectiveTimeOfDay`: `moodTuningTimeOfDay` を考慮した表示用時間帯
   - `effectiveWeather`: `normalizeWeatherType` を適用した表示用天気
-  - `isDark`: 背景が暗いかどうか（`isDarkBackground` の結果）
-  - 全コンポーネント（`PlaylistExplorer`, `WeatherMonitor`, `WeatherMoodTuningPanel`, `WeatherAnimation`）が Context から取得し、常に一致
+  - **isCanvasBackgroundDark**: キャンバス（背景）が暗いか。画面上のテキスト・アイコン視認性用。天気×時間帯で算出。`WeatherMonitor`, `PlaylistExplorer` の画面上要素が参照
+  - **isOverlayThemeDark**: モーダル・パネル等オーバーレイのライト/ダークテーマ。時間帯のみで判定。`WeatherMoodTuningPanel`, `GenreSelector`, 各オンボーディングモーダルが参照
 - テキスト色の視認性を堅牢化:
   - `getTopColor` で dusk 時に暗い扱いにする天気を拡張（Clouds/Drizzle/Mist/Haze を追加し、グラデーション下部の視認性を確保）
 - 表示用時刻の単一ソース（displayHour）:

@@ -47,8 +47,8 @@ interface Props {
 
 export default function GenreSelectModal({ onComplete }: Props) {
   const [selectedGenres, setSelectedGenres] = useState<Genre[]>(DEFAULT_SELECTED_GENRES)
-  const { isDark } = useWeather()
-  const s = isDark ? DARK_STYLES : LIGHT_STYLES
+  const { isOverlayThemeDark } = useWeather()
+  const s = isOverlayThemeDark ? DARK_STYLES : LIGHT_STYLES
 
   const toggleGenre = (genre: Genre) => {
     setSelectedGenres((prev) => {

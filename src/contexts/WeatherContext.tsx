@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from "react"
-import { getTimeOfDay, type TimeOfDay, type WeatherType } from "@/lib/weather-background"
+import { getTimeOfDay, isDarkBackground, type TimeOfDay, type WeatherType } from "@/lib/weather-background"
 import { normalizeWeatherType } from "@/lib/weather-utils"
 
 interface WeatherContextType {
@@ -15,8 +15,10 @@ interface WeatherContextType {
   effectiveTimeOfDay: TimeOfDay
   /** normalizeWeatherType を適用した表示用天気（単一ソース） */
   effectiveWeather: WeatherType
-  /** UIが暗いかどうか。時間帯のみで判定（6〜17時＝ライト、それ以外＝ダーク）。背景・天気には紐づけない。 */
-  isDark: boolean
+  /** キャンバス（背景）が暗いか。画面上のテキスト・アイコンの視認性用。天気×時間帯で算出。 */
+  isCanvasBackgroundDark: boolean
+  /** モーダル・パネル等オーバーレイのライト/ダークテーマ。時間帯のみで判定（dusk/night＝ダーク）。 */
+  isOverlayThemeDark: boolean
   weatherType: string | null
   setWeatherType: (weather: string | null) => void
   /** APIから取得した実際の天気（手動設定をやめるときの復帰用） */
@@ -73,8 +75,14 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
     return normalizeWeatherType(weatherType ?? "Clear")
   }, [weatherType])
 
-  /** UIの明暗。実際の時間帯のみで判定（夕方・夜＝ダーク）。背景の明暗や天気には影響されない。 */
-  const isDark = useMemo(() => {
+  /** キャンバス背景が暗いか。画面上のテキスト・アイコン視認性用。天気×時間帯で算出（以前の isDarkBackground 相当）。 */
+  const isCanvasBackgroundDark = useMemo(() => {
+    if (!isTimeInitialized) return false
+    return isDarkBackground(effectiveWeather, actualTimeOfDay)
+  }, [isTimeInitialized, effectiveWeather, actualTimeOfDay])
+
+  /** オーバーレイのテーマ。モーダル・パネル用。時間帯のみで判定（夕方・夜＝ダーク）。 */
+  const isOverlayThemeDark = useMemo(() => {
     if (!isTimeInitialized) return false
     return actualTimeOfDay === "dusk" || actualTimeOfDay === "night"
   }, [isTimeInitialized, actualTimeOfDay])
@@ -91,7 +99,8 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
         actualTimeOfDay,
         effectiveTimeOfDay,
         effectiveWeather,
-        isDark,
+        isCanvasBackgroundDark,
+        isOverlayThemeDark,
         weatherType,
         setWeatherType,
         actualWeatherType,
