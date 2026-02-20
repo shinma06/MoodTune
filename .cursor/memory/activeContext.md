@@ -6,6 +6,40 @@ UI/UX 改善とコードベースのリファクタリング、Vibeコーディ�
 
 ## 最近の変更履歴
 
+- Settings パネル文言・UI の最終調整:
+  - `Favorite Music` を `Select Genre` に改名
+  - Settings は一覧→詳細の 2 段階 UI、詳細はフラット 1 パネルに統一（ネストCardを排除）
+  - 詳細ヘッダーは「戻る」上段＋項目名下段に統一。見出しと設定本体は余白で分離
+  - Account ボタンは Spotify ネイティブ風を維持しつつ、ログアウト時のみ hover を赤系に変更
+  - モックモード時も Account にログイン導線を表示し、ボタン文言は常に「Spotifyでログイン」
+  - 音符エフェクトの出現位置を下方向へ大きくオフセットし、サイズを 1.4x 相当に調整
+- 設定パネルの情報設計を 2 段階に再構成（縦長解消）:
+  - `SettingsPanel` を「一覧（menu）」と「詳細（favorite/appearance/playback）」に分割
+  - 初期表示は **Favorite Music / Appearance / Playback** と Account のみ
+  - 各詳細画面に左上の戻るボタンを追加し、一覧へ戻れる導線を実装
+  - `appearance` 詳細では UI テーマと Mood Tuning 中の天気表示のみを表示
+  - `playback` 詳細では自動回転・トーンアーム・音符エフェクトのみを表示
+- UI テーマ設定の適用範囲を明確化:
+  - `themePreference` は `isOverlayThemeDark`（モーダル/パネル）のみに反映
+  - `isCanvasBackgroundDark` は `effectiveWeather × effectiveTimeOfDay` の静的テーブルで判定（メイン画面の視認性用途）
+  - `isOverlayThemeDark` と `isCanvasBackgroundDark` は依存を持たない独立判定
+- 設定パネル（Settings）導入と UI カスタマイズ機能の追加:
+  - `SettingsPanel.tsx` を新規作成し、既存 `GenreSelector` を内包した単一設定パネルに拡張
+  - 設定項目を追加: UI テーマ（time/light/dark/system）、自動回転 ON/OFF、トーンアーム表示 ON/OFF、音符エフェクト ON/OFF、Mood Tuning 中の天気表示（tuning/actual）
+  - 右下トグルを Music アイコンから Settings アイコンへ変更し、設定パネル開閉の文言を更新
+  - 本番時の Account セクションを追加（未ログイン時: `/api/auth/spotify` へログイン、ログイン時: `/api/auth/signout` でログアウト）
+  - `useSettings.ts` を新規追加し、設定群の localStorage 永続化を一元化
+- テーマ判定の単一ソースを WeatherContext に統合:
+  - `WeatherContext` に `themePreference` / `setThemePreference` を追加
+  - `system` 選択時は `prefers-color-scheme` を購読して UI テーマに反映
+  - `isOverlayThemeDark` は `themePreference`（time/light/dark/system）を返し、`isCanvasBackgroundDark` は視認性専用テーブル判定を返すように分離
+- レコード表示の設定連動:
+  - `useVinylRotation` に `idleEnabled` を追加し、自動回転設定でアイドル回転を停止可能に
+  - `PlaylistExplorer` で `tonearmVisible` によるトーンアーム表示切替を実装
+  - `FloatingNoteEffect.tsx` を新規作成し、レコード右上付近から音符が浮遊・フェードアウトする表現を追加（設定で ON/OFF）
+  - `globals.css` に音符エフェクト用アニメーション（`motion-note-float` / `@keyframes note-float`）を追加
+- Mood Tuning 中の天気表示切替:
+  - `WeatherMonitor` で設定値 `moodTuningWeatherDisplay` を参照し、`tuning` なら従来どおり虹 UI、`actual` なら実際の天気表示かつ「天気アイコン/天候名」の虹 UI のみ無効化
 - 実装の命名を Test から Mood Tuning に統一:
   - `WeatherContext`: `testTimeOfDay` → `moodTuningTimeOfDay`, `setTestTimeOfDay` → `setMoodTuningTimeOfDay`, `isTestMode` → `isMoodTuning`, `setIsTestMode` → `setIsMoodTuning`
   - `WeatherTestPanel.tsx` を `WeatherMoodTuningPanel.tsx` にリネーム、コンポーネント名・Props 型も `WeatherMoodTuningPanel` / `WeatherMoodTuningPanelProps` に変更
@@ -46,8 +80,8 @@ UI/UX 改善とコードベースのリファクタリング、Vibeコーディ�
   - `WeatherContext` に `effectiveTimeOfDay`, `effectiveWeather`, `isCanvasBackgroundDark`, `isOverlayThemeDark` を提供
   - `effectiveTimeOfDay`: `moodTuningTimeOfDay` を考慮した表示用時間帯
   - `effectiveWeather`: `normalizeWeatherType` を適用した表示用天気
-  - **isCanvasBackgroundDark**: キャンバス（背景）が暗いか。画面上のテキスト・アイコン視認性用。天気×時間帯で算出。`WeatherMonitor`, `PlaylistExplorer` の画面上要素が参照
-  - **isOverlayThemeDark**: モーダル・パネル等オーバーレイのライト/ダークテーマ。時間帯のみで判定。`WeatherMoodTuningPanel`, `GenreSelector`, 各オンボーディングモーダルが参照
+  - **isCanvasBackgroundDark**: 画面上の文字・アイコンに使う UI テーマ（time/light/dark/system）の暗色判定
+  - **isOverlayThemeDark**: モーダル・パネル等オーバーレイに使う UI テーマ（time/light/dark/system）の暗色判定
 - テキスト色の視認性を堅牢化:
   - `getTopColor` で dusk 時に暗い扱いにする天気を拡張（Clouds/Drizzle/Mist/Haze を追加し、グラデーション下部の視認性を確保）
 - 表示用時刻の単一ソース（displayHour）:

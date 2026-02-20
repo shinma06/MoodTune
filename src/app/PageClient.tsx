@@ -14,7 +14,7 @@ export default function PageClient({ isUnauthenticated }: Props) {
 
   return (
     <>
-      <PlaylistExplorer suspended={genreSelectPending} />
+      <PlaylistExplorer suspended={genreSelectPending} isUnauthenticated={isUnauthenticated} />
       <OnboardingOrchestrator
         isUnauthenticated={isUnauthenticated}
         onInitialized={(needsGenreSelect) => setGenreSelectPending(needsGenreSelect)}

@@ -42,7 +42,8 @@ actualWeatherType / actualTimeOfDay   → 実際の天気・時間帯
 weatherType / moodTuningTimeOfDay     → Mood Tuning で設定した値（Context）
 effectiveWeather / effectiveTimeOfDay → 表示用（Mood Tuning があればそちら優先）
 isCanvasBackgroundDark                → 背景上のテキスト・アイコン視認性
-isOverlayThemeDark                    → モーダル・パネルのテーマ明暗
+themePreference                       → Settings で選ぶ overlay テーマ（time/light/dark/system）
+isOverlayThemeDark                    → モーダル・パネルのテーマ明暗（themePreference を反映。canvas判定とは独立）
 displayHour                           → 表示用時刻（1分ごと更新）
 playlistRefreshTrigger                → プレイリスト再生成のトリガー
 ```
@@ -59,7 +60,7 @@ playlistRefreshTrigger                → プレイリスト再生成のトリ�
 ### PlaylistExplorer のデータフロー
 
 ```
-1. Context から effectiveWeather / effectiveTimeOfDay / isCanvasBackgroundDark を取得
+1. Context から effectiveWeather / effectiveTimeOfDay / isCanvasBackgroundDark / isOverlayThemeDark を取得
 2. useSelectedGenres から現在のジャンル配列を取得
 3. ジャンル差分・天気変化を検知してプレイリスト更新
 4. 差分更新（追加ジャンルのみ API）/ 全件更新（Mood Tuning 閉じ時）

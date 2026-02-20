@@ -51,6 +51,30 @@ export const GENRE_STORAGE_KEY = "selected-genres"
 // オンボーディング完了フラグのlocalStorageキー
 export const ONBOARDING_COMPLETED_KEY = "onboarding-completed"
 
+/** 設定パネルの localStorage キー */
+export const SETTINGS_STORAGE_KEYS = {
+  themePreference: "mt-theme",
+  autoRotationEnabled: "mt-auto-rotation",
+  tonearmVisible: "mt-tonearm",
+  noteEffectEnabled: "mt-note-effect",
+  moodTuningWeatherDisplay: "mt-mood-tuning-weather-display",
+} as const
+
+/** UI テーマの表示モード */
+export type ThemePreference = "time" | "light" | "dark" | "system"
+export const THEME_PREFERENCES: ThemePreference[] = ["time", "light", "dark", "system"]
+export const DEFAULT_THEME_PREFERENCE: ThemePreference = "time"
+
+/** Mood Tuning 中の天気表示モード */
+export type MoodTuningWeatherDisplayMode = "tuning" | "actual"
+export const MOOD_TUNING_WEATHER_DISPLAY_MODES: MoodTuningWeatherDisplayMode[] = ["tuning", "actual"]
+export const DEFAULT_MOOD_TUNING_WEATHER_DISPLAY_MODE: MoodTuningWeatherDisplayMode = "tuning"
+
+/** 設定パネルのトグル初期値 */
+export const DEFAULT_AUTO_ROTATION_ENABLED = true
+export const DEFAULT_TONEARM_VISIBLE = true
+export const DEFAULT_NOTE_EFFECT_ENABLED = true
+
 // デフォルトで選択されているジャンル（初回アクセス時。MAX_SELECTED_GENRES 以下にすること）
 export const DEFAULT_SELECTED_GENRES: Genre[] = [
   "J-POP",

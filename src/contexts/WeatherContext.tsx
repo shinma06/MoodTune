@@ -1,8 +1,19 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from "react"
-import { getTimeOfDay, isDarkBackground, type TimeOfDay, type WeatherType } from "@/lib/weather-background"
+import { getTimeOfDay, isCanvasTextDark, type TimeOfDay, type WeatherType } from "@/lib/weather-background"
 import { normalizeWeatherType } from "@/lib/weather-utils"
+import { useLocalStorage } from "@/hooks/useLocalStorage"
+import {
+  DEFAULT_THEME_PREFERENCE,
+  SETTINGS_STORAGE_KEYS,
+  THEME_PREFERENCES,
+  type ThemePreference,
+} from "@/lib/constants"
+
+const isThemePreference = (value: unknown): value is ThemePreference => {
+  return typeof value === "string" && THEME_PREFERENCES.includes(value as ThemePreference)
+}
 
 interface WeatherContextType {
   /** クライアントで現在時刻が確定したか（SSR/初回は false。useEffect で true になり時間帯背景が有効になる） */
@@ -17,8 +28,11 @@ interface WeatherContextType {
   effectiveWeather: WeatherType
   /** キャンバス（背景）が暗いか。画面上のテキスト・アイコンの視認性用。天気×時間帯で算出。 */
   isCanvasBackgroundDark: boolean
-  /** モーダル・パネル等オーバーレイのライト/ダークテーマ。時間帯のみで判定（dusk/night＝ダーク）。 */
+  /** モーダル・パネル等オーバーレイのライト/ダークテーマ。 */
   isOverlayThemeDark: boolean
+  /** UI テーマの表示モード（time/light/dark/system）。 */
+  themePreference: ThemePreference
+  setThemePreference: (value: ThemePreference | ((prev: ThemePreference) => ThemePreference)) => void
   weatherType: string | null
   setWeatherType: (weather: string | null) => void
   /** APIから取得した実際の天気（手動設定をやめるときの復帰用） */
@@ -48,6 +62,12 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
   const [moodTuningTimeOfDay, setMoodTuningTimeOfDay] = useState<TimeOfDay | null>(null)
   const [isMoodTuning, setIsMoodTuning] = useState(false)
   const [playlistRefreshTrigger, setPlaylistRefreshTrigger] = useState(0)
+  const [themePreference, setThemePreference] = useLocalStorage<ThemePreference>(
+    SETTINGS_STORAGE_KEYS.themePreference,
+    DEFAULT_THEME_PREFERENCE,
+    { validate: isThemePreference }
+  )
+  const [isSystemDark, setIsSystemDark] = useState(false)
 
   /** 表示用時刻の単一ソース。マウント時にクライアント現地時刻で設定し、1分ごとに更新。SSR のサーバー時刻に依存しない。 */
   useEffect(() => {
@@ -77,17 +97,29 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
     return normalizeWeatherType(weatherType ?? "Clear")
   }, [weatherType])
 
-  /** キャンバス背景が暗いか。画面上のテキスト・アイコン視認性用。天気×時間帯で算出（以前の isDarkBackground 相当）。 */
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
+    const syncSystemTheme = () => setIsSystemDark(mediaQuery.matches)
+    syncSystemTheme()
+    mediaQuery.addEventListener("change", syncSystemTheme)
+    return () => mediaQuery.removeEventListener("change", syncSystemTheme)
+  }, [])
+
+  /** キャンバス背景が暗いか。視認性専用の静的テーブル（天気×表示時間）で算出。 */
   const isCanvasBackgroundDark = useMemo(() => {
     if (!isTimeInitialized) return false
-    return isDarkBackground(effectiveWeather, actualTimeOfDay)
-  }, [isTimeInitialized, effectiveWeather, actualTimeOfDay])
+    return isCanvasTextDark(effectiveWeather, effectiveTimeOfDay)
+  }, [isTimeInitialized, effectiveWeather, effectiveTimeOfDay])
 
-  /** オーバーレイのテーマ。モーダル・パネル用。時間帯のみで判定（夕方・夜＝ダーク）。 */
+  /** オーバーレイのテーマ。themePreference に従う（canvas 判定とは独立）。 */
   const isOverlayThemeDark = useMemo(() => {
     if (!isTimeInitialized) return false
+    if (themePreference === "dark") return true
+    if (themePreference === "light") return false
+    if (themePreference === "system") return isSystemDark
     return actualTimeOfDay === "dusk" || actualTimeOfDay === "night"
-  }, [isTimeInitialized, actualTimeOfDay])
+  }, [isTimeInitialized, themePreference, isSystemDark, actualTimeOfDay])
 
   /** 表示が実際の天気・時間と異なる場合のみ true。虹枠・虹色ラベル等の Mood Tuning UI を共通で制御。 */
   const isMoodTuningApplied = useMemo(() => {
@@ -112,6 +144,8 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
         effectiveWeather,
         isCanvasBackgroundDark,
         isOverlayThemeDark,
+        themePreference,
+        setThemePreference,
         weatherType,
         setWeatherType,
         actualWeatherType,
@@ -137,4 +171,3 @@ export function useWeather() {
   }
   return context
 }
-

@@ -20,17 +20,11 @@ export interface BackgroundGradient {
     to2?: string // 最終色（5色以上のグラデーション用）
 }
 
-/** 明るい背景用の上部色（ヘッダー/UIが暗いテーマになるかどうかの境界） */
-const BACKGROUND_TOP_COLOR_BRIGHT = "#FAFAFA"
-
-/**
- * 天気×時間帯 → グラデーション最上部の色（単一ソース。UIの明暗はこの値の明度から動的算出）
- * 晴れ・雪の夕方も暗いトーンにし、UIを暗テーマで統一
- */
-const TOP_COLOR: Record<WeatherType, Record<TimeOfDay, string>> = {
+/** 背景最上部のベース色（グラデーション用）。 */
+const BACKGROUND_TOP_COLOR: Record<WeatherType, Record<TimeOfDay, string>> = {
     Clear: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#2A2A3A", night: "#2A2A4A" },
     Clouds: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#2F2F2F", night: "#1C1C1C" },
-    Rain: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#2F2F2F", night: "#1A1A2A" },
+    Rain: { dawn: "#3A4654", day: "#35475A", dusk: "#2F2F2F", night: "#1A1A2A" },
     Drizzle: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#2F2F2F", night: "#1A1A2A" },
     Thunderstorm: { dawn: "#1C1C1C", day: "#1C1C1C", dusk: "#1C1C1C", night: "#0A0A0A" },
     Snow: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#2A2A2A", night: "#2A2A2A" },
@@ -39,33 +33,30 @@ const TOP_COLOR: Record<WeatherType, Record<TimeOfDay, string>> = {
     Haze: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#2F2F2F", night: "#1C1C1C" },
 }
 
-/** 相対輝度の閾値（これ未満なら暗い背景として白文字UI） */
-const LUMINANCE_DARK_THRESHOLD = 0.4
-
-/** hex (#RRGGBB) の相対輝度を 0–1 で返す */
-function getLuminance(hex: string): number {
-    const n = parseInt(hex.slice(1), 16)
-    const r = ((n >> 16) & 0xff) / 255
-    const g = ((n >> 8) & 0xff) / 255
-    const b = (n & 0xff) / 255
-    const [rs, gs, bs] = [r, g, b].map((c) =>
-        c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
-    )
-    return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs
-}
-
-/** 天気と時間帯に応じた top 色を取得（テーブル参照） */
-function getTopColor(weather: WeatherType, timeOfDay: TimeOfDay): string {
-    return TOP_COLOR[weather]?.[timeOfDay] ?? BACKGROUND_TOP_COLOR_BRIGHT
-}
+export type CanvasTextTheme = "light" | "dark"
 
 /**
- * 背景が暗いかどうか（ヘッダー/UIのテキスト色を白にするか）を取得
- * TOP_COLOR の相対輝度から動的算出（単一ソースで不整合を防止）
+ * キャンバス上の視認性テーマ（light: 暗文字系 / dark: 白文字系）
+ * 背景グラデーションとは独立した、視認性確保専用の静的テーブル。
  */
-export function isDarkBackground(weather: WeatherType, timeOfDay: TimeOfDay): boolean {
-    const topColor = getTopColor(weather, timeOfDay)
-    return getLuminance(topColor) < LUMINANCE_DARK_THRESHOLD
+const CANVAS_TEXT_THEME: Record<WeatherType, Record<TimeOfDay, CanvasTextTheme>> = {
+    Clear: { dawn: "light", day: "light", dusk: "dark", night: "dark" },
+    Clouds: { dawn: "light", day: "light", dusk: "dark", night: "dark" },
+    Rain: { dawn: "dark", day: "dark", dusk: "dark", night: "dark" },
+    Drizzle: { dawn: "light", day: "light", dusk: "dark", night: "dark" },
+    Thunderstorm: { dawn: "dark", day: "dark", dusk: "dark", night: "dark" },
+    Snow: { dawn: "light", day: "light", dusk: "dark", night: "dark" },
+    Mist: { dawn: "light", day: "light", dusk: "dark", night: "dark" },
+    Fog: { dawn: "light", day: "light", dusk: "dark", night: "dark" },
+    Haze: { dawn: "light", day: "light", dusk: "dark", night: "dark" },
+}
+
+export function getCanvasTextTheme(weather: WeatherType, timeOfDay: TimeOfDay): CanvasTextTheme {
+    return CANVAS_TEXT_THEME[weather]?.[timeOfDay] ?? "light"
+}
+
+export function isCanvasTextDark(weather: WeatherType, timeOfDay: TimeOfDay): boolean {
+    return getCanvasTextTheme(weather, timeOfDay) === "dark"
 }
 
 // 時間帯の判定
@@ -141,7 +132,7 @@ export function getWeatherBackground(
 ): BackgroundGradient {
     const baseGradient = BACKGROUNDS[weather]?.[timeOfDay] || BACKGROUNDS.Clear[timeOfDay]
     return {
-        top: getTopColor(weather, timeOfDay),
+        top: BACKGROUND_TOP_COLOR[weather]?.[timeOfDay] ?? BACKGROUND_TOP_COLOR.Clear.day,
         ...baseGradient,
     }
 }

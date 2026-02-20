@@ -9,6 +9,7 @@ import { formatDateTime, getWeatherIcon, getWeatherThemeColor, normalizeWeatherT
 import { WEATHER_TYPE_LABELS } from "@/lib/constants"
 import { fetchWeatherData } from "@/lib/weather-api"
 import { useGeolocation } from "@/hooks/useGeolocation"
+import { useSettings } from "@/hooks/useSettings"
 
 export default function WeatherMonitor() {
     const [currentTime, setCurrentTime] = useState<Date | null>(null)
@@ -17,6 +18,7 @@ export default function WeatherMonitor() {
         message: "位置情報を取得中...",
     })
     const { effectiveTimeOfDay, isCanvasBackgroundDark, setWeatherType, setActualWeatherType, weatherType, isMoodTuning, isMoodTuningApplied } = useWeather()
+    const { moodTuningWeatherDisplay } = useSettings()
 
     const isMoodTuningRef = useRef(isMoodTuning)
     useEffect(() => {
@@ -91,12 +93,25 @@ export default function WeatherMonitor() {
     const dateTime = currentTime ? formatDateTime(currentTime) : { dateString: "--/--/--/---", timeString: "--:--" }
     const { dateString, timeString } = dateTime
 
+    const tuningWeatherType =
+        isMoodTuning && moodTuningWeatherDisplay === "tuning" && weatherType !== null
+            ? normalizeWeatherType(weatherType)
+            : null
+    const shouldUseTuningWeather = tuningWeatherType !== null
+
     // アイコン・気温表示用（天気取得成功時のみ表示）
-    const displayWeatherType = isMoodTuning && weatherType
-        ? normalizeWeatherType(weatherType)
+    const displayWeatherType = tuningWeatherType
+        ? tuningWeatherType
         : weatherState.status === "success"
         ? normalizeWeatherType(weatherState.data.weatherMain)
         : null
+
+    const shouldUseMoodRainbowWeatherUi = isMoodTuningApplied && shouldUseTuningWeather
+    const weatherDescriptionText = shouldUseMoodRainbowWeatherUi && displayWeatherType
+      ? WEATHER_TYPE_LABELS[displayWeatherType]
+      : weatherState.status === "success"
+        ? weatherState.data.description
+        : ""
     
     const WeatherIcon = displayWeatherType
         ? getWeatherIcon(displayWeatherType, effectiveTimeOfDay)
@@ -152,13 +167,13 @@ export default function WeatherMonitor() {
                             <div className="text-right">
                                 <p className={`text-2xl font-serif ${textColorClass || "text-foreground"}`}>{weatherState.data.temp}</p>
                                 <p className={`text-xs font-light ${mutedTextColorClass2}`}>{weatherState.data.city}</p>
-                                {(isMoodTuningApplied && displayWeatherType ? WEATHER_TYPE_LABELS[displayWeatherType] : weatherState.data.description) && (
-                                    <p className={`text-[10px] font-light ${isMoodTuningApplied ? "text-rainbow" : mutedTextColorClass}`}>
-                                        {isMoodTuningApplied && displayWeatherType ? WEATHER_TYPE_LABELS[displayWeatherType] : weatherState.data.description}
+                                {weatherDescriptionText && (
+                                    <p className={`text-[10px] font-light ${shouldUseMoodRainbowWeatherUi ? "text-rainbow" : mutedTextColorClass}`}>
+                                        {weatherDescriptionText}
                                     </p>
                                 )}
                             </div>
-                            {isMoodTuningApplied ? (
+                            {shouldUseMoodRainbowWeatherUi ? (
                                 <span className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center">
                                     <span className="ring-rainbow absolute inset-0 rounded-full" aria-hidden />
                                     <WeatherIcon className="relative z-10 h-10 w-10" style={{ color: iconColor }} strokeWidth={1.5} />

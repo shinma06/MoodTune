@@ -4,7 +4,9 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import WeatherMonitor from "./WeatherMonitor"
 import WeatherAnimation from "./WeatherAnimation"
 import WeatherMoodTuningPanel from "./WeatherMoodTuningPanel"
-import GenreSelector, { useSelectedGenres } from "./GenreSelector"
+import SettingsPanel from "./SettingsPanel"
+import FloatingNoteEffect from "./FloatingNoteEffect"
+import { useSelectedGenres } from "./GenreSelector"
 import { useWeather } from "@/contexts/WeatherContext"
 import { getWeatherBackground, type TimeOfDay } from "@/lib/weather-background"
 import { formatGradientBackground, INITIAL_BACKGROUND_GRADIENT } from "@/lib/weather-background-utils"
@@ -23,7 +25,8 @@ import {
     EMPTY_PLAYLIST,
     type LoadingMode,
 } from "@/lib/playlist-utils"
-import { Music, Loader2 } from "lucide-react"
+import { useSettings } from "@/hooks/useSettings"
+import { Music, Loader2, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { generateDashboard } from "@/app/actions/generateDashboard"
 import { saveToSpotify } from "@/app/actions/saveToSpotify"
@@ -34,9 +37,14 @@ interface PlaylistExplorerProps {
     playlists?: DashboardItem[]
     /** true の間はプレイリスト初期構築をスキップ（ジャンル選択モーダル表示中に使用） */
     suspended?: boolean
+    isUnauthenticated?: boolean
 }
 
-export default function PlaylistExplorer({ playlists: initialPlaylists, suspended = false }: PlaylistExplorerProps) {
+export default function PlaylistExplorer({
+    playlists: initialPlaylists,
+    suspended = false,
+    isUnauthenticated = true,
+}: PlaylistExplorerProps) {
     const [currentIndex, setCurrentIndex] = useState(0)
     const { isTimeInitialized, actualWeatherType, actualTimeOfDay, isMoodTuning, effectiveWeather, effectiveTimeOfDay, playlistRefreshTrigger, isCanvasBackgroundDark, isOverlayThemeDark, isMoodTuningApplied } = useWeather()
     /** 開いているパネル（null = 両方閉じている）。同時に1つだけ開く */
@@ -48,6 +56,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
     const [loadingMode, setLoadingMode] = useState<LoadingMode>(null)
     const [isSaving, setIsSaving] = useState(false)
     const [saveError, setSaveError] = useState<string | null>(null)
+    const { autoRotationEnabled, tonearmVisible, noteEffectEnabled } = useSettings()
 
     /** パネルを開いた時点のジャンル（閉じたときの差分計算用） */
     const genresOnOpenRef = useRef<string[]>([])
@@ -296,6 +305,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
                 : undefined,
         onRegenerateAll:
             selectedGenres.length > 0 ? refreshPlaylists : undefined,
+        idleEnabled: autoRotationEnabled,
     })
 
     /** 3周フィードバック表示: ドラッグ中・戻り演出でない・1周超 */
@@ -337,7 +347,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
                 hideToggleButton={openPanel === "genre" || isLoading}
             />
 
-            {/* Settings Toggle Button（ジャンル選択・右下）。気分パネル開時または構築中は非表示 */}
+            {/* Settings Toggle Button（設定・右下）。気分パネル開時または構築中は非表示 */}
             {openPanel !== "mood" && !isLoading && (
                 <Button
                     variant="outline"
@@ -356,16 +366,16 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
                           : "hover:bg-background hover:text-foreground hover:border-border"
                       }
                     `}
-                    aria-label={openPanel === "genre" && selectedGenres.length === 0 ? "1つ以上ジャンルを選択すると閉じられます" : openPanel === "genre" ? "Favorite Musicパネルを閉じる" : "Favorite Musicパネルを開く"}
+                    aria-label={openPanel === "genre" && selectedGenres.length === 0 ? "1つ以上ジャンルを選択すると閉じられます" : openPanel === "genre" ? "設定パネルを閉じる" : "設定パネルを開く"}
                 >
-                    <Music className="size-6" />
+                    <Settings className="size-6" />
                 </Button>
             )}
 
-            {/* Settings Panel with Genre Selector（ボタンの上に表示）。構築中は非表示 */}
+            {/* Settings Panel（ボタンの上に表示）。構築中は非表示 */}
             {openPanel === "genre" && !isLoading && (
                 <div className="fixed bottom-26 right-4 z-50 w-80 max-w-[calc(100vw-2rem)]">
-                    <GenreSelector />
+                    <SettingsPanel isUnauthenticated={isUnauthenticated} />
                 </div>
             )}
 
@@ -472,40 +482,50 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
                         </div>
                     </div>
 
+                    {noteEffectEnabled && (
+                        <FloatingNoteEffect
+                            accentColor={vinylColors.accentColor}
+                            isDarkText={isCanvasBackgroundDark}
+                            isPaused={openPanel !== null || isLoading}
+                        />
+                    )}
+
                     {/* Tonearm overlay: scale/position from record-tonearm-reference.svg (record r=225, center 225,231.29; pivot 478.50,63.79; tonearm 332×366) */}
-                    <div
-                        className="absolute inset-0 pointer-events-none overflow-visible"
-                        aria-hidden
-                        style={{
-                            // record-tonearm-reference: record diameter 450, tonearm 332×366 → width 332/450, height 366/450 of container
-                            // Pivot (478.50,63.79) vs record center (225,231.29) → pivot at (106.33%, 12.78%) in container
-                            // tonearm.svg pivot at (221.90/332, 63.79/366) → left/top so that pivot lands at (106.33%, 12.78%)
-                            left: "57.06%",
-                            top: "-1.40%",
-                            width: "73.78%",
-                            height: "81.33%",
-                        }}
-                    >
-                        <svg
-                            className="w-full h-full drop-shadow-md"
-                            viewBox="0 0 332 366"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                            preserveAspectRatio="xMidYMid meet"
+                    {tonearmVisible && (
+                        <div
+                            className="absolute inset-0 pointer-events-none overflow-visible"
+                            aria-hidden
+                            style={{
+                                // record-tonearm-reference: record diameter 450, tonearm 332×366 → width 332/450, height 366/450 of container
+                                // Pivot (478.50,63.79) vs record center (225,231.29) → pivot at (106.33%, 12.78%) in container
+                                // tonearm.svg pivot at (221.90/332, 63.79/366) → left/top so that pivot lands at (106.33%, 12.78%)
+                                left: "57.06%",
+                                top: "-1.40%",
+                                width: "73.78%",
+                                height: "81.33%",
+                            }}
                         >
-                            <defs>
-                                <filter id="tonearm-pivot-shadow" x="-50%" y="-50%" width="200%" height="200%">
-                                    <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="black" floodOpacity="0.35" />
-                                </filter>
-                            </defs>
-                            <circle cx="221.897" cy="63.7868" r="25" transform="rotate(-17.9996 221.897 63.7868)" fill={vinylColors.accentColor} filter="url(#tonearm-pivot-shadow)" />
-                            <path d="M225.05 27.1963C225.797 24.1904 228.812 22.3346 231.832 23.021C234.902 23.7187 236.822 26.7769 236.116 29.8449L195.908 204.559C195.57 206.024 194.907 207.395 193.967 208.568L122.532 297.749C119.718 301.261 114.317 301.079 111.747 297.384C110.053 294.95 110.151 291.694 111.988 289.366L180.56 202.477C181.44 201.362 182.072 200.073 182.415 198.694L225.05 27.1963Z" fill="#D9D9D9" />
-                            <path d="M104.424 330.4C102.784 332.775 99.4779 333.272 97.212 331.483L86.403 322.949C84.2033 321.213 83.8604 318.008 85.6428 315.845L116.761 278.088C118.499 275.979 121.609 275.656 123.743 277.364L131.256 283.374C133.306 285.014 133.739 287.96 132.247 290.12L104.424 330.4Z" fill={REALISTIC_VINYL_THEME.accentColor} />
-                            <circle cx="140.805" cy="321.355" r="4.47665" transform="rotate(-56.8972 140.805 321.355)" fill={REALISTIC_VINYL_THEME.accentColor} />
-                            <rect width="8.9533" height="25.5809" transform="translate(116.395 310.786) rotate(-56.8972)" fill={REALISTIC_VINYL_THEME.accentColor} />
-                            <path d="M221.045 11.7671C221.513 9.02436 224.13 7.19152 226.868 7.68925L238.712 9.8427C241.53 10.355 243.342 13.125 242.683 15.9122L231.692 62.4163C231.212 64.4431 229.527 65.9607 227.461 66.2256L218.097 67.4262C214.764 67.8535 211.967 64.9374 212.532 61.6253L221.045 11.7671Z" fill={REALISTIC_VINYL_THEME.accentColor} />
-                        </svg>
-                    </div>
+                            <svg
+                                className="w-full h-full drop-shadow-md"
+                                viewBox="0 0 332 366"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                                preserveAspectRatio="xMidYMid meet"
+                            >
+                                <defs>
+                                    <filter id="tonearm-pivot-shadow" x="-50%" y="-50%" width="200%" height="200%">
+                                        <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="black" floodOpacity="0.35" />
+                                    </filter>
+                                </defs>
+                                <circle cx="221.897" cy="63.7868" r="25" transform="rotate(-17.9996 221.897 63.7868)" fill={vinylColors.accentColor} filter="url(#tonearm-pivot-shadow)" />
+                                <path d="M225.05 27.1963C225.797 24.1904 228.812 22.3346 231.832 23.021C234.902 23.7187 236.822 26.7769 236.116 29.8449L195.908 204.559C195.57 206.024 194.907 207.395 193.967 208.568L122.532 297.749C119.718 301.261 114.317 301.079 111.747 297.384C110.053 294.95 110.151 291.694 111.988 289.366L180.56 202.477C181.44 201.362 182.072 200.073 182.415 198.694L225.05 27.1963Z" fill="#D9D9D9" />
+                                <path d="M104.424 330.4C102.784 332.775 99.4779 333.272 97.212 331.483L86.403 322.949C84.2033 321.213 83.8604 318.008 85.6428 315.845L116.761 278.088C118.499 275.979 121.609 275.656 123.743 277.364L131.256 283.374C133.306 285.014 133.739 287.96 132.247 290.12L104.424 330.4Z" fill={REALISTIC_VINYL_THEME.accentColor} />
+                                <circle cx="140.805" cy="321.355" r="4.47665" transform="rotate(-56.8972 140.805 321.355)" fill={REALISTIC_VINYL_THEME.accentColor} />
+                                <rect width="8.9533" height="25.5809" transform="translate(116.395 310.786) rotate(-56.8972)" fill={REALISTIC_VINYL_THEME.accentColor} />
+                                <path d="M221.045 11.7671C221.513 9.02436 224.13 7.19152 226.868 7.68925L238.712 9.8427C241.53 10.355 243.342 13.125 242.683 15.9122L231.692 62.4163C231.212 64.4431 229.527 65.9607 227.461 66.2256L218.097 67.4262C214.764 67.8535 211.967 64.9374 212.532 61.6253L221.045 11.7671Z" fill={REALISTIC_VINYL_THEME.accentColor} />
+                            </svg>
+                        </div>
+                    )}
                 </div>
 
                 {/* 3周フィードバック文言（レコードとは少しあけ、ページネーションとは詰める。1行分のスペースは常に確保） */}

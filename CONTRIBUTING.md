@@ -67,8 +67,9 @@ MoodTune への貢献ありがとうございます。このドキュメント�
 
 | 役割                                  | 役割の概要                                                                                                                 |
 | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| **WeatherContext**                    | 天気・時間帯・表示用の `effectiveWeather` / `effectiveTimeOfDay` / `isCanvasBackgroundDark` / `isOverlayThemeDark` の単一ソース。Mood Tuning の手動値もここで管理 |
+| **WeatherContext**                    | 天気・時間帯・表示用の `effectiveWeather` / `effectiveTimeOfDay` / `isCanvasBackgroundDark` / `isOverlayThemeDark` の単一ソース。`isCanvasBackgroundDark` は天気×表示時間の静的テーブル、`themePreference` は overlay 専用として独立管理 |
 | **useLocalStorage (selected-genres)** | ジャンル選択の永続化。空配列は無効として扱い、初回・他タブ時はデフォルトに修復                                             |
+| **useSettings**                       | Settings パネル値（`themePreference` / `autoRotationEnabled` / `tonearmVisible` / `noteEffectEnabled` / `moodTuningWeatherDisplay`）の永続化 |
 | **PlaylistExplorer**                  | Context とジャンルを統合し、プレイリスト表示・差分更新・全件再生成を担当                                                   |
 
 - 天気・時間帯を表示に使うコンポーネントは、**WeatherContext** から取得した値を使う（ローカルで別計算しない）

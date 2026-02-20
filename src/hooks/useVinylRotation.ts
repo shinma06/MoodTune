@@ -20,6 +20,8 @@ interface UseVinylRotationOptions {
   onRegenerateCurrent?: () => void
   /** 左に3周以上回したときに呼ぶ（全件再構築） */
   onRegenerateAll?: () => void
+  /** アイドル時の自動回転を有効にするか */
+  idleEnabled?: boolean
 }
 
 /**
@@ -34,6 +36,7 @@ export function useVinylRotation({
   canPaginate = true,
   onRegenerateCurrent,
   onRegenerateAll,
+  idleEnabled = true,
 }: UseVinylRotationOptions) {
   const [rotation, setRotation] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
@@ -131,6 +134,11 @@ export function useVinylRotation({
     let rafId: number
     const loop = (now: number) => {
       rafId = requestAnimationFrame(loop)
+      if (!idleEnabled) {
+        // 再開時に角度が急に進まないよう、delta 計算の基準時刻をリセットする
+        lastIdleTimeRef.current = null
+        return
+      }
       if (isDraggingRef.current || snapBackActiveRef.current) return
       if (lastIdleTimeRef.current === null) lastIdleTimeRef.current = now
       const dt = now - lastIdleTimeRef.current
@@ -140,7 +148,7 @@ export function useVinylRotation({
     }
     rafId = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(rafId)
-  }, [])
+  }, [idleEnabled])
 
   /** 戻り演出の transitionend で状態をクリア */
   useEffect(() => {
