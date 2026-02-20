@@ -3,18 +3,13 @@
 import { generateText } from "ai"
 import { openai } from "@ai-sdk/openai"
 import { getSpotifyClient } from "@/lib/spotify-server"
+import { getSession } from "@/lib/spotify-session"
 import { getMockPlaylistInfo } from "@/lib/mock-playlist-data"
 import { WEATHER_TYPE_LABELS, TIME_OF_DAY_LABELS, type Genre } from "@/lib/constants"
 import type { WeatherType, TimeOfDay } from "@/lib/weather-background"
 import type { DashboardItem } from "@/types/dashboard"
 
-/** モック時の意図的な待機時間（ms） */
-const MOCK_DELAY_MS = 500
-
 export type { DashboardItem }
-
-/** アプリ全体のモックモード。true のとき GPT と Spotify をスキップしデフォルトデータ＋意図的待機で応答 */
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK !== "false"
 
 /**
  * ジャンル名に基づいてモック画像URLを生成
@@ -151,12 +146,13 @@ export async function generateDashboard(
   }
 
   try {
+    const session = await getSession()
+    const isLoggedIn = Boolean(session)
     let playlistInfos: PlaylistInfo[]
     const weatherLabel = WEATHER_TYPE_LABELS[weather] ?? "晴れ"
     const timeLabel = TIME_OF_DAY_LABELS[time] ?? "昼"
 
-    if (USE_MOCK) {
-      await new Promise((resolve) => setTimeout(resolve, MOCK_DELAY_MS))
+    if (!isLoggedIn) {
       playlistInfos = getMockPlaylistInfo(selectedGenres, weatherLabel, timeLabel)
     } else {
       try {
@@ -171,7 +167,7 @@ export async function generateDashboard(
     }
 
     let spotifyClient: Awaited<ReturnType<typeof getSpotifyClient>> = null
-    if (!USE_MOCK) {
+    if (isLoggedIn) {
       try {
         spotifyClient = await getSpotifyClient()
       } catch {
@@ -188,7 +184,7 @@ export async function generateDashboard(
       let imageUrl = getMockImageUrl(info?.genre ?? "")
       let trackUris: string[] = []
 
-      if (!USE_MOCK && spotifyClient && Array.isArray(info.tracks) && info.tracks.length > 0) {
+      if (isLoggedIn && spotifyClient && Array.isArray(info.tracks) && info.tracks.length > 0) {
         const results = await mapWithConcurrency(
           info.tracks,
           SPOTIFY_SEARCH_CONCURRENCY,

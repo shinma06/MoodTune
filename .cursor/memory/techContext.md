@@ -32,7 +32,7 @@
 - **使用方針**: Server Action（generateDashboard）内で `generateText` によりジャンル別のタイトル/クエリを生成
 
 ### Spotify PKCE（Authorization Code with PKCE）
-- **理由**: 本番モードで Spotify 連携を安全に提供するため
+- **理由**: ログイン時のみ Spotify 連携を安全に提供するため
 - **実装**: `lib/spotify-pkce.ts` で認可URL・トークン交換。`lib/spotify-session.ts` でセッション暗号化クッキーとトークンリフレッシュ。`auth.ts` は `getSession()` をラップして `auth()` でセッション取得。`GET /api/auth/spotify`, `GET /api/auth/spotify/callback`, `GET /api/auth/signout`
 
 ### Spotify Web API
@@ -45,15 +45,15 @@
 
 | 変数 | 必須 | 説明 |
 |------|------|------|
-| `OPENAI_API_KEY` | 本番時 | プレイリストタイトル・クエリ生成（Vercel AI SDK / OpenAI） |
+| `OPENAI_API_KEY` | Spotify ログイン時 | プレイリストタイトル・クエリ生成（Vercel AI SDK / OpenAI） |
 | `AUTH_SECRET` | Spotify 利用時 | セッション暗号化用（32文字以上推奨） |
 | `AUTH_SPOTIFY_ID` / `AUTH_SPOTIFY_SECRET` | Spotify 利用時 | Spotify PKCE（トークン交換・リフレッシュ） |
 | `WXTECH_API_KEY` | 天気推奨 | WxTech API（日本 1km/海外 5km）。未設定時は OWM のみ |
 | `NEXT_PUBLIC_WEATHER_API_KEY` | 天気フォールバック | OpenWeatherMap API（WxTech 失敗時または未設定時） |
 | `GOOGLE_GEOCODING_API_KEY` | 都市名表示時 | Google Geocoding（逆ジオコーディング）。未設定時は OWM の地名にフォールバック |
 
-**最小構成**: `NEXT_PUBLIC_USE_MOCK` が未設定または `true` なら環境変数なしで起動可能。  
-**本番構成**: `NEXT_PUBLIC_USE_MOCK=false` と `OPENAI_API_KEY` が必要。Spotify 利用時は認証関連も設定。
+**最小構成**: 環境変数なしで起動可能（未ログイン時は固定データで動作）。  
+**Spotify 連携構成**: `OPENAI_API_KEY` と Spotify 認証関連が必要。
 
 ### 開発サーバー
 ```bash

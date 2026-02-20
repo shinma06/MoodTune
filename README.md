@@ -2,7 +2,7 @@
 
 **天気と時間帯に合わせた音楽プレイリスト提案アプリ**
 
-現在の天気・時間帯に応じた背景とアニメーションで、そのときの気分に合うプレイリストをレコード盤風 UI で探索できます。`Settings`（Select Genre / Appearance / Playback / Account）と `Mood Tuning`（天気・時間の手動設定）で好みに合わせて更新可能です。Spotify 連携はオプションで、モックモードでもログイン導線を表示します。
+現在の天気・時間帯に応じた背景とアニメーションで、そのときの気分に合うプレイリストをレコード盤風 UI で探索できます。`Settings`（Select Genre / Appearance / Playback / Account）と `Mood Tuning`（天気・時間の手動設定）で好みに合わせて更新可能です。Spotify 連携はオプションで、非ログイン時でもアプリを利用できます。
 
 ---
 
@@ -16,7 +16,7 @@
 - **Playback**: 自動回転、トーンアーム表示、音符エフェクトを切り替え
 - **Mood Tuning**: 天気・時間帯を手動で変更してプレビュー。パネルを閉じるときに変更があれば全件再生成
 - **レコード UI**: スワイプ/ドラッグでジャンル切替。右 3 周で表示中ジャンル再生成、左 3 周で全件再生成
-- **オンボーディング**: 初回はジャンル選択モーダルとチュートリアルを表示（本番モードで未ログイン時はログインモーダルを表示）
+- **オンボーディング**: 初回はログインモーダル（ログイン/ログインせずに使う）→ ジャンル選択モーダル → チュートリアルの順で案内
 - **Spotify 保存**: `Spotifyで再生` で MoodTune プレイリスト 1 本を上書きまたは新規作成
 
 ---
@@ -57,8 +57,7 @@ npm install
 
 | 変数名 | 必須 | 説明 |
 |--------|------|------|
-| `NEXT_PUBLIC_USE_MOCK` | No | 未設定または `true` でモックモード（OpenAI/Spotify 未使用）。Settings のログイン導線 UI は表示される |
-| `OPENAI_API_KEY` | 本番時 | プレイリスト生成（本番モード時） |
+| `OPENAI_API_KEY` | Spotifyログイン時 | ログイン済みユーザー向けのプレイリスト生成（非ログイン時は固定データ） |
 | `AUTH_SECRET` | Spotify ログイン時 | セッション暗号化キー（32 文字以上推奨） |
 | `AUTH_SPOTIFY_ID` | Spotify ログイン時 | Spotify Client ID |
 | `AUTH_SPOTIFY_SECRET` | Spotify ログイン時 | Spotify Client Secret |
@@ -67,8 +66,8 @@ npm install
 | `NEXT_PUBLIC_WEATHER_API_KEY` | フォールバック時 | OpenWeatherMap API キー |
 | `GOOGLE_GEOCODING_API_KEY` | 都市名表示時 | Google Geocoding API キー |
 
-**最小構成（モック）**: 環境変数なしで起動可能です。  
-**本番モード**: `NEXT_PUBLIC_USE_MOCK=false` かつ `OPENAI_API_KEY` が必要です。
+**最小構成（非ログイン）**: 環境変数なしで起動可能です（固定データで動作）。  
+**Spotify連携を使う場合**: `OPENAI_API_KEY` と Spotify 認証関連の環境変数が必要です。
 
 ### 3. 開発サーバー
 

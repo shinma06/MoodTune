@@ -51,6 +51,13 @@ export const GENRE_STORAGE_KEY = "selected-genres"
 // オンボーディング完了フラグのlocalStorageキー
 export const ONBOARDING_COMPLETED_KEY = "onboarding-completed"
 
+// 認証導線の選択状態（localStorage）
+export const AUTH_CHOICE_STORAGE_KEY = "mt-auth-choice"
+export type AuthChoice = "undecided" | "guest"
+
+// ログインモーダル自動表示の同一セッション抑制フラグ（sessionStorage）
+export const LOGIN_MODAL_SESSION_SUPPRESSED_KEY = "mt-login-modal-suppressed-session"
+
 /** 設定パネルの localStorage キー */
 export const SETTINGS_STORAGE_KEYS = {
   themePreference: "mt-theme",

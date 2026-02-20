@@ -105,8 +105,7 @@ export default function SettingsPanel({ isUnauthenticated }: SettingsPanelProps)
   const titleClass = isOverlayThemeDark ? "text-white" : "text-foreground"
   const helperTextClass = isOverlayThemeDark ? "text-white/60" : "text-muted-foreground"
 
-  const isMockMode = process.env.NEXT_PUBLIC_USE_MOCK !== "false"
-  const shouldShowLoginButton = isMockMode || isUnauthenticated
+  const shouldShowLoginButton = isUnauthenticated
   const accountButtonLabel = shouldShowLoginButton ? "Spotifyでログイン" : "ログアウト"
   const accountHref = shouldShowLoginButton ? "/api/auth/spotify" : "/api/auth/signout"
   const accountButtonClass = shouldShowLoginButton

@@ -6,16 +6,27 @@ UI/UX 改善とコードベースのリファクタリング、Vibeコーディ�
 
 ## 最近の変更履歴
 
+- プレイリスト生成モードを認証状態ベースに整理:
+  - `generateDashboard` から `NEXT_PUBLIC_USE_MOCK` 依存を削除
+  - 未ログイン時は常に固定データ（`mock-playlist-data`）を返す
+  - ログイン時のみ OpenAI 生成 + Spotify 検索を実行
+- 非ログイン時のログイン導線を最適化:
+  - `LoginModal` に「ログインせずに使う」ボタンを追加し、`Spotifyでログイン` との2択化
+  - `OnboardingOrchestrator` でログインモーダルの自動表示を初回中心に整理し、同一セッションでの自動再表示抑制（sessionStorage）を追加
+  - `PlaylistExplorer` の Spotify ボタンは非ログイン時に「Spotifyでログインして再生」文言へ変更し、押下時にログインモーダルを開く導線へ変更
+  - `PageClient` で `PlaylistExplorer -> OnboardingOrchestrator` のログインモーダルトリガー連携を追加
+  - `SettingsPanel` の Account ログイン表示条件を `isUnauthenticated` 基準に統一（モック判定依存を削除）
+  - `page.tsx` の `isUnauthenticated` を常に実認証状態で判定するよう整理
 - Settings パネル文言・UI の最終調整:
-  - `Favorite Music` を `Select Genre` に改名
+  - ジャンル設定の名称を `Select Genre` に統一
   - Settings は一覧→詳細の 2 段階 UI、詳細はフラット 1 パネルに統一（ネストCardを排除）
   - 詳細ヘッダーは「戻る」上段＋項目名下段に統一。見出しと設定本体は余白で分離
   - Account ボタンは Spotify ネイティブ風を維持しつつ、ログアウト時のみ hover を赤系に変更
-  - モックモード時も Account にログイン導線を表示し、ボタン文言は常に「Spotifyでログイン」
+  - Account は未ログイン時にログイン導線を表示し、ログイン済み時はログアウト導線を表示
   - 音符エフェクトの出現位置を下方向へ大きくオフセットし、サイズを 1.4x 相当に調整
 - 設定パネルの情報設計を 2 段階に再構成（縦長解消）:
   - `SettingsPanel` を「一覧（menu）」と「詳細（favorite/appearance/playback）」に分割
-  - 初期表示は **Favorite Music / Appearance / Playback** と Account のみ
+  - 初期表示は **Select Genre / Appearance / Playback** と Account のみ
   - 各詳細画面に左上の戻るボタンを追加し、一覧へ戻れる導線を実装
   - `appearance` 詳細では UI テーマと Mood Tuning 中の天気表示のみを表示
   - `playback` 詳細では自動回転・トーンアーム・音符エフェクトのみを表示

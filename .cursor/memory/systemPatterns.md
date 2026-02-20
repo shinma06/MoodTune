@@ -45,9 +45,9 @@ src/
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS 4.x + shadcn/ui
 - **State**: React Context + localStorage
-- **AI**: Vercel AI SDK + OpenAI（本番モード）
+- **AI**: Vercel AI SDK + OpenAI（ログイン時に使用）
 - **Weather**: WxTech 優先、OpenWeatherMap フォールバック、Google Geocoding
-- **Auth**: Spotify PKCE（モックモードでは不要）
+- **Auth**: Spotify PKCE（未ログイン利用を許容し、Spotify機能利用時に必要）
 
 ## 設計原則
 

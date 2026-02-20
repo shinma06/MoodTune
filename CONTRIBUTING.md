@@ -12,7 +12,7 @@ MoodTune への貢献ありがとうございます。このドキュメント�
    cd MoodTune
    npm install
    ```
-2. [README.md](./README.md) の「環境変数」に従い `.env.local` を用意する（モックモード時は環境変数不要で動作します）
+2. [README.md](./README.md) の「環境変数」に従い `.env.local` を用意する（非ログイン利用のみなら環境変数なしで起動可能です）
 3. `npm run dev` で開発サーバーを起動し、動作を確認する
 
 ---

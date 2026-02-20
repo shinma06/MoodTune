@@ -38,12 +38,14 @@ interface PlaylistExplorerProps {
     /** true の間はプレイリスト初期構築をスキップ（ジャンル選択モーダル表示中に使用） */
     suspended?: boolean
     isUnauthenticated?: boolean
+    onRequestLoginModal?: () => void
 }
 
 export default function PlaylistExplorer({
     playlists: initialPlaylists,
     suspended = false,
     isUnauthenticated = true,
+    onRequestLoginModal,
 }: PlaylistExplorerProps) {
     const [currentIndex, setCurrentIndex] = useState(0)
     const { isTimeInitialized, actualWeatherType, actualTimeOfDay, isMoodTuning, effectiveWeather, effectiveTimeOfDay, playlistRefreshTrigger, isCanvasBackgroundDark, isOverlayThemeDark, isMoodTuningApplied } = useWeather()
@@ -122,6 +124,10 @@ export default function PlaylistExplorer({
 
     /** 現在のジャンルの楽曲を "MoodTune" Spotify プレイリストに保存して開く */
     const handleSaveToSpotify = useCallback(async () => {
+        if (isUnauthenticated) {
+            onRequestLoginModal?.()
+            return
+        }
         if (isLoadingOrEmpty || isSaving) return
         setSaveError(null)
         setIsSaving(true)
@@ -137,7 +143,7 @@ export default function PlaylistExplorer({
         } finally {
             setIsSaving(false)
         }
-    }, [isLoadingOrEmpty, isSaving, currentPlaylist])
+    }, [isUnauthenticated, onRequestLoginModal, isLoadingOrEmpty, isSaving, currentPlaylist])
 
     /** 表示中の1ジャンルだけ現在の天気・時間で再構築（レコード右3周で発火） */
     const refreshPlaylistByGenre = useCallback(async (genre: Genre) => {
@@ -600,16 +606,15 @@ export default function PlaylistExplorer({
                     </div>
                 </div>
 
-                {/* Spotify 再生ボタン（アプリのモックモード時は disabled で表示） */}
+            {/* Spotify 再生ボタン（非ログイン時はログイン導線として動作） */}
                 {(() => {
-                    const isMockMode = process.env.NEXT_PUBLIC_USE_MOCK !== "false"
+                    const needsSpotifyLogin = isUnauthenticated
                     const spotifyDisabled =
-                        isMockMode ||
                         isLoadingOrEmpty ||
                         isSaving ||
                         currentPlaylist.trackUris.length === 0
-                    const disabledReason = isMockMode
-                        ? "Spotify連携時のみ利用できます"
+                    const disabledReason = needsSpotifyLogin
+                        ? "Spotify機能はログインすると利用できます"
                         : isSaving
                             ? null
                             : isLoadingOrEmpty
@@ -617,8 +622,8 @@ export default function PlaylistExplorer({
                               : currentPlaylist.trackUris.length === 0
                                 ? "再生できる曲を取得できませんでした。しばらく経ってからお試しください。"
                                 : null
-                    const buttonLabel = isMockMode
-                        ? "Spotifyで再生（モック中）"
+                    const buttonLabel = needsSpotifyLogin
+                        ? "Spotifyでログインして再生"
                         : isSaving
                             ? "保存中..."
                             : "Spotifyで再生"
@@ -626,7 +631,7 @@ export default function PlaylistExplorer({
                         <div className="flex flex-col items-center gap-2">
                             <Button
                                 onClick={handleSaveToSpotify}
-                                disabled={spotifyDisabled}
+                                disabled={!needsSpotifyLogin && spotifyDisabled}
                                 className="flex items-center gap-2 bg-[#1DB954] hover:bg-[#1ed760] text-black font-semibold rounded-full px-6 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {isSaving ? (
