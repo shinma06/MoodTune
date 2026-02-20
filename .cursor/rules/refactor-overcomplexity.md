@@ -36,3 +36,8 @@
 - **変更する候補**: ファイル名・関数名（または該当範囲）と、過剰な点・提案する簡略化を箇条書き。
 - **変更しないと判断した箇所**: 理由を 1 行で記載（任意だが推奨）。
 - 実際にコードを書き換える場合は、上記の前提と手順に沿っていることを短く説明する。
+
+### 5. 本プロジェクトでの適用例（参考）
+
+- **決定的なマッピングの静的化**: `weather-background.ts` の `BACKGROUNDS`、`weather-utils.ts` の `WEATHER_ICON_MAP` / `WEATHER_THEME_COLORS` は、天気×時間帯など入力が決まれば出力が一意のため、静的定数として定義済み。
+- **単一ソースの集約**: `effectiveWeather` / `effectiveTimeOfDay` / `isDark` は WeatherContext で算出し、PlaylistExplorer・WeatherMonitor・WeatherMoodTuningPanel・WeatherAnimation が参照。同じ導出を各コンポーネントで持たない。
