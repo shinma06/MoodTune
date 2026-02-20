@@ -28,7 +28,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     title: "天気と連動するプレイリスト",
     description:
       "雨の午後、晴れた朝、夜の街——それぞれの空気感にぴったりな音楽をAIが選曲します。位置情報を許可すると自動で取得します。",
-    mediaPath: "/onboarding/step2.webm",
+    mediaPath: "/onboarding/step2.jpg",
   },
   {
     stepType: "feature",
@@ -69,8 +69,8 @@ export default function TutorialModal({ onComplete }: Props) {
   const isLastStep = currentStep === TUTORIAL_STEPS.length - 1
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center backdrop-blur-sm bg-black/50 p-4">
-      <div className={`w-full max-w-md rounded-2xl border shadow-2xl flex flex-col max-h-[90vh] ${isOverlayThemeDark ? "bg-slate-900/95 border-white/10" : "bg-background/95 border-border/50"}`}>
+    <div className="fixed inset-0 z-100 flex items-center justify-center backdrop-blur-sm bg-black/50 p-4">
+      <div className={`w-full max-w-md h-[80dvh] max-h-[80dvh] rounded-2xl border shadow-2xl flex flex-col overflow-hidden ${isOverlayThemeDark ? "bg-slate-900/95 border-white/10" : "bg-background/95 border-border/50"}`}>
         {/* ヘッダー */}
         <div className="flex items-center justify-between px-6 pt-5 pb-3">
           <div className="flex gap-1.5">
@@ -96,12 +96,12 @@ export default function TutorialModal({ onComplete }: Props) {
         </div>
 
         {/* コンテンツ */}
-        <div className="flex-1 overflow-y-auto px-6 pb-2">
-          <div className="mb-4">
-            <TutorialMediaPlaceholder mediaPath={step.mediaPath} alt={step.title} />
-          </div>
-
-          <div className="space-y-2 mb-4">
+        <div className="flex-1 overflow-hidden px-6 pb-2">
+          <div className="flex h-full flex-col gap-4">
+            <div className="min-h-0 flex-1">
+              <TutorialMediaPlaceholder mediaPath={step.mediaPath} alt={step.title} className="h-full" />
+            </div>
+            <div className="space-y-2 shrink-0 pb-1">
             <h2 className={`text-lg font-semibold ${isOverlayThemeDark ? "text-white" : "text-foreground"}`}>
               {step.title.includes("Mood Tuning") ? (
                 <>
@@ -111,6 +111,7 @@ export default function TutorialModal({ onComplete }: Props) {
               ) : step.title}
             </h2>
             <p className={`text-sm leading-relaxed ${isOverlayThemeDark ? "text-white/60" : "text-muted-foreground"}`}>{step.description}</p>
+            </div>
           </div>
         </div>
 
