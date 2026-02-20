@@ -420,7 +420,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
 
                     <div
                         ref={vinylRef}
-                        className={`relative w-full h-full select-none touch-none ${isLoading ? "pointer-events-none cursor-default" : "cursor-grab active:cursor-grabbing"}`}
+                        className={`relative w-full h-full select-none touch-none ${isLoading || openPanel === "mood" || openPanel === "genre" ? "pointer-events-none cursor-default" : "cursor-grab active:cursor-grabbing"}`}
                         style={{
                             transform: `rotate(${rotation}deg)`,
                             transition: isDragging
