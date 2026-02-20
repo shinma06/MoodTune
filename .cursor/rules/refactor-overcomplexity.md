@@ -40,4 +40,4 @@
 ### 5. 本プロジェクトでの適用例（参考）
 
 - **決定的なマッピングの静的化**: `weather-background.ts` の `BACKGROUNDS`、`weather-utils.ts` の `WEATHER_ICON_MAP` / `WEATHER_THEME_COLORS` は、天気×時間帯など入力が決まれば出力が一意のため、静的定数として定義済み。
-- **単一ソースの集約**: `effectiveWeather` / `effectiveTimeOfDay` / `isDark` は WeatherContext で算出し、PlaylistExplorer・WeatherMonitor・WeatherMoodTuningPanel・WeatherAnimation が参照。同じ導出を各コンポーネントで持たない。
+- **単一ソースの集約**: `effectiveWeather` / `effectiveTimeOfDay` / `isCanvasBackgroundDark` / `isOverlayThemeDark` は WeatherContext で算出し、PlaylistExplorer・WeatherMonitor・WeatherMoodTuningPanel・WeatherAnimation が参照。同じ導出を各コンポーネントで持たない。

@@ -40,6 +40,13 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# personal
+# cursor
+/.cursor
 .cursorrules
+
+# claude code
+/CLAUDE.md
+/CLAUDE.local.md
+
+# personal
 vibe_cording.md

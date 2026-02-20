@@ -20,51 +20,43 @@ export interface BackgroundGradient {
     to2?: string // 最終色（5色以上のグラデーション用）
 }
 
-/** 明るい背景用の上部色（ヘッダー/UIが暗いテーマになるかどうかの境界） */
-const BACKGROUND_TOP_COLOR_BRIGHT = "#FAFAFA"
-
-/**
- * 天気×時間帯 → グラデーション最上部の色（静的なテーブル）
- * ヘッダー・UIのテキスト色はこの値が明るいかどうかで固定で紐づく
- */
-const TOP_COLOR: Record<WeatherType, Record<TimeOfDay, string>> = {
-    Clear: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#FAFAFA", night: "#2A2A4A" },
+/** 背景最上部のベース色（グラデーション用）。 */
+const BACKGROUND_TOP_COLOR: Record<WeatherType, Record<TimeOfDay, string>> = {
+    Clear: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#2A2A3A", night: "#2A2A4A" },
     Clouds: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#2F2F2F", night: "#1C1C1C" },
-    Rain: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#2F2F2F", night: "#1A1A2A" },
+    Rain: { dawn: "#3A4654", day: "#35475A", dusk: "#2F2F2F", night: "#1A1A2A" },
     Drizzle: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#2F2F2F", night: "#1A1A2A" },
     Thunderstorm: { dawn: "#1C1C1C", day: "#1C1C1C", dusk: "#1C1C1C", night: "#0A0A0A" },
-    Snow: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#FAFAFA", night: "#2A2A2A" },
+    Snow: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#2A2A2A", night: "#2A2A2A" },
     Mist: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#2F2F2F", night: "#1C1C1C" },
     Fog: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#2F2F2F", night: "#1C1C1C" },
     Haze: { dawn: "#FAFAFA", day: "#FAFAFA", dusk: "#2F2F2F", night: "#1C1C1C" },
 }
 
-/**
- * 天気×時間帯 → ヘッダー/UIを暗いテーマ（白文字）にするか（静的なテーブル）
- * TOP_COLOR が明るい色でない組み合わせは true
- */
-const IS_DARK: Record<WeatherType, Record<TimeOfDay, boolean>> = {
-    Clear: { dawn: false, day: false, dusk: false, night: true },
-    Clouds: { dawn: false, day: false, dusk: true, night: true },
-    Rain: { dawn: false, day: false, dusk: true, night: true },
-    Drizzle: { dawn: false, day: false, dusk: true, night: true },
-    Thunderstorm: { dawn: true, day: true, dusk: true, night: true },
-    Snow: { dawn: false, day: false, dusk: false, night: true },
-    Mist: { dawn: false, day: false, dusk: true, night: true },
-    Fog: { dawn: false, day: false, dusk: true, night: true },
-    Haze: { dawn: false, day: false, dusk: true, night: true },
-}
-
-/** 天気と時間帯に応じた top 色を取得（テーブル参照） */
-function getTopColor(weather: WeatherType, timeOfDay: TimeOfDay): string {
-    return TOP_COLOR[weather]?.[timeOfDay] ?? BACKGROUND_TOP_COLOR_BRIGHT
-}
+export type CanvasTextTheme = "light" | "dark"
 
 /**
- * 背景が暗いかどうか（ヘッダー/UIのテキスト色を白にするか）を取得（テーブル参照）
+ * キャンバス上の視認性テーマ（light: 暗文字系 / dark: 白文字系）
+ * 背景グラデーションとは独立した、視認性確保専用の静的テーブル。
  */
-export function isDarkBackground(weather: WeatherType, timeOfDay: TimeOfDay): boolean {
-    return IS_DARK[weather]?.[timeOfDay] ?? false
+const CANVAS_TEXT_THEME: Record<WeatherType, Record<TimeOfDay, CanvasTextTheme>> = {
+    Clear: { dawn: "light", day: "light", dusk: "dark", night: "dark" },
+    Clouds: { dawn: "light", day: "light", dusk: "dark", night: "dark" },
+    Rain: { dawn: "dark", day: "dark", dusk: "dark", night: "dark" },
+    Drizzle: { dawn: "light", day: "light", dusk: "dark", night: "dark" },
+    Thunderstorm: { dawn: "dark", day: "dark", dusk: "dark", night: "dark" },
+    Snow: { dawn: "light", day: "light", dusk: "dark", night: "dark" },
+    Mist: { dawn: "light", day: "light", dusk: "dark", night: "dark" },
+    Fog: { dawn: "light", day: "light", dusk: "dark", night: "dark" },
+    Haze: { dawn: "light", day: "light", dusk: "dark", night: "dark" },
+}
+
+export function getCanvasTextTheme(weather: WeatherType, timeOfDay: TimeOfDay): CanvasTextTheme {
+    return CANVAS_TEXT_THEME[weather]?.[timeOfDay] ?? "light"
+}
+
+export function isCanvasTextDark(weather: WeatherType, timeOfDay: TimeOfDay): boolean {
+    return getCanvasTextTheme(weather, timeOfDay) === "dark"
 }
 
 // 時間帯の判定
@@ -140,7 +132,7 @@ export function getWeatherBackground(
 ): BackgroundGradient {
     const baseGradient = BACKGROUNDS[weather]?.[timeOfDay] || BACKGROUNDS.Clear[timeOfDay]
     return {
-        top: getTopColor(weather, timeOfDay),
+        top: BACKGROUND_TOP_COLOR[weather]?.[timeOfDay] ?? BACKGROUND_TOP_COLOR.Clear.day,
         ...baseGradient,
     }
 }

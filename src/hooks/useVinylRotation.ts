@@ -20,6 +20,8 @@ interface UseVinylRotationOptions {
   onRegenerateCurrent?: () => void
   /** 左に3周以上回したときに呼ぶ（全件再構築） */
   onRegenerateAll?: () => void
+  /** アイドル時の自動回転を有効にするか */
+  idleEnabled?: boolean
 }
 
 /**
@@ -34,6 +36,7 @@ export function useVinylRotation({
   canPaginate = true,
   onRegenerateCurrent,
   onRegenerateAll,
+  idleEnabled = true,
 }: UseVinylRotationOptions) {
   const [rotation, setRotation] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
@@ -84,21 +87,9 @@ export function useVinylRotation({
 
   const calculateRotationFromDrag = useCallback(
     (clientX: number, clientY: number): number => {
-      if (!vinylRef.current) return 0
-
-      const rect = vinylRef.current.getBoundingClientRect()
-      const centerX = rect.left + rect.width / 2
-      const centerY = rect.top + rect.height / 2
-
-      const startAngleRad = Math.atan2(startY - centerY, startX - centerX)
-      const currentAngleRad = Math.atan2(clientY - centerY, clientX - centerX)
-
-      const startAngleDeg = (startAngleRad * 180) / Math.PI
-      const currentAngleDeg = (currentAngleRad * 180) / Math.PI
-
-      return getAngleDifference(startAngleDeg, currentAngleDeg)
+      return getAngleDifference(getAngleFromCenter(startX, startY), getAngleFromCenter(clientX, clientY))
     },
-    [startX, startY, getAngleDifference]
+    [startX, startY, getAngleFromCenter, getAngleDifference]
   )
 
   const resetRotation = useCallback(() => {
@@ -118,7 +109,6 @@ export function useVinylRotation({
     setCumulativeRotation(0)
     setStartRotation(0)
     cumulativeRotationRef.current = 0
-    setCumulativeRotation(0)
   }, [])
 
   /** 指定角度から 0° まで、CSS transition（linear）で回した角度分を逆方向に戻す。角速度一定で滑らかに一貫した制御。 */
@@ -144,6 +134,11 @@ export function useVinylRotation({
     let rafId: number
     const loop = (now: number) => {
       rafId = requestAnimationFrame(loop)
+      if (!idleEnabled) {
+        // 再開時に角度が急に進まないよう、delta 計算の基準時刻をリセットする
+        lastIdleTimeRef.current = null
+        return
+      }
       if (isDraggingRef.current || snapBackActiveRef.current) return
       if (lastIdleTimeRef.current === null) lastIdleTimeRef.current = now
       const dt = now - lastIdleTimeRef.current
@@ -153,7 +148,7 @@ export function useVinylRotation({
     }
     rafId = requestAnimationFrame(loop)
     return () => cancelAnimationFrame(rafId)
-  }, [])
+  }, [idleEnabled])
 
   /** 戻り演出の transitionend で状態をクリア */
   useEffect(() => {

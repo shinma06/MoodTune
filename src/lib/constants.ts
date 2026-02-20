@@ -42,17 +42,50 @@ export const GENRE_THEME_COLORS: Record<Genre, GenreThemeColors> = Object.fromEn
   GENRE_DEFINITIONS.map((g) => [g.id, g.themeColors])
 ) as Record<Genre, GenreThemeColors>
 
-// ユーザーが選択できる最大ジャンル数
-export const MAX_SELECTED_GENRES = 8
+// ユーザーが選択できる最大ジャンル数（Spotify レート制限・生成時間を考慮）
+export const MAX_SELECTED_GENRES = 4
 
 // ジャンル選択のlocalStorageキー
 export const GENRE_STORAGE_KEY = "selected-genres"
 
-// デフォルトで選択されているジャンル（初回アクセス時）
+// オンボーディング完了フラグのlocalStorageキー
+export const ONBOARDING_COMPLETED_KEY = "onboarding-completed"
+
+// 認証導線の選択状態（localStorage）
+export const AUTH_CHOICE_STORAGE_KEY = "mt-auth-choice"
+export type AuthChoice = "undecided" | "guest"
+
+// ログインモーダル自動表示の同一セッション抑制フラグ（sessionStorage）
+export const LOGIN_MODAL_SESSION_SUPPRESSED_KEY = "mt-login-modal-suppressed-session"
+
+/** 設定パネルの localStorage キー */
+export const SETTINGS_STORAGE_KEYS = {
+  themePreference: "mt-theme",
+  autoRotationEnabled: "mt-auto-rotation",
+  tonearmVisible: "mt-tonearm",
+  noteEffectEnabled: "mt-note-effect",
+  moodTuningWeatherDisplay: "mt-mood-tuning-weather-display",
+} as const
+
+/** UI テーマの表示モード */
+export type ThemePreference = "time" | "light" | "dark" | "system"
+export const THEME_PREFERENCES: ThemePreference[] = ["time", "light", "dark", "system"]
+export const DEFAULT_THEME_PREFERENCE: ThemePreference = "time"
+
+/** Mood Tuning 中の天気表示モード */
+export type MoodTuningWeatherDisplayMode = "tuning" | "actual"
+export const MOOD_TUNING_WEATHER_DISPLAY_MODES: MoodTuningWeatherDisplayMode[] = ["tuning", "actual"]
+export const DEFAULT_MOOD_TUNING_WEATHER_DISPLAY_MODE: MoodTuningWeatherDisplayMode = "tuning"
+
+/** 設定パネルのトグル初期値 */
+export const DEFAULT_AUTO_ROTATION_ENABLED = true
+export const DEFAULT_TONEARM_VISIBLE = true
+export const DEFAULT_NOTE_EFFECT_ENABLED = true
+
+// デフォルトで選択されているジャンル（初回アクセス時。MAX_SELECTED_GENRES 以下にすること）
 export const DEFAULT_SELECTED_GENRES: Genre[] = [
   "J-POP",
   "J-Rock",
-  "Hip Hop",
   "City Pop",
   "K-POP (Girl)",
 ]

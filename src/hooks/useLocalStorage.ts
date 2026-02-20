@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback, useRef } from "react"
 const STORAGE_CHANGE_EVENT = "local-storage-change"
 
 /** 同一ページ内の他コンポーネントに変更を通知（レンダリング中の setState を避けるため queueMicrotask で発火） */
-function dispatchStorageChange(key: string) {
+export function dispatchStorageChange(key: string) {
   if (typeof window !== "undefined") {
     queueMicrotask(() => {
       window.dispatchEvent(new CustomEvent(STORAGE_CHANGE_EVENT, { detail: { key } }))

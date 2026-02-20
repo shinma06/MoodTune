@@ -2,9 +2,9 @@
 
 ## 重要な技術的決定とその理由（ADR）
 
-### ADR-001: Next.js 15 App Router の採用
+### ADR-001: Next.js App Router の採用
 
-**決定**: Next.js 15 の App Router を使用
+**決定**: Next.js App Router を使用（現在は Next.js 16）
 **理由**:
 
 - Server Components によるパフォーマンス向上
@@ -111,13 +111,13 @@
 **理由**:
 
 - 天気取得失敗/ローディング時や Mood Tuning 手動設定時の表示不整合を防ぐ
-- `effectiveTimeOfDay`, `effectiveWeather`, `isDark`, `displayHour` を一箇所で管理し、全コンポーネントが同じ値を参照する
+- `effectiveTimeOfDay`, `effectiveWeather`, `isCanvasBackgroundDark`, `isOverlayThemeDark`, `displayHour` を一箇所で管理し、全コンポーネントが同じ値を参照する
 
 **影響**: `WeatherContext` に上記プロパティを追加。PlaylistExplorer, WeatherMonitor, WeatherMoodTuningPanel, WeatherAnimation が Context から取得
 
 ---
 
-### ADR-010: Favorite Music パネルとジャンル選択の永続化
+### ADR-010: Select Genre パネルとジャンル選択の永続化
 
 **決定**: ジャンル選択を localStorage で永続化。空配列は「永続化として無効」とし、読み込み時はデフォルト（J-POP）に修復する
 **理由**:
@@ -143,7 +143,7 @@
 
 ### ADR-012: ジャンル変更時のプレイリスト更新は差分のみ API 呼び出し
 
-**決定**: Favorite Music パネルを閉じたとき、追加されたジャンル分だけ `generateDashboard` を呼び、既存ジャンルは現在のプレイリストを再利用する
+**決定**: Select Genre パネルを閉じたとき、追加されたジャンル分だけ `generateDashboard` を呼び、既存ジャンルは現在のプレイリストを再利用する
 **理由**:
 
 - 全件再生成だと不要な API 呼び出しとローディングが増える
@@ -193,7 +193,7 @@
 
 ### ADR-016: 初回アクセス時の背景・時間帯の初期化（isTimeInitialized）
 
-**決定**: SSR/初回はサーバー時刻に依存せず `displayHour` を 0 で初期化し、クライアントで現地時刻を設定したあと `isTimeInitialized = true` にする。未初期化時は `effectiveTimeOfDay = "day"`, `isDark = false` で中性背景を使う
+**決定**: SSR/初回はサーバー時刻に依存せず `displayHour` を 0 で初期化し、クライアントで現地時刻を設定したあと `isTimeInitialized = true` にする。未初期化時は `effectiveTimeOfDay = "day"`, `isCanvasBackgroundDark = false`, `isOverlayThemeDark = false` で中性背景を使う
 **理由**:
 
 - ハイドレーションのずれや一瞬の誤った時間帯表示を防ぐ
@@ -212,3 +212,28 @@
 - バックグラウンド再取得時はローディング表示なし（初回成功後の同座標再取得）
 
 **影響**: `WeatherMonitor` で `isMoodTuningRef.current` を参照してポーリングをスキップ。自動更新時は `refreshPlaylists({ autoUpdate: true })` で「天気・時間の変化に合わせて再生成中」を表示
+
+---
+
+### ADR-018: Spotify 認証を PKCE に統一、プレイリスト保存は直接 fetch
+
+**決定**: NextAuth を使わず、Spotify の Authorization Code with PKCE で自前実装。認可は `GET /api/auth/spotify`、コールバックでトークン交換・セッションは暗号化クッキー（`spotify-session.ts`）、リフレッシュは同一モジュールで自動。プレイリスト保存（saveToSpotify）は spotify-web-api-node の一部エンドポイントで 403 が出るため、セッショントークンで Spotify Web API を直接 fetch し、既存プレイリストの上書きは `PUT /playlists/{id}/items`（非推奨の `/tracks` は 403）、100 曲超はチャンク送信
+
+**理由**:
+
+- PKCE でクライアントシークレットをフロントに露出せず、サーバー側でトークン交換・リフレッシュを一元管理できる
+- プレイリスト replace で 403 を避けるため新エンドポイント（/items）と直接 fetch を採用
+
+**影響**: `lib/spotify-pkce.ts`, `lib/spotify-session.ts`, `app/api/auth/spotify`, `app/api/auth/spotify/callback`, `app/api/auth/signout`, `auth.ts`（getSession のラップ）。`saveToSpotify` は getSession + fetch、PUT /items と 100 曲チャンク
+
+---
+
+### ADR-019: Overlay テーマとキャンバス視認性判定を分離
+
+**決定**: `themePreference`（time/light/dark/system）はモーダル・パネル等の overlay UI にのみ適用し、メイン画面の視認性判定（`isCanvasBackgroundDark`）は天気×時間帯の静的テーブルで独立して管理する
+**理由**:
+
+- ユーザーのテーマ選好と、背景上テキストの可読性は目的が異なるため
+- 単一の判定に混在させると、UI 視認性とデザイン意図の両方が崩れる
+
+**影響**: `WeatherContext` で `isOverlayThemeDark` と `isCanvasBackgroundDark` を分離提供。PlaylistExplorer/WeatherMonitor/SettingsPanel は用途に応じて参照先を切り替える

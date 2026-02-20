@@ -4,10 +4,11 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import WeatherMonitor from "./WeatherMonitor"
 import WeatherAnimation from "./WeatherAnimation"
 import WeatherMoodTuningPanel from "./WeatherMoodTuningPanel"
-import GenreSelector, { useSelectedGenres } from "./GenreSelector"
+import SettingsPanel from "./SettingsPanel"
+import FloatingNoteEffect from "./FloatingNoteEffect"
+import { useSelectedGenres } from "./GenreSelector"
 import { useWeather } from "@/contexts/WeatherContext"
-import { getWeatherBackground, getTimeOfDay, type WeatherType } from "@/lib/weather-background"
-import { normalizeWeatherType } from "@/lib/weather-utils"
+import { getWeatherBackground, type TimeOfDay } from "@/lib/weather-background"
 import { formatGradientBackground, INITIAL_BACKGROUND_GRADIENT } from "@/lib/weather-background-utils"
 import {
     useVinylRotation,
@@ -24,20 +25,30 @@ import {
     EMPTY_PLAYLIST,
     type LoadingMode,
 } from "@/lib/playlist-utils"
-import { Music } from "lucide-react"
+import { useSettings } from "@/hooks/useSettings"
+import { Music, Loader2, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { generateDashboard } from "@/app/actions/generateDashboard"
+import { saveToSpotify } from "@/app/actions/saveToSpotify"
 import type { DashboardItem } from "@/types/dashboard"
-import type { TimeOfDay } from "@/lib/weather-background"
 import type { Genre } from "@/lib/constants"
 
 interface PlaylistExplorerProps {
     playlists?: DashboardItem[]
+    /** true の間はプレイリスト初期構築をスキップ（ジャンル選択モーダル表示中に使用） */
+    suspended?: boolean
+    isUnauthenticated?: boolean
+    onRequestLoginModal?: () => void
 }
 
-export default function PlaylistExplorer({ playlists: initialPlaylists }: PlaylistExplorerProps) {
+export default function PlaylistExplorer({
+    playlists: initialPlaylists,
+    suspended = false,
+    isUnauthenticated = true,
+    onRequestLoginModal,
+}: PlaylistExplorerProps) {
     const [currentIndex, setCurrentIndex] = useState(0)
-    const { isTimeInitialized, displayHour, weatherType, actualWeatherType, moodTuningTimeOfDay, isMoodTuning, effectiveWeather, effectiveTimeOfDay, playlistRefreshTrigger, isDark } = useWeather()
+    const { isTimeInitialized, actualWeatherType, actualTimeOfDay, isMoodTuning, effectiveWeather, effectiveTimeOfDay, playlistRefreshTrigger, isCanvasBackgroundDark, isOverlayThemeDark, isMoodTuningApplied } = useWeather()
     /** 開いているパネル（null = 両方閉じている）。同時に1つだけ開く */
     const [openPanel, setOpenPanel] = useState<null | "mood" | "genre">(null)
     const [selectedGenres, isGenresInitialized] = useSelectedGenres()
@@ -45,6 +56,9 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
     const [isLoading, setIsLoading] = useState(false)
     /** 構築中の種別（初回 / 全件再構築 / 個別 / 追加ジャンルのみ）。表示文言の切り替え用 */
     const [loadingMode, setLoadingMode] = useState<LoadingMode>(null)
+    const [isSaving, setIsSaving] = useState(false)
+    const [saveError, setSaveError] = useState<string | null>(null)
+    const { autoRotationEnabled, tonearmVisible, noteEffectEnabled } = useSettings()
 
     /** パネルを開いた時点のジャンル（閉じたときの差分計算用） */
     const genresOnOpenRef = useRef<string[]>([])
@@ -82,10 +96,6 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         ? REALISTIC_VINYL_THEME
         : getGenreThemeColors(currentPlaylist.genre)
 
-    /** 表示用時間帯の単一ソース（実時刻ベースと Mood Tuning 考慮） */
-    const actualTimeOfDay = getTimeOfDay(displayHour)
-    const timeOfDay = isMoodTuning && moodTuningTimeOfDay ? moodTuningTimeOfDay : actualTimeOfDay
-
     /** ローディング中かどうかを ref で保持（useCallback 内で最新値を参照するため） */
     const isLoadingRef = useRef(false)
     isLoadingRef.current = isLoading
@@ -97,9 +107,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         setLoadingMode(options?.autoUpdate ? "auto" : "all")
         setIsLoading(true)
         try {
-            const weather = normalizeWeatherType(weatherType ?? "Clear") as WeatherType
-            const time = timeOfDay as TimeOfDay
-            const generated = await generateDashboard(weather, time, selectedGenres as Genre[])
+            const generated = await generateDashboard(effectiveWeather, effectiveTimeOfDay, selectedGenres as Genre[])
             setPlaylists(generated)
             setCurrentIndex((prev) => Math.min(prev, Math.max(0, generated.length - 1)))
         } catch (error) {
@@ -108,11 +116,34 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
             setIsLoading(false)
             setLoadingMode(null)
         }
-    }, [weatherType, timeOfDay, selectedGenres])
+    }, [effectiveWeather, effectiveTimeOfDay, selectedGenres])
 
     /** パネル閉時トリガー用 effect が refreshPlaylists の参照変更で再実行されないよう ref に保持 */
     const refreshPlaylistsRef = useRef(refreshPlaylists)
     refreshPlaylistsRef.current = refreshPlaylists
+
+    /** 現在のジャンルの楽曲を "MoodTune" Spotify プレイリストに保存して開く */
+    const handleSaveToSpotify = useCallback(async () => {
+        if (isUnauthenticated) {
+            onRequestLoginModal?.()
+            return
+        }
+        if (isLoadingOrEmpty || isSaving) return
+        setSaveError(null)
+        setIsSaving(true)
+        try {
+            const result = await saveToSpotify(currentPlaylist.title, currentPlaylist.trackUris)
+            if (result.success) {
+                window.open(result.playlistUrl, "_blank", "noopener,noreferrer")
+            } else {
+                setSaveError(result.error)
+            }
+        } catch {
+            setSaveError("Spotifyへの接続に失敗しました")
+        } finally {
+            setIsSaving(false)
+        }
+    }, [isUnauthenticated, onRequestLoginModal, isLoadingOrEmpty, isSaving, currentPlaylist])
 
     /** 表示中の1ジャンルだけ現在の天気・時間で再構築（レコード右3周で発火） */
     const refreshPlaylistByGenre = useCallback(async (genre: Genre) => {
@@ -121,9 +152,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         setLoadingMode("single")
         setIsLoading(true)
         try {
-            const weather = normalizeWeatherType(weatherType ?? "Clear") as WeatherType
-            const time = timeOfDay as TimeOfDay
-            const generated = await generateDashboard(weather, time, [genre])
+            const generated = await generateDashboard(effectiveWeather, effectiveTimeOfDay, [genre])
             const newItem = generated[0]
             if (!newItem) return
             setPlaylists((prev) => {
@@ -136,7 +165,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
             setIsLoading(false)
             setLoadingMode(null)
         }
-    }, [weatherType, timeOfDay, selectedGenres])
+    }, [effectiveWeather, effectiveTimeOfDay, selectedGenres])
 
     /** ジャンル差分に応じてプレイリストを更新（追加ジャンルのみAPI呼び出し。既存は currentPlaylists を再利用） */
     const updatePlaylistsWithDiff = useCallback(async (
@@ -155,9 +184,6 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         setLoadingMode(isInitialSync ? "initial" : "added")
         setIsLoading(true)
         try {
-            const weather = normalizeWeatherType(weatherType ?? "Clear") as WeatherType
-            const time = timeOfDay as TimeOfDay
-
             const existingMap = new Map<string, DashboardItem>()
             if (currentPlaylists) {
                 currentPlaylists.forEach(p => existingMap.set(p.genre, p))
@@ -169,11 +195,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
 
             let newPlaylists: DashboardItem[] = []
             if (diff.added.length > 0) {
-                newPlaylists = await generateDashboard(
-                    weather,
-                    time,
-                    diff.added as Genre[]
-                )
+                newPlaylists = await generateDashboard(effectiveWeather, effectiveTimeOfDay, diff.added as Genre[])
             }
 
             const allMap = new Map<string, DashboardItem>()
@@ -192,7 +214,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
             setIsLoading(false)
             setLoadingMode(null)
         }
-    }, [weatherType, timeOfDay])
+    }, [effectiveWeather, effectiveTimeOfDay])
 
     /** ジャンル選択パネルの開閉（閉じたときにジャンル変更があればプレイリスト再構築）。0件時は閉じない。 */
     const handleToggleSettings = useCallback(() => {
@@ -209,9 +231,9 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         }
     }, [openPanel, selectedGenres, playlists, updatePlaylistsWithDiff])
 
-    /** localStorage のジャンル読み込み完了後、保存値と表示プレイリストが食い違っていれば同期 */
+    /** localStorage のジャンル読み込み完了後、保存値と表示プレイリストが食い違っていれば同期。suspended 中はスキップ */
     useEffect(() => {
-        if (!isGenresInitialized || hasPerformedInitialSyncRef.current) return
+        if (suspended || !isGenresInitialized || hasPerformedInitialSyncRef.current) return
         hasPerformedInitialSyncRef.current = true
 
         const currentPlaylistGenres = playlists?.map(p => p.genre) ?? []
@@ -219,7 +241,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
             const diff = getGenresDiff(currentPlaylistGenres, selectedGenres)
             updatePlaylistsWithDiff(selectedGenres, diff, playlists, true)
         }
-    }, [isGenresInitialized, selectedGenres, playlists, updatePlaylistsWithDiff])
+    }, [suspended, isGenresInitialized, selectedGenres, playlists, updatePlaylistsWithDiff])
 
     /** 実時刻の時間帯が変わったタイミングでプレイリストを自動更新（手動設定中は行わない）。常に自動更新ONとして動作。 */
     useEffect(() => {
@@ -254,17 +276,11 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
         }
     }, [actualWeatherType, isMoodTuning, isGenresInitialized, selectedGenres.length, refreshPlaylists])
 
-    /** パネルを閉じたうえで、表示中の天気・時間が実際と異なる場合のみ Mood Tuning 表示を適用 */
-    const actualWeatherNorm = actualWeatherType ? normalizeWeatherType(actualWeatherType) : null
-    const isMoodTuningApplied =
-        openPanel !== "mood" &&
-        (actualWeatherNorm != null && effectiveWeather !== actualWeatherNorm || effectiveTimeOfDay !== actualTimeOfDay)
-    const weather = normalizeWeatherType(weatherType ?? "Clear")
     const backgroundStyle = isTimeInitialized
-      ? formatGradientBackground(getWeatherBackground(weather, timeOfDay))
+      ? formatGradientBackground(getWeatherBackground(effectiveWeather, effectiveTimeOfDay))
       : INITIAL_BACKGROUND_GRADIENT
-    const genreColorClass = isDark ? "text-white/80" : "text-muted-foreground"
-    const titleColorClass = isDark ? "text-white" : "text-foreground"
+    const genreColorClass = isCanvasBackgroundDark ? "text-white/80" : "text-muted-foreground"
+    const titleColorClass = isCanvasBackgroundDark ? "text-white" : "text-foreground"
 
     const {
         rotation,
@@ -295,6 +311,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                 : undefined,
         onRegenerateAll:
             selectedGenres.length > 0 ? refreshPlaylists : undefined,
+        idleEnabled: autoRotationEnabled,
     })
 
     /** 3周フィードバック表示: ドラッグ中・戻り演出でない・1周超 */
@@ -320,7 +337,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
 
     return (
         <div
-            className="min-h-screen flex flex-col items-center justify-between p-4 pb-20 sm:p-6 sm:pb-8 overflow-x-hidden overflow-y-auto transition-all duration-1000 ease-in-out relative z-10"
+            className="h-dvh min-h-0 flex flex-col items-center justify-between [@media(max-height:780px)]:justify-start p-4 pb-20 sm:p-6 sm:pb-8 [@media(max-height:780px)]:pb-6 overflow-hidden transition-all duration-1000 ease-in-out relative z-10"
             style={{
                 background: backgroundStyle,
             }}
@@ -336,7 +353,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                 hideToggleButton={openPanel === "genre" || isLoading}
             />
 
-            {/* Settings Toggle Button（ジャンル選択・右下）。気分パネル開時または構築中は非表示 */}
+            {/* Settings Toggle Button（設定・右下）。気分パネル開時または構築中は非表示 */}
             {openPanel !== "mood" && !isLoading && (
                 <Button
                     variant="outline"
@@ -344,20 +361,27 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                     onClick={handleToggleSettings}
                     disabled={openPanel === "genre" && selectedGenres.length === 0}
                     className={`
-                    fixed bottom-4 right-4 z-50 size-[2.8rem] rounded-[1.1rem] bg-background/80 backdrop-blur-sm
-                    [&_svg]:size-5
-                    ${openPanel === "genre" ? "bg-primary text-primary-foreground" : ""}
-                `}
-                aria-label={openPanel === "genre" && selectedGenres.length === 0 ? "1つ以上ジャンルを選択すると閉じられます" : openPanel === "genre" ? "Favorite Musicパネルを閉じる" : "Favorite Musicパネルを開く"}
+                      fixed bottom-12 right-4 z-50 size-[3.1rem] rounded-[1.2rem] bg-background/80 backdrop-blur-sm
+                      [&_svg]:size-6
+                      ${openPanel === "genre"
+                        ? isOverlayThemeDark
+                          ? "bg-white/15 text-white border-white/40 hover:bg-white/25 hover:text-white"
+                          : "bg-primary text-primary-foreground hover:bg-primary/90"
+                        : isOverlayThemeDark
+                          ? "hover:bg-white/10 hover:text-white/90 hover:border-white/40"
+                          : "hover:bg-background hover:text-foreground hover:border-border"
+                      }
+                    `}
+                    aria-label={openPanel === "genre" && selectedGenres.length === 0 ? "1つ以上ジャンルを選択すると閉じられます" : openPanel === "genre" ? "設定パネルを閉じる" : "設定パネルを開く"}
                 >
-                    <Music className="size-5" />
+                    <Settings className="size-6" />
                 </Button>
             )}
 
-            {/* Settings Panel with Genre Selector（ボタンの上に表示）。構築中は非表示 */}
+            {/* Settings Panel（ボタンの上に表示）。構築中は非表示 */}
             {openPanel === "genre" && !isLoading && (
-                <div className="fixed bottom-16 right-4 z-50 w-80 max-w-[calc(100vw-2rem)]">
-                    <GenreSelector />
+                <div className="fixed bottom-26 right-4 z-50 w-80 max-w-[calc(100vw-2rem)]">
+                    <SettingsPanel isUnauthenticated={isUnauthenticated} />
                 </div>
             )}
 
@@ -367,36 +391,40 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
             </div>
 
             {/* Vinyl Record Section（縦幅が狭いときはレコードを縮小して重なりを防止） */}
-            <div className="flex-1 min-h-0 flex items-center justify-center w-full max-w-md relative z-10 py-2">
-                {!(isLoading || openPanel === "mood" || openPanel === "genre") && (
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 text-center space-y-0.5">
-                        <p className={`text-[10px] font-light whitespace-nowrap flex items-center justify-center gap-1 ${isDark ? "text-white/80" : "text-muted-foreground/70"}`}>
-                            {selectedGenres.length <= 1 ? (
-                                <>
-                                    <Music className="w-3 h-3 shrink-0" aria-hidden />
-                                    お気に入りのジャンルを追加
-                                </>
-                            ) : (
-                                "左右にスピンして他のプレイリストへ"
-                            )}
-                        </p>
-                        <p className={`text-[9px] font-light whitespace-nowrap ${isDark ? "text-white/60" : "text-muted-foreground/50"}`}>
-                            {selectedGenres.length === 0
-                                ? "1つ以上選択するとスピンで再構築できます"
-                                : selectedGenres.length === 1
-                                    ? "右3周でプレイリストを再構築"
-                                    : "右3周でプレイリストを再構築・左3周で一括再構築"}
-                        </p>
-                        {isMoodTuningApplied && (
-                            <p className="text-base font-semibold text-rainbow whitespace-nowrap mt-2.5">
-                                Mood Tuning
-                            </p>
-                        )}
-                    </div>
-                )}
-
+            <div className="flex-1 min-h-0 flex flex-col items-center justify-center w-full max-w-md relative z-10 py-2 [@media(max-height:780px)]:py-1 [@media(max-height:780px)]:flex-none record-section-gap">
+                {/* ヒントは高さを固定しレコード・ページネーションの位置を常に揃える（非Mood Tuning時を基準にずれないよう h-14 で固定） */}
                 <div
-                    className="relative w-[min(18rem,42vh)] h-[min(18rem,42vh)] rounded-full transition-shadow duration-200"
+                    className={`text-center space-y-0.5 shrink-0 h-14 ${isLoading || openPanel === "mood" || openPanel === "genre" ? "invisible" : ""}`}
+                    aria-hidden={isLoading || openPanel === "mood" || openPanel === "genre"}
+                >
+                    <p className={`text-[10px] font-light whitespace-nowrap flex items-center justify-center gap-1 ${isCanvasBackgroundDark ? "text-white/80" : "text-muted-foreground/70"}`}>
+                        {selectedGenres.length <= 1 ? (
+                            <>
+                                <Music className="w-3 h-3 shrink-0" aria-hidden />
+                                お気に入りのジャンルを追加
+                            </>
+                        ) : (
+                            "左右にスピンして他のプレイリストへ"
+                        )}
+                    </p>
+                    <p className={`text-[9px] font-light whitespace-nowrap ${isCanvasBackgroundDark ? "text-white/60" : "text-muted-foreground/50"}`}>
+                        {selectedGenres.length === 0
+                            ? "1つ以上選択するとスピンで再構築できます"
+                            : selectedGenres.length === 1
+                                ? "右3周でプレイリストを再構築"
+                                : "右3周でプレイリストを再構築・左3周で一括再構築"}
+                    </p>
+                    {isMoodTuningApplied && (
+                        <p className="text-center">
+                            <span className="text-base font-semibold text-rainbow whitespace-nowrap">Mood Tuning</span>
+                        </p>
+                    )}
+                </div>
+
+                {/* レコードと3周メッセージをひとまとまりにし、下はページネーションに隙間なし */}
+                <div className="flex flex-col items-center shrink-0">
+                <div
+                    className="relative w-[min(18rem,42vh)] h-[min(18rem,42vh)] [@media(max-height:780px)]:w-[min(15rem,36vh)] [@media(max-height:780px)]:h-[min(15rem,36vh)] rounded-full transition-shadow duration-200 shrink-0"
                     style={
                         showRegenerateFeedback
                             ? {
@@ -410,7 +438,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
 
                     <div
                         ref={vinylRef}
-                        className={`relative w-full h-full select-none touch-none ${isLoading ? "pointer-events-none cursor-default" : "cursor-grab active:cursor-grabbing"}`}
+                        className={`relative w-full h-full select-none touch-none ${isLoading || openPanel === "mood" || openPanel === "genre" ? "pointer-events-none cursor-default" : "cursor-grab active:cursor-grabbing"}`}
                         style={{
                             transform: `rotate(${rotation}deg)`,
                             transition: isDragging
@@ -460,52 +488,94 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                         </div>
                     </div>
 
-                    {/* 3周フィードバック文言（1周超で表示、3周に近づくほど強調） */}
-                    {regenerateMessage && (
-                        <div
-                            className="absolute left-1/2 -translate-x-1/2 -bottom-6 sm:-bottom-9 w-full text-center pointer-events-none transition-opacity duration-150"
-                            style={{
-                                opacity: 0.7 + regenerateProgress * 0.3,
-                            }}
-                        >
-                            <span
-                                className={`text-xs font-medium whitespace-nowrap ${isDark ? "text-white/90" : "text-foreground/90"
-                                    }`}
-                            >
-                                {regenerateMessage}
-                            </span>
-                        </div>
+                    {noteEffectEnabled && (
+                        <FloatingNoteEffect
+                            accentColor={vinylColors.accentColor}
+                            isDarkText={isCanvasBackgroundDark}
+                            isPaused={openPanel !== null || isLoading}
+                        />
                     )}
 
-                    {/* Indicator dots（ジャンルごとのテーマカラー。Mood Tuning 中は非選択ドットが1本の虹になる） */}
-                    <div className="absolute -bottom-8 sm:-bottom-12 left-1/2 -translate-x-1/2 flex gap-1.5">
-                        {displayPlaylists.map((item, i) => {
-                            const colors = (useRealisticVinyl && i === safeCurrentIndex) ? REALISTIC_VINYL_THEME : getGenreThemeColors(item.genre)
-                            const isActive = i === safeCurrentIndex
-                            const inactiveCount = Math.max(1, displayPlaylists.length - 1)
-                            const inactiveIndex = i < safeCurrentIndex ? i : i - 1
-                            const rainbowSliceStyle =
-                                isMoodTuningApplied && !isActive
-                                    ? {
-                                          background: "linear-gradient(90deg, #ef4444, #f97316, #eab308, #22c55e, #06b6d4, #8b5cf6, #ec4899, #ef4444)",
-                                          backgroundSize: `${inactiveCount * 100}% 100%`,
-                                          backgroundPosition: `${-inactiveIndex * 100}% 0`,
-                                      }
-                                    : undefined
-                            return (
-                                <div
-                                    key={i}
-                                    className={`w-1.5 h-1.5 rounded-full transition-all ${isActive ? "w-6" : isMoodTuningApplied ? "" : "bg-border"}`}
-                                    style={isActive ? { backgroundColor: colors.accentColor } : rainbowSliceStyle}
-                                />
-                            )
-                        })}
-                    </div>
+                    {/* Tonearm overlay: scale/position from record-tonearm-reference.svg (record r=225, center 225,231.29; pivot 478.50,63.79; tonearm 332×366) */}
+                    {tonearmVisible && (
+                        <div
+                            className="absolute inset-0 pointer-events-none overflow-visible"
+                            aria-hidden
+                            style={{
+                                // record-tonearm-reference: record diameter 450, tonearm 332×366 → width 332/450, height 366/450 of container
+                                // Pivot (478.50,63.79) vs record center (225,231.29) → pivot at (106.33%, 12.78%) in container
+                                // tonearm.svg pivot at (221.90/332, 63.79/366) → left/top so that pivot lands at (106.33%, 12.78%)
+                                left: "57.06%",
+                                top: "-1.40%",
+                                width: "73.78%",
+                                height: "81.33%",
+                            }}
+                        >
+                            <svg
+                                className="w-full h-full drop-shadow-md"
+                                viewBox="0 0 332 366"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                                preserveAspectRatio="xMidYMid meet"
+                            >
+                                <defs>
+                                    <filter id="tonearm-pivot-shadow" x="-50%" y="-50%" width="200%" height="200%">
+                                        <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="black" floodOpacity="0.35" />
+                                    </filter>
+                                </defs>
+                                <circle cx="221.897" cy="63.7868" r="25" transform="rotate(-17.9996 221.897 63.7868)" fill={vinylColors.accentColor} filter="url(#tonearm-pivot-shadow)" />
+                                <path d="M225.05 27.1963C225.797 24.1904 228.812 22.3346 231.832 23.021C234.902 23.7187 236.822 26.7769 236.116 29.8449L195.908 204.559C195.57 206.024 194.907 207.395 193.967 208.568L122.532 297.749C119.718 301.261 114.317 301.079 111.747 297.384C110.053 294.95 110.151 291.694 111.988 289.366L180.56 202.477C181.44 201.362 182.072 200.073 182.415 198.694L225.05 27.1963Z" fill="#D9D9D9" />
+                                <path d="M104.424 330.4C102.784 332.775 99.4779 333.272 97.212 331.483L86.403 322.949C84.2033 321.213 83.8604 318.008 85.6428 315.845L116.761 278.088C118.499 275.979 121.609 275.656 123.743 277.364L131.256 283.374C133.306 285.014 133.739 287.96 132.247 290.12L104.424 330.4Z" fill={REALISTIC_VINYL_THEME.accentColor} />
+                                <circle cx="140.805" cy="321.355" r="4.47665" transform="rotate(-56.8972 140.805 321.355)" fill={REALISTIC_VINYL_THEME.accentColor} />
+                                <rect width="8.9533" height="25.5809" transform="translate(116.395 310.786) rotate(-56.8972)" fill={REALISTIC_VINYL_THEME.accentColor} />
+                                <path d="M221.045 11.7671C221.513 9.02436 224.13 7.19152 226.868 7.68925L238.712 9.8427C241.53 10.355 243.342 13.125 242.683 15.9122L231.692 62.4163C231.212 64.4431 229.527 65.9607 227.461 66.2256L218.097 67.4262C214.764 67.8535 211.967 64.9374 212.532 61.6253L221.045 11.7671Z" fill={REALISTIC_VINYL_THEME.accentColor} />
+                            </svg>
+                        </div>
+                    )}
+                </div>
+
+                {/* 3周フィードバック文言（レコードとは少しあけ、ページネーションとは詰める。1行分のスペースは常に確保） */}
+                <div
+                    className={`mt-1.5 -mb-0.5 min-h-4 flex items-center justify-center w-full text-center shrink-0 transition-opacity duration-150 leading-none ${regenerateMessage ? "" : "invisible"}`}
+                    style={regenerateMessage ? { opacity: 0.7 + regenerateProgress * 0.3 } : undefined}
+                    aria-hidden={!regenerateMessage}
+                >
+                    <span
+                        className={`text-xs font-medium whitespace-nowrap ${isCanvasBackgroundDark ? "text-white/90" : "text-foreground/90"}`}
+                    >
+                        {regenerateMessage ?? "\u00A0"}
+                    </span>
+                </div>
+                </div>
+
+                {/* Indicator dots（ジャンルごとのテーマカラー。Mood Tuning 中は非選択ドットが1本の虹になる） */}
+                <div className="flex gap-1.5 shrink-0">
+                    {displayPlaylists.map((item, i) => {
+                        const colors = (useRealisticVinyl && i === safeCurrentIndex) ? REALISTIC_VINYL_THEME : getGenreThemeColors(item.genre)
+                        const isActive = i === safeCurrentIndex
+                        const inactiveCount = Math.max(1, displayPlaylists.length - 1)
+                        const inactiveIndex = i < safeCurrentIndex ? i : i - 1
+                        const rainbowSliceStyle =
+                          isMoodTuningApplied && !isActive
+                            ? {
+                                background: "linear-gradient(90deg, #ef4444, #f97316, #eab308, #22c55e, #06b6d4, #8b5cf6, #ec4899, #ef4444)",
+                                backgroundSize: `${inactiveCount * 100}% 100%`,
+                                backgroundPosition: `${-inactiveIndex * 100}% 0`,
+                              }
+                            : undefined
+                        return (
+                          <div
+                            key={i}
+                            className={`w-1.5 h-1.5 rounded-full transition-all ${isActive ? "w-6" : isMoodTuningApplied ? "" : "bg-border"}`}
+                            style={isActive ? { backgroundColor: colors.accentColor } : rainbowSliceStyle}
+                          />
+                        )
+                    })}
                 </div>
             </div>
 
-            {/* Playlist Info Section（縦幅が狭いときは余白・画像を縮小）。Mood Tuning 中はタイトル・ジャケに虹色の淵 */}
-            <div className="w-full max-w-md shrink-0 space-y-4 sm:space-y-6 pb-4 relative z-10">
+            {/* Playlist Info Section（ページネーションとの幅を確保するため上に余白。ジャンル名〜Spotifyボタンの位置関係は固定） */}
+            <div className="w-full max-w-md shrink-0 mt-5 sm:mt-6 [@media(max-height:780px)]:mt-3 space-y-4 sm:space-y-6 [@media(max-height:780px)]:space-y-3 pb-4 [@media(max-height:780px)]:pb-2 relative z-10">
                 <div className="text-center space-y-2 sm:space-y-3">
                     <p className={`text-[10px] sm:text-xs uppercase tracking-widest font-light ${genreColorClass}`}>
                         {isLoadingOrEmpty ? LOADING_GENRE_TEXT : currentPlaylist.genre}
@@ -516,42 +586,74 @@ export default function PlaylistExplorer({ playlists: initialPlaylists }: Playli
                 </div>
 
                 <div className="flex items-center justify-center">
-                    {isLoadingOrEmpty ? (
-                        isMoodTuningApplied ? (
-                            <div className="bg-rainbow p-[2px] rounded-lg shrink-0">
-                                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-[calc(1rem-2px)] bg-muted/50 animate-pulse flex items-center justify-center">
-                                    <Music className={`w-6 h-6 sm:w-8 sm:h-8 ${isDark ? "text-white/30" : "text-muted-foreground/30"}`} />
-                                </div>
+                    {/* ジャケットは常に同一外寸のラッパーで配置を固定（非Mood Tuning時を基準）。虹枠は見た目だけ */}
+                    <div className={`p-[2px] rounded-lg shrink-0 w-[calc(6rem+4px)] h-[calc(6rem+4px)] sm:w-[calc(8rem+4px)] sm:h-[calc(8rem+4px)] ${isMoodTuningApplied ? "bg-rainbow" : ""}`}>
+                        {isLoadingOrEmpty ? (
+                            <div className={`w-24 h-24 sm:w-32 sm:h-32 bg-muted/50 animate-pulse flex items-center justify-center ${isMoodTuningApplied ? "rounded-[calc(1rem-2px)]" : "rounded-lg"}`}>
+                                <Music className={`w-6 h-6 sm:w-8 sm:h-8 ${isCanvasBackgroundDark ? "text-white/30" : "text-muted-foreground/30"}`} />
                             </div>
                         ) : (
-                            <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-lg bg-muted/50 animate-pulse flex items-center justify-center">
-                                <Music className={`w-6 h-6 sm:w-8 sm:h-8 ${isDark ? "text-white/30" : "text-muted-foreground/30"}`} />
-                            </div>
-                        )
-                    ) : isMoodTuningApplied ? (
-                        <div className="bg-rainbow p-[2px] rounded-lg shrink-0">
                             <img
                                 src={getImageUrl(currentPlaylist.imageUrl)}
                                 alt={currentPlaylist.title}
-                                className="w-24 h-24 sm:w-32 sm:h-32 rounded-[calc(1rem-2px)] shadow-lg object-cover"
+                                className={`w-24 h-24 sm:w-32 sm:h-32 shadow-lg object-cover ${isMoodTuningApplied ? "rounded-[calc(1rem-2px)]" : "rounded-lg"}`}
                                 onError={(e) => {
                                     const target = e.target as HTMLImageElement
                                     target.src = "/placeholder.svg"
                                 }}
                             />
-                        </div>
-                    ) : (
-                        <img
-                            src={getImageUrl(currentPlaylist.imageUrl)}
-                            alt={currentPlaylist.title}
-                            className="w-24 h-24 sm:w-32 sm:h-32 rounded-lg shadow-lg object-cover"
-                            onError={(e) => {
-                                const target = e.target as HTMLImageElement
-                                target.src = "/placeholder.svg"
-                            }}
-                        />
-                    )}
+                        )}
+                    </div>
                 </div>
+
+            {/* Spotify 再生ボタン（非ログイン時はログイン導線として動作） */}
+                {(() => {
+                    const needsSpotifyLogin = isUnauthenticated
+                    const spotifyDisabled =
+                        isLoadingOrEmpty ||
+                        isSaving ||
+                        currentPlaylist.trackUris.length === 0
+                    const disabledReason = needsSpotifyLogin
+                        ? "Spotify機能はログインすると利用できます"
+                        : isSaving
+                            ? null
+                            : isLoadingOrEmpty
+                              ? "プレイリストを読み込み中です"
+                              : currentPlaylist.trackUris.length === 0
+                                ? "再生できる曲を取得できませんでした。しばらく経ってからお試しください。"
+                                : null
+                    const buttonLabel = needsSpotifyLogin
+                        ? "Spotifyでログインして再生"
+                        : isSaving
+                            ? "保存中..."
+                            : "Spotifyで再生"
+                    return (
+                        <div className="flex flex-col items-center gap-2">
+                            <Button
+                                onClick={handleSaveToSpotify}
+                                disabled={!needsSpotifyLogin && spotifyDisabled}
+                                className="flex items-center gap-2 bg-[#1DB954] hover:bg-[#1ed760] text-black font-semibold rounded-full px-6 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isSaving ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
+                                    </svg>
+                                )}
+                                {buttonLabel}
+                            </Button>
+                            {disabledReason && (
+                                <p className="text-xs text-white/60 text-center max-w-[240px]" role="status">
+                                    {disabledReason}
+                                </p>
+                            )}
+                            {saveError && (
+                                <p className="text-xs text-red-400">{saveError}</p>
+                            )}
+                        </div>
+                    )
+                })()}
             </div>
         </div>
     )

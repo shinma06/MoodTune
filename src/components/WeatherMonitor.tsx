@@ -5,9 +5,11 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { useWeather } from "@/contexts/WeatherContext"
 import type { WeatherState } from "@/types/weather"
-import { formatDateTime, getWeatherIcon, getWeatherThemeColor, getWeatherThemeColorForDark, normalizeWeatherType } from "@/lib/weather-utils"
+import { formatDateTime, getWeatherIcon, getWeatherThemeColor, normalizeWeatherType } from "@/lib/weather-utils"
+import { WEATHER_TYPE_LABELS } from "@/lib/constants"
 import { fetchWeatherData } from "@/lib/weather-api"
 import { useGeolocation } from "@/hooks/useGeolocation"
+import { useSettings } from "@/hooks/useSettings"
 
 export default function WeatherMonitor() {
     const [currentTime, setCurrentTime] = useState<Date | null>(null)
@@ -15,7 +17,8 @@ export default function WeatherMonitor() {
         status: "loading",
         message: "位置情報を取得中...",
     })
-    const { effectiveTimeOfDay, isDark, setWeatherType, setActualWeatherType, weatherType, isMoodTuning } = useWeather()
+    const { effectiveTimeOfDay, isCanvasBackgroundDark, setWeatherType, setActualWeatherType, weatherType, isMoodTuning, isMoodTuningApplied } = useWeather()
+    const { moodTuningWeatherDisplay } = useSettings()
 
     const isMoodTuningRef = useRef(isMoodTuning)
     useEffect(() => {
@@ -98,28 +101,39 @@ export default function WeatherMonitor() {
     const dateTime = currentTime ? formatDateTime(currentTime) : { dateString: "--/--/--/---", timeString: "--:--" }
     const { dateString, timeString } = dateTime
 
+    const tuningWeatherType =
+        isMoodTuning && moodTuningWeatherDisplay === "tuning" && weatherType !== null
+            ? normalizeWeatherType(weatherType)
+            : null
+    const shouldUseTuningWeather = tuningWeatherType !== null
+
     // アイコン・気温表示用（天気取得成功時のみ表示）
-    const displayWeatherType = isMoodTuning && weatherType
-        ? normalizeWeatherType(weatherType)
+    const displayWeatherType = tuningWeatherType
+        ? tuningWeatherType
         : weatherState.status === "success"
         ? normalizeWeatherType(weatherState.data.weatherMain)
         : null
+
+    const shouldUseMoodRainbowWeatherUi = isMoodTuningApplied && shouldUseTuningWeather
+    const weatherDescriptionText = shouldUseMoodRainbowWeatherUi && displayWeatherType
+      ? WEATHER_TYPE_LABELS[displayWeatherType]
+      : weatherState.status === "success"
+        ? weatherState.data.description
+        : ""
     
     const WeatherIcon = displayWeatherType
         ? getWeatherIcon(displayWeatherType, effectiveTimeOfDay)
         : null
     
-    // isDark は Context の単一ソースから取得（背景と常に一致）
+    // isCanvasBackgroundDark: キャンバス背景の明暗に連動（画面上のテキスト・アイコン視認性用）
     const iconColor = displayWeatherType
-        ? isDark
-            ? getWeatherThemeColorForDark(displayWeatherType, effectiveTimeOfDay)
-            : getWeatherThemeColor(displayWeatherType, effectiveTimeOfDay)
+        ? getWeatherThemeColor(displayWeatherType, effectiveTimeOfDay, isCanvasBackgroundDark)
         : undefined
     
-    const textColorClass = isDark ? "text-white" : ""
-    const mutedTextColorClass = isDark ? "text-white/80" : "text-muted-foreground/60"
-    const mutedTextColorClass2 = isDark ? "text-white/70" : "text-muted-foreground/70"
-    const mutedTextColorClass3 = isDark ? "text-white/60" : "text-muted-foreground/80"
+    const textColorClass = isCanvasBackgroundDark ? "text-white" : ""
+    const mutedTextColorClass = isCanvasBackgroundDark ? "text-white/80" : "text-muted-foreground/60"
+    const mutedTextColorClass2 = isCanvasBackgroundDark ? "text-white/70" : "text-muted-foreground/70"
+    const mutedTextColorClass3 = isCanvasBackgroundDark ? "text-white/60" : "text-muted-foreground/80"
 
     const handleRetry = () => {
         setWeatherState({ status: "loading", message: "位置情報を取得中..." })
@@ -161,15 +175,24 @@ export default function WeatherMonitor() {
                             <div className="text-right">
                                 <p className={`text-2xl font-serif ${textColorClass || "text-foreground"}`}>{weatherState.data.temp}</p>
                                 <p className={`text-xs font-light ${mutedTextColorClass2}`}>{weatherState.data.city}</p>
-                                {weatherState.data.description && (
-                                    <p className={`text-[10px] font-light ${mutedTextColorClass}`}>{weatherState.data.description}</p>
+                                {weatherDescriptionText && (
+                                    <p className={`text-[10px] font-light ${shouldUseMoodRainbowWeatherUi ? "text-rainbow" : mutedTextColorClass}`}>
+                                        {weatherDescriptionText}
+                                    </p>
                                 )}
                             </div>
-                            <WeatherIcon 
-                                className="w-10 h-10" 
-                                style={{ color: iconColor }} 
-                                strokeWidth={1.5} 
-                            />
+                            {shouldUseMoodRainbowWeatherUi ? (
+                                <span className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center">
+                                    <span className="ring-rainbow absolute inset-0 rounded-full" aria-hidden />
+                                    <WeatherIcon className="relative z-10 h-10 w-10" style={{ color: iconColor }} strokeWidth={1.5} />
+                                </span>
+                            ) : (
+                                <WeatherIcon
+                                    className="w-10 h-10"
+                                    style={{ color: iconColor }}
+                                    strokeWidth={1.5}
+                                />
+                            )}
                         </>
                     )}
                 </div>

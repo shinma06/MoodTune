@@ -1,44 +1,22 @@
-import NextAuth from "next-auth"
-import Spotify from "next-auth/providers/spotify"
+import { getSession as getSpotifySession } from "@/lib/spotify-session"
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  providers: [
-    Spotify({
-      authorization: {
-        params: {
-          scope: [
-            "playlist-modify-public",
-            "playlist-modify-private",
-            "user-read-email",
-          ].join(" "),
-        },
-      },
-    }),
-  ],
-  callbacks: {
-    async jwt({ token, account }) {
-      if (account?.access_token) {
-        token.accessToken = account.access_token
-        token.refreshToken = account.refresh_token ?? undefined
-        token.expiresAt = account.expires_at
-          ? account.expires_at * 1000
-          : undefined
-      }
+/**
+ * Session shape used by page.tsx (isUnauthenticated) and spotify-server.ts (accessToken).
+ */
+export interface Session {
+  accessToken?: string
+  refreshToken?: string
+  expiresAt?: number
+  error?: string
+}
 
-      return token
-    },
-    async session({ session, token }) {
-      if (token.accessToken) {
-        session.accessToken = token.accessToken as string
-      }
-      if (token.refreshToken) {
-        session.refreshToken = token.refreshToken as string
-      }
-      if (token.expiresAt) {
-        session.expiresAt = token.expiresAt as number
-      }
-
-      return session
-    },
-  },
-})
+/** Returns current Spotify session or null. Refreshes token if expired. */
+export async function auth(): Promise<Session | null> {
+  const session = await getSpotifySession()
+  if (!session) return null
+  return {
+    accessToken: session.accessToken,
+    refreshToken: session.refreshToken,
+    expiresAt: session.expiresAt,
+  }
+}

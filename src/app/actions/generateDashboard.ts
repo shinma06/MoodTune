@@ -3,14 +3,13 @@
 import { generateText } from "ai"
 import { openai } from "@ai-sdk/openai"
 import { getSpotifyClient } from "@/lib/spotify-server"
+import { getSession } from "@/lib/spotify-session"
+import { getMockPlaylistInfo } from "@/lib/mock-playlist-data"
 import { WEATHER_TYPE_LABELS, TIME_OF_DAY_LABELS, type Genre } from "@/lib/constants"
 import type { WeatherType, TimeOfDay } from "@/lib/weather-background"
 import type { DashboardItem } from "@/types/dashboard"
 
 export type { DashboardItem }
-
-/** Spotify 未連携時は true。明示的に "false" でない限りモック画像を使用 */
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK_SPOTIFY !== "false"
 
 /**
  * ジャンル名に基づいてモック画像URLを生成
@@ -22,6 +21,13 @@ function getMockImageUrl(genre: string): string {
   return `https://picsum.photos/seed/${genreHash}/400/400`
 }
 
+type TrackCandidate = { artist: string; title: string }
+type PlaylistInfo = {
+  genre: string
+  title: string
+  tracks: TrackCandidate[]
+}
+
 /**
  * フォールバック用のプレイリスト情報を生成
  */
@@ -29,43 +35,26 @@ function createFallbackPlaylistInfo(
   genres: Genre[],
   weatherLabel: string,
   timeLabel: string
-): Array<{ genre: string; title: string; query: string }> {
+): PlaylistInfo[] {
   return genres.map((genre) => ({
     genre,
     title: `${weatherLabel}の${timeLabel}に聴く${genre}`,
-    query: `${genre} ${weatherLabel} ${timeLabel}`,
+    tracks: [],
   }))
 }
 
 /**
- * Spotify APIから画像を取得（通常モード）
- */
-async function getSpotifyImage(
-  spotifyClient: NonNullable<Awaited<ReturnType<typeof getSpotifyClient>>>,
-  query: string
-): Promise<string | null> {
-  try {
-    const response = await spotifyClient.searchTracks(query, { limit: 1 })
-    const track = response.body.tracks?.items?.[0]
-    return track?.album?.images?.[0]?.url || null
-  } catch (error) {
-    console.error("Failed to search Spotify tracks:", error)
-    return null
-  }
-}
-
-/**
- * AIを使用してジャンルごとのタイトルと検索クエリを生成
+ * AIを使用してジャンルごとのタイトルと楽曲候補リストを生成
  */
 async function generatePlaylistInfo(
   weather: WeatherType,
   time: TimeOfDay,
   genres: Genre[]
-): Promise<Array<{ genre: string; title: string; query: string }>> {
+): Promise<PlaylistInfo[]> {
   const weatherLabel = WEATHER_TYPE_LABELS[weather]
   const timeLabel = TIME_OF_DAY_LABELS[time]
 
-  const prompt = `あなたは音楽プレイリストのキュレーターです。以下の条件に基づいて、各ジャンルに対するプレイリストのタイトルとSpotify検索クエリを生成してください。
+  const prompt = `あなたは音楽プレイリストのキュレーターです。以下の条件に基づいて、各ジャンルに対するプレイリストのタイトルと楽曲リストを生成してください。
 
 条件:
 - 天気: ${weatherLabel}
@@ -76,14 +65,18 @@ async function generatePlaylistInfo(
 {
   "genre": "ジャンル名",
   "title": "プレイリストのタイトル（日本語、30文字以内）",
-  "query": "Spotify検索クエリ（英語、アーティスト名や楽曲名を含む）"
+  "tracks": [
+    { "artist": "アーティスト名（英語表記）", "title": "曲名（英語表記）" }
+  ]
 }
 
+tracksには各ジャンルの雰囲気・天気・時間帯に合った楽曲を15曲リストアップしてください。
+実際にSpotifyに存在する楽曲・アーティストを選んでください。
 出力はJSON配列形式で、各ジャンルごとに1つのオブジェクトを含めてください。`
 
   try {
     const { text } = await generateText({
-      model: openai("gpt-4o-mini"),
+      model: openai("gpt-4o"),
       prompt,
     })
 
@@ -99,19 +92,44 @@ async function generatePlaylistInfo(
   }
 }
 
-/** プレイリスト情報を DashboardItem に変換（undefined を空文字にしシリアライズ可能にする） */
-function toDashboardItem(
-  info: { genre: string; title: string; query: string },
-  index: number,
-  imageUrl: string
-): DashboardItem {
-  return {
-    id: `playlist-${index + 1}`,
-    genre: String(info?.genre ?? ""),
-    title: String(info?.title ?? ""),
-    query: String(info?.query ?? ""),
-    imageUrl: String(imageUrl ?? ""),
+/**
+ * 1曲分のSpotify track URI と アルバム画像URLを取得
+ */
+async function searchTrack(
+  spotifyClient: NonNullable<Awaited<ReturnType<typeof getSpotifyClient>>>,
+  artist: string,
+  title: string
+): Promise<{ uri: string; imageUrl: string | null } | null> {
+  try {
+    const query = `artist:${artist} track:${title}`
+    const response = await spotifyClient.searchTracks(query, { limit: 1 })
+    const track = response.body.tracks?.items?.[0]
+    if (!track) return null
+    return {
+      uri: track.uri,
+      imageUrl: track.album?.images?.[0]?.url ?? null,
+    }
+  } catch {
+    return null
   }
+}
+
+/** 同時実行数を制限して Promise を実行（429 レート制限回避） */
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length)
+  let index = 0
+  async function worker(): Promise<void> {
+    while (index < items.length) {
+      const i = index++
+      results[i] = await fn(items[i], i)
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => worker()))
+  return results
 }
 
 /**
@@ -128,22 +146,28 @@ export async function generateDashboard(
   }
 
   try {
-    let playlistInfos: Array<{ genre: string; title: string; query: string }>
-    try {
-      playlistInfos = await generatePlaylistInfo(weather, time, selectedGenres)
-    } catch {
-      playlistInfos = createFallbackPlaylistInfo(
-        selectedGenres,
-        WEATHER_TYPE_LABELS[weather] ?? "晴れ",
-        TIME_OF_DAY_LABELS[time] ?? "昼"
-      )
+    const session = await getSession()
+    const isLoggedIn = Boolean(session)
+    let playlistInfos: PlaylistInfo[]
+    const weatherLabel = WEATHER_TYPE_LABELS[weather] ?? "晴れ"
+    const timeLabel = TIME_OF_DAY_LABELS[time] ?? "昼"
+
+    if (!isLoggedIn) {
+      playlistInfos = getMockPlaylistInfo(selectedGenres, weatherLabel, timeLabel)
+    } else {
+      try {
+        playlistInfos = await generatePlaylistInfo(weather, time, selectedGenres)
+      } catch {
+        playlistInfos = createFallbackPlaylistInfo(selectedGenres, weatherLabel, timeLabel)
+      }
     }
+
     if (!Array.isArray(playlistInfos) || playlistInfos.length === 0) {
       return []
     }
 
     let spotifyClient: Awaited<ReturnType<typeof getSpotifyClient>> = null
-    if (!USE_MOCK) {
+    if (isLoggedIn) {
       try {
         spotifyClient = await getSpotifyClient()
       } catch {
@@ -151,22 +175,38 @@ export async function generateDashboard(
       }
     }
 
-    const dashboardItems: DashboardItem[] = await Promise.all(
-      playlistInfos.map(async (info, index) => {
-        let imageUrl = ""
-        try {
-          if (USE_MOCK || !spotifyClient) {
-            imageUrl = getMockImageUrl(info?.genre ?? "")
-          } else {
-            const spotifyImage = await getSpotifyImage(spotifyClient, info?.query ?? "")
-            imageUrl = spotifyImage || getMockImageUrl(info?.genre ?? "")
-          }
-        } catch {
-          imageUrl = getMockImageUrl(info?.genre ?? "")
+    // レート制限(429)回避: ジャンルごとに直列、曲検索は同時2件まで
+    const SPOTIFY_SEARCH_CONCURRENCY = 2
+    const dashboardItems: DashboardItem[] = []
+
+    for (let index = 0; index < playlistInfos.length; index++) {
+      const info = playlistInfos[index]
+      let imageUrl = getMockImageUrl(info?.genre ?? "")
+      let trackUris: string[] = []
+
+      if (isLoggedIn && spotifyClient && Array.isArray(info.tracks) && info.tracks.length > 0) {
+        const results = await mapWithConcurrency(
+          info.tracks,
+          SPOTIFY_SEARCH_CONCURRENCY,
+          (t) => searchTrack(spotifyClient!, t.artist, t.title)
+        )
+
+        for (const result of results) {
+          if (result) trackUris.push(result.uri)
         }
-        return toDashboardItem(info, index, imageUrl)
+
+        const firstImage = results.find((r) => r?.imageUrl)?.imageUrl
+        if (firstImage) imageUrl = firstImage
+      }
+
+      dashboardItems.push({
+        id: `playlist-${index + 1}`,
+        genre: String(info?.genre ?? ""),
+        title: String(info?.title ?? ""),
+        imageUrl,
+        trackUris,
       })
-    )
+    }
 
     return dashboardItems
   } catch (error) {

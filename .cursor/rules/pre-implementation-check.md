@@ -38,14 +38,15 @@
 ### WeatherContext の責務
 
 ```
-actualWeatherType / actualTimeOfDay  → 実際の天気・時間帯
-weatherType / moodTuningTimeOfDay    → Mood Tuning で設定した値（Context）
-effectiveWeather / effectiveTimeOfDay → 表示用（Mood Tuning で設定されていればそちら優先）
-isDark                               → 背景が暗いかどうか
-isMoodTuning                         → Mood Tuning で手動設定中か（10 分ポーリングはスキップ）
-isTimeInitialized                    → クライアントで時刻が確定したか（初回背景の切り替えに使用）
-displayHour                          → 表示用時刻（1 分ごと更新）
-playlistRefreshTrigger               → プレイリスト再生成のトリガー
+actualWeatherType / actualTimeOfDay   → 実際の天気・時間帯
+weatherType / moodTuningTimeOfDay     → Context が保持する現在表示値と Mood Tuning 手動時間帯
+effectiveWeather / effectiveTimeOfDay → 表示用の単一ソース（Mood Tuning 優先）
+isCanvasBackgroundDark                → 背景上のテキスト・アイコン視認性（天気×時間帯）
+themePreference                       → Settings で選ぶ overlay テーマ（time/light/dark/system）
+isOverlayThemeDark                    → モーダル・パネルのテーマ明暗（themePreference を反映。canvas判定とは独立）
+isMoodTuningApplied                   → 表示が実際の天気・時間と異なるか（虹 UI 制御）
+displayHour                           → 表示用時刻（1分ごと更新）
+playlistRefreshTrigger                → プレイリスト再生成のトリガー
 ```
 
 ### useLocalStorage（selected-genres）の責務
@@ -60,7 +61,7 @@ playlistRefreshTrigger               → プレイリスト再生成のトリガ
 ### PlaylistExplorer のデータフロー
 
 ```
-1. Context から effectiveWeather / effectiveTimeOfDay / isDark を取得
+1. Context から effectiveWeather / effectiveTimeOfDay / isCanvasBackgroundDark / isOverlayThemeDark を取得
 2. useSelectedGenres から現在のジャンル配列を取得
 3. ジャンル差分・天気変化を検知してプレイリスト更新
 4. 差分更新（追加ジャンルのみ API）/ 全件更新（Mood Tuning 閉じ時）
@@ -69,6 +70,6 @@ playlistRefreshTrigger               → プレイリスト再生成のトリガ
 ## 使い方
 
 1. 実装を始める前にこのチェックリストを一読する
-2. 不明点があれば `systemPatterns.md` / `activeContext.md` を参照
+2. 不明点があれば `.cursor/memory/systemPatterns.md` / `.cursor/memory/activeContext.md` を参照
 3. 実装後、「4. 実装後の確認」を行う
-4. 技術負債を感じたら `rules/refactor-overcomplexity.md` を適用
+4. 技術負債を感じたら `.cursor/rules/refactor-overcomplexity.md` を適用

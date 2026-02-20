@@ -12,7 +12,7 @@ MoodTune への貢献ありがとうございます。このドキュメント�
    cd MoodTune
    npm install
    ```
-2. [README.md](./README.md) の「環境変数」に従い `.env.local` を用意する（最低限 `OPENAI_API_KEY` でモックモードが動作します）
+2. [README.md](./README.md) の「環境変数」に従い `.env.local` を用意する（非ログイン利用のみなら環境変数なしで起動可能です）
 3. `npm run dev` で開発サーバーを起動し、動作を確認する
 
 ---
@@ -31,7 +31,7 @@ MoodTune への貢献ありがとうございます。このドキュメント�
 
 ### 技術スタック・方針
 
-- **Framework**: Next.js 15 (App Router)
+- **Framework**: Next.js 16 (App Router)
 - **Language**: TypeScript（明示的な型定義を推奨、`any` は避ける）
 - **Styling**: Tailwind CSS のみ。UI コンポーネントは shadcn/ui を優先する
 - **Components**: 関数コンポーネント。デフォルトは Server Component、`useState` 等が必要な場合のみ `'use client'` を使用する
@@ -59,7 +59,7 @@ MoodTune への貢献ありがとうございます。このドキュメント�
 - **YAGNI**: 今の要件を満たす範囲で実装し、不要な抽象化を避ける
 - **決定的なマッピング**: 入力→出力が一意に決まるものは、関数内オブジェクトではなく静的定数で定義する（例: `WEATHER_ICON_MAP`, `BACKGROUNDS`）
 
-新機能・変更前には `.cursor/rules/pre-implementation-check.md` のチェックリストを参照し、実装後に複雑さを感じた場合は `.cursor/rules/refactor-overcomplexity.md` の手順を検討してください。
+新機能・変更前には `.claude/rules/pre-implementation-check.md`（または `.cursor/rules/pre-implementation-check.md`）のチェックリストを参照し、実装後に複雑さを感じた場合は `.claude/rules/refactor-overcomplexity.md`（または `.cursor/rules/refactor-overcomplexity.md`）の手順を検討してください。
 
 ---
 
@@ -69,8 +69,9 @@ MoodTune への貢献ありがとうございます。このドキュメント�
 
 | 役割                                  | 役割の概要                                                                                                                 |
 | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| **WeatherContext**                    | 天気・時間帯・表示用の `effectiveWeather` / `effectiveTimeOfDay` / `isDark` の単一ソース。Mood Tuning の手動値もここで管理 |
+| **WeatherContext**                    | 天気・時間帯・表示用の `effectiveWeather` / `effectiveTimeOfDay` / `isCanvasBackgroundDark` / `isOverlayThemeDark` の単一ソース。`isCanvasBackgroundDark` は天気×表示時間の静的テーブル、`themePreference` は overlay 専用として独立管理 |
 | **useLocalStorage (selected-genres)** | ジャンル選択の永続化。空配列は無効として扱い、初回・他タブ時はデフォルトに修復                                             |
+| **useSettings**                       | Settings パネル値（`themePreference` / `autoRotationEnabled` / `tonearmVisible` / `noteEffectEnabled` / `moodTuningWeatherDisplay`）の永続化 |
 | **PlaylistExplorer**                  | Context とジャンルを統合し、プレイリスト表示・差分更新・全件再生成を担当                                                   |
 
 - 天気・時間帯を表示に使うコンポーネントは、**WeatherContext** から取得した値を使う（ローカルで別計算しない）
