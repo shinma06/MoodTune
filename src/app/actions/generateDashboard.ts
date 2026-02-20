@@ -9,7 +9,7 @@ import type { WeatherType, TimeOfDay } from "@/lib/weather-background"
 import type { DashboardItem } from "@/types/dashboard"
 
 /** モック時の意図的な待機時間（ms） */
-const MOCK_DELAY_MS = 1500
+const MOCK_DELAY_MS = 500
 
 export type { DashboardItem }
 
