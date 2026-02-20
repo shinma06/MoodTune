@@ -300,6 +300,23 @@
   );
 }
 
+/* Rainbow ring only (donut): center transparent, 2px ring. Use with w-11 h-11 (2.75rem = 44px, same as former circle). */
+.ring-rainbow {
+  background: linear-gradient(
+    135deg,
+    #ef4444,
+    #f97316,
+    #eab308,
+    #22c55e,
+    #06b6d4,
+    #8b5cf6,
+    #ec4899,
+    #ef4444
+  );
+  mask: radial-gradient(circle, transparent 20px, black 22px);
+  -webkit-mask: radial-gradient(circle, transparent 20px, black 22px);
+}
+
 /* Responsive spacing for record section: narrow height = small gap, enough height = more distance */
 .record-section-gap {
   gap: 0.5rem;

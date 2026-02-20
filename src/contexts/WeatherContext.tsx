@@ -30,6 +30,8 @@ interface WeatherContextType {
   /** Mood Tuning で手動設定中か（天気・時間帯を上書きしているか） */
   isMoodTuning: boolean
   setIsMoodTuning: (enabled: boolean) => void
+  /** 表示が実際の天気・時間と異なる場合 true（虹枠・虹色ラベル等の Mood Tuning UI 用。単一ソース） */
+  isMoodTuningApplied: boolean
   /** パネルから「プレイリストを再構築」が押されたときのトリガー（インクリメントで発火） */
   playlistRefreshTrigger: number
   requestPlaylistRefresh: () => void
@@ -87,6 +89,15 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
     return actualTimeOfDay === "dusk" || actualTimeOfDay === "night"
   }, [isTimeInitialized, actualTimeOfDay])
 
+  /** 表示が実際の天気・時間と異なる場合のみ true。虹枠・虹色ラベル等の Mood Tuning UI を共通で制御。 */
+  const isMoodTuningApplied = useMemo(() => {
+    const actualWeatherNorm = actualWeatherType ? normalizeWeatherType(actualWeatherType) : null
+    return (
+      (actualWeatherNorm != null && effectiveWeather !== actualWeatherNorm) ||
+      effectiveTimeOfDay !== actualTimeOfDay
+    )
+  }, [actualWeatherType, effectiveWeather, effectiveTimeOfDay, actualTimeOfDay])
+
   const requestPlaylistRefresh = useCallback(() => {
     setPlaylistRefreshTrigger((prev) => prev + 1)
   }, [])
@@ -109,6 +120,7 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
         setMoodTuningTimeOfDay,
         isMoodTuning,
         setIsMoodTuning,
+        isMoodTuningApplied,
         playlistRefreshTrigger,
         requestPlaylistRefresh,
       }}

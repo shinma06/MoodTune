@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { useWeather } from "@/contexts/WeatherContext"
 import type { WeatherState } from "@/types/weather"
 import { formatDateTime, getWeatherIcon, getWeatherThemeColor, normalizeWeatherType } from "@/lib/weather-utils"
+import { WEATHER_TYPE_LABELS } from "@/lib/constants"
 import { fetchWeatherData } from "@/lib/weather-api"
 import { useGeolocation } from "@/hooks/useGeolocation"
 
@@ -15,7 +16,7 @@ export default function WeatherMonitor() {
         status: "loading",
         message: "位置情報を取得中...",
     })
-    const { effectiveTimeOfDay, isCanvasBackgroundDark, setWeatherType, setActualWeatherType, weatherType, isMoodTuning } = useWeather()
+    const { effectiveTimeOfDay, isCanvasBackgroundDark, setWeatherType, setActualWeatherType, weatherType, isMoodTuning, isMoodTuningApplied } = useWeather()
 
     const isMoodTuningRef = useRef(isMoodTuning)
     useEffect(() => {
@@ -151,15 +152,24 @@ export default function WeatherMonitor() {
                             <div className="text-right">
                                 <p className={`text-2xl font-serif ${textColorClass || "text-foreground"}`}>{weatherState.data.temp}</p>
                                 <p className={`text-xs font-light ${mutedTextColorClass2}`}>{weatherState.data.city}</p>
-                                {weatherState.data.description && (
-                                    <p className={`text-[10px] font-light ${mutedTextColorClass}`}>{weatherState.data.description}</p>
+                                {(isMoodTuningApplied && displayWeatherType ? WEATHER_TYPE_LABELS[displayWeatherType] : weatherState.data.description) && (
+                                    <p className={`text-[10px] font-light ${isMoodTuningApplied ? "text-rainbow" : mutedTextColorClass}`}>
+                                        {isMoodTuningApplied && displayWeatherType ? WEATHER_TYPE_LABELS[displayWeatherType] : weatherState.data.description}
+                                    </p>
                                 )}
                             </div>
-                            <WeatherIcon 
-                                className="w-10 h-10" 
-                                style={{ color: iconColor }} 
-                                strokeWidth={1.5} 
-                            />
+                            {isMoodTuningApplied ? (
+                                <span className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center">
+                                    <span className="ring-rainbow absolute inset-0 rounded-full" aria-hidden />
+                                    <WeatherIcon className="relative z-10 h-10 w-10" style={{ color: iconColor }} strokeWidth={1.5} />
+                                </span>
+                            ) : (
+                                <WeatherIcon
+                                    className="w-10 h-10"
+                                    style={{ color: iconColor }}
+                                    strokeWidth={1.5}
+                                />
+                            )}
                         </>
                     )}
                 </div>

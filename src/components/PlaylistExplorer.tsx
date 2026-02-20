@@ -7,7 +7,6 @@ import WeatherMoodTuningPanel from "./WeatherMoodTuningPanel"
 import GenreSelector, { useSelectedGenres } from "./GenreSelector"
 import { useWeather } from "@/contexts/WeatherContext"
 import { getWeatherBackground, type TimeOfDay } from "@/lib/weather-background"
-import { normalizeWeatherType } from "@/lib/weather-utils"
 import { formatGradientBackground, INITIAL_BACKGROUND_GRADIENT } from "@/lib/weather-background-utils"
 import {
     useVinylRotation,
@@ -39,7 +38,7 @@ interface PlaylistExplorerProps {
 
 export default function PlaylistExplorer({ playlists: initialPlaylists, suspended = false }: PlaylistExplorerProps) {
     const [currentIndex, setCurrentIndex] = useState(0)
-    const { isTimeInitialized, actualWeatherType, actualTimeOfDay, isMoodTuning, effectiveWeather, effectiveTimeOfDay, playlistRefreshTrigger, isCanvasBackgroundDark } = useWeather()
+    const { isTimeInitialized, actualWeatherType, actualTimeOfDay, isMoodTuning, effectiveWeather, effectiveTimeOfDay, playlistRefreshTrigger, isCanvasBackgroundDark, isMoodTuningApplied } = useWeather()
     /** 開いているパネル（null = 両方閉じている）。同時に1つだけ開く */
     const [openPanel, setOpenPanel] = useState<null | "mood" | "genre">(null)
     const [selectedGenres, isGenresInitialized] = useSelectedGenres()
@@ -262,10 +261,6 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
         }
     }, [actualWeatherType, isMoodTuning, isGenresInitialized, selectedGenres.length, refreshPlaylists])
 
-    /** 表示中の天気・時間が実際と異なる場合に Mood Tuning 表示を適用（パネル開閉に依存させず、動的プレビューも同一UIに） */
-    const actualWeatherNorm = actualWeatherType ? normalizeWeatherType(actualWeatherType) : null
-    const isMoodTuningApplied =
-        actualWeatherNorm != null && effectiveWeather !== actualWeatherNorm || effectiveTimeOfDay !== actualTimeOfDay
     const backgroundStyle = isTimeInitialized
       ? formatGradientBackground(getWeatherBackground(effectiveWeather, effectiveTimeOfDay))
       : INITIAL_BACKGROUND_GRADIENT
@@ -374,9 +369,9 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
 
             {/* Vinyl Record Section（縦幅が狭いときはレコードを縮小して重なりを防止） */}
             <div className="flex-1 min-h-0 flex flex-col items-center justify-center w-full max-w-md relative z-10 py-2 record-section-gap">
-                {/* ヒントは高さを固定しレコード・ページネーションの位置を常に揃える（2行＋Mood Tuning時は text-base で行が伸びるため min-h で統一） */}
+                {/* ヒントは高さを固定しレコード・ページネーションの位置を常に揃える（非Mood Tuning時を基準にずれないよう h-14 で固定） */}
                 <div
-                    className={`text-center space-y-0.5 shrink-0 min-h-12 ${isLoading || openPanel === "mood" || openPanel === "genre" ? "invisible" : ""}`}
+                    className={`text-center space-y-0.5 shrink-0 h-14 ${isLoading || openPanel === "mood" || openPanel === "genre" ? "invisible" : ""}`}
                     aria-hidden={isLoading || openPanel === "mood" || openPanel === "genre"}
                 >
                     <p className={`text-[10px] font-light whitespace-nowrap flex items-center justify-center gap-1 ${isCanvasBackgroundDark ? "text-white/80" : "text-muted-foreground/70"}`}>
@@ -389,18 +384,18 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
                             "左右にスピンして他のプレイリストへ"
                         )}
                     </p>
-                    <div className="flex items-center justify-center gap-2 flex-wrap">
-                        <p className={`text-[9px] font-light whitespace-nowrap ${isCanvasBackgroundDark ? "text-white/60" : "text-muted-foreground/50"}`}>
-                            {selectedGenres.length === 0
-                                ? "1つ以上選択するとスピンで再構築できます"
-                                : selectedGenres.length === 1
-                                    ? "右3周でプレイリストを再構築"
-                                    : "右3周でプレイリストを再構築・左3周で一括再構築"}
-                        </p>
-                        {isMoodTuningApplied && (
+                    <p className={`text-[9px] font-light whitespace-nowrap ${isCanvasBackgroundDark ? "text-white/60" : "text-muted-foreground/50"}`}>
+                        {selectedGenres.length === 0
+                            ? "1つ以上選択するとスピンで再構築できます"
+                            : selectedGenres.length === 1
+                                ? "右3周でプレイリストを再構築"
+                                : "右3周でプレイリストを再構築・左3周で一括再構築"}
+                    </p>
+                    {isMoodTuningApplied && (
+                        <p className="text-center">
                             <span className="text-base font-semibold text-rainbow whitespace-nowrap">Mood Tuning</span>
-                        )}
-                    </div>
+                        </p>
+                    )}
                 </div>
 
                 {/* レコードと3周メッセージをひとまとまりにし、下はページネーションに隙間なし */}
