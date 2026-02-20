@@ -262,13 +262,12 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
         }
     }, [actualWeatherType, isMoodTuning, isGenresInitialized, selectedGenres.length, refreshPlaylists])
 
-    /** パネルを閉じたうえで、表示中の天気・時間が実際と異なる場合のみ Mood Tuning 表示を適用 */
+    /** 表示中の天気・時間が実際と異なる場合に Mood Tuning 表示を適用（パネル開閉に依存させず、動的プレビューも同一UIに） */
     const actualWeatherNorm = actualWeatherType ? normalizeWeatherType(actualWeatherType) : null
     const isMoodTuningApplied =
-        openPanel !== "mood" &&
-        (actualWeatherNorm != null && effectiveWeather !== actualWeatherNorm || effectiveTimeOfDay !== actualTimeOfDay)
+        actualWeatherNorm != null && effectiveWeather !== actualWeatherNorm || effectiveTimeOfDay !== actualTimeOfDay
     const backgroundStyle = isTimeInitialized
-      ? formatGradientBackground(getWeatherBackground(effectiveWeather, actualTimeOfDay))
+      ? formatGradientBackground(getWeatherBackground(effectiveWeather, effectiveTimeOfDay))
       : INITIAL_BACKGROUND_GRADIENT
     const genreColorClass = isDark ? "text-white/80" : "text-muted-foreground"
     const titleColorClass = isDark ? "text-white" : "text-foreground"
@@ -375,9 +374,9 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
 
             {/* Vinyl Record Section（縦幅が狭いときはレコードを縮小して重なりを防止） */}
             <div className="flex-1 min-h-0 flex flex-col items-center justify-center w-full max-w-md relative z-10 py-2 record-section-gap">
-                {/* ヒントは常にレイアウトを占有し、パネル開閉でレコードが動かないようにする（非表示時は invisible） */}
+                {/* ヒントは高さを固定しレコード・ページネーションの位置を常に揃える（2行＋Mood Tuning時は text-base で行が伸びるため min-h で統一） */}
                 <div
-                    className={`text-center space-y-0.5 shrink-0 ${isLoading || openPanel === "mood" || openPanel === "genre" ? "invisible" : ""}`}
+                    className={`text-center space-y-0.5 shrink-0 min-h-12 ${isLoading || openPanel === "mood" || openPanel === "genre" ? "invisible" : ""}`}
                     aria-hidden={isLoading || openPanel === "mood" || openPanel === "genre"}
                 >
                     <p className={`text-[10px] font-light whitespace-nowrap flex items-center justify-center gap-1 ${isDark ? "text-white/80" : "text-muted-foreground/70"}`}>
@@ -390,18 +389,18 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
                             "左右にスピンして他のプレイリストへ"
                         )}
                     </p>
-                    <p className={`text-[9px] font-light whitespace-nowrap ${isDark ? "text-white/60" : "text-muted-foreground/50"}`}>
-                        {selectedGenres.length === 0
-                            ? "1つ以上選択するとスピンで再構築できます"
-                            : selectedGenres.length === 1
-                                ? "右3周でプレイリストを再構築"
-                                : "右3周でプレイリストを再構築・左3周で一括再構築"}
-                    </p>
-                    {isMoodTuningApplied && (
-                        <p className="text-base font-semibold text-rainbow whitespace-nowrap mt-2.5">
-                            Mood Tuning
+                    <div className="flex items-center justify-center gap-2 flex-wrap">
+                        <p className={`text-[9px] font-light whitespace-nowrap ${isDark ? "text-white/60" : "text-muted-foreground/50"}`}>
+                            {selectedGenres.length === 0
+                                ? "1つ以上選択するとスピンで再構築できます"
+                                : selectedGenres.length === 1
+                                    ? "右3周でプレイリストを再構築"
+                                    : "右3周でプレイリストを再構築・左3周で一括再構築"}
                         </p>
-                    )}
+                        {isMoodTuningApplied && (
+                            <span className="text-base font-semibold text-rainbow whitespace-nowrap">Mood Tuning</span>
+                        )}
+                    </div>
                 </div>
 
                 {/* レコードと3周メッセージをひとまとまりにし、下はページネーションに隙間なし */}
@@ -559,41 +558,24 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
                 </div>
 
                 <div className="flex items-center justify-center">
-                    {isLoadingOrEmpty ? (
-                        isMoodTuningApplied ? (
-                            <div className="bg-rainbow p-[2px] rounded-lg shrink-0">
-                                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-[calc(1rem-2px)] bg-muted/50 animate-pulse flex items-center justify-center">
-                                    <Music className={`w-6 h-6 sm:w-8 sm:h-8 ${isDark ? "text-white/30" : "text-muted-foreground/30"}`} />
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-lg bg-muted/50 animate-pulse flex items-center justify-center">
+                    {/* ジャケットは常に同一外寸のラッパーで配置を固定（非Mood Tuning時を基準）。虹枠は見た目だけ */}
+                    <div className={`p-[2px] rounded-lg shrink-0 w-[calc(6rem+4px)] h-[calc(6rem+4px)] sm:w-[calc(8rem+4px)] sm:h-[calc(8rem+4px)] ${isMoodTuningApplied ? "bg-rainbow" : ""}`}>
+                        {isLoadingOrEmpty ? (
+                            <div className={`w-24 h-24 sm:w-32 sm:h-32 bg-muted/50 animate-pulse flex items-center justify-center ${isMoodTuningApplied ? "rounded-[calc(1rem-2px)]" : "rounded-lg"}`}>
                                 <Music className={`w-6 h-6 sm:w-8 sm:h-8 ${isDark ? "text-white/30" : "text-muted-foreground/30"}`} />
                             </div>
-                        )
-                    ) : isMoodTuningApplied ? (
-                        <div className="bg-rainbow p-[2px] rounded-lg shrink-0">
+                        ) : (
                             <img
                                 src={getImageUrl(currentPlaylist.imageUrl)}
                                 alt={currentPlaylist.title}
-                                className="w-24 h-24 sm:w-32 sm:h-32 rounded-[calc(1rem-2px)] shadow-lg object-cover"
+                                className={`w-24 h-24 sm:w-32 sm:h-32 shadow-lg object-cover ${isMoodTuningApplied ? "rounded-[calc(1rem-2px)]" : "rounded-lg"}`}
                                 onError={(e) => {
                                     const target = e.target as HTMLImageElement
                                     target.src = "/placeholder.svg"
                                 }}
                             />
-                        </div>
-                    ) : (
-                        <img
-                            src={getImageUrl(currentPlaylist.imageUrl)}
-                            alt={currentPlaylist.title}
-                            className="w-24 h-24 sm:w-32 sm:h-32 rounded-lg shadow-lg object-cover"
-                            onError={(e) => {
-                                const target = e.target as HTMLImageElement
-                                target.src = "/placeholder.svg"
-                            }}
-                        />
-                    )}
+                        )}
+                    </div>
                 </div>
 
                 {/* Spotify 再生ボタン（アプリのモックモード時は disabled で表示） */}

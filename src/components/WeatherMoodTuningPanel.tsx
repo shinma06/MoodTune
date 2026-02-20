@@ -151,37 +151,25 @@ export default function WeatherMoodTuningPanel({
 
   return (
     <>
-      {/* トグルボタン（Favorite Music と同一デザイン）。ジャンルパネル開時は非表示 */}
+      {/* トグルボタン（常に同一サイズのラッパーで包み、Mood Tuning 中の開閉でレイアウトがずれないようにする） */}
       {!hideToggleButton && (
-        <>
-          {showRainbowButton ? (
-            <div className="fixed bottom-12 left-4 z-50 bg-rainbow p-[2px] rounded-[1.2rem]">
-              <Button
-                variant="outline"
-                size="icon"
-                className="size-[3.1rem] rounded-[calc(1.2rem-2px)] bg-background/80 backdrop-blur-sm border-0 [&_svg]:size-6"
-                onClick={handleTogglePanel}
-                aria-label={isOpen ? "Mood Tuningパネルを閉じる" : "Mood Tuningパネルを開く"}
-              >
-                <Sparkles className="size-6" />
-              </Button>
-            </div>
-          ) : (
-            <Button
-              variant="outline"
-              size="icon"
-              className={`
-                fixed bottom-12 left-4 z-50 size-[3.1rem] rounded-[1.2rem] bg-background/80 backdrop-blur-sm
-                [&_svg]:size-6
-                ${isOpen ? "bg-primary text-primary-foreground" : ""}
-              `}
-              onClick={handleTogglePanel}
-              aria-label={isOpen ? "Mood Tuningパネルを閉じる" : "Mood Tuningパネルを開く"}
-            >
-              <Sparkles className="size-6" />
-            </Button>
-          )}
-        </>
+        <div
+          className={`fixed bottom-12 left-4 z-50 rounded-[1.2rem] w-[calc(3.1rem+4px)] h-[calc(3.1rem+4px)] flex items-center justify-center ${showRainbowButton ? "bg-rainbow p-[2px]" : ""}`}
+        >
+          <Button
+            variant="outline"
+            size="icon"
+            className={`
+              size-[3.1rem] bg-background/80 backdrop-blur-sm [&_svg]:size-6
+              ${showRainbowButton ? "rounded-[calc(1.2rem-2px)] border-0" : "rounded-[1.2rem]"}
+              ${isOpen ? "bg-primary text-primary-foreground" : ""}
+            `}
+            onClick={handleTogglePanel}
+            aria-label={isOpen ? "Mood Tuningパネルを閉じる" : "Mood Tuningパネルを開く"}
+          >
+            <Sparkles className="size-6" />
+          </Button>
+        </div>
       )}
 
       {isOpen && (
