@@ -225,3 +225,15 @@
 - プレイリスト replace で 403 を避けるため新エンドポイント（/items）と直接 fetch を採用
 
 **影響**: `lib/spotify-pkce.ts`, `lib/spotify-session.ts`, `app/api/auth/spotify`, `app/api/auth/spotify/callback`, `app/api/auth/signout`, `auth.ts`（getSession のラップ）。`saveToSpotify` は getSession + fetch、PUT /items と 100 曲チャンク
+
+---
+
+### ADR-019: Overlay テーマとキャンバス視認性判定を分離
+
+**決定**: `themePreference`（time/light/dark/system）はモーダル・パネル等の overlay UI にのみ適用し、メイン画面の視認性判定（`isCanvasBackgroundDark`）は天気×時間帯の静的テーブルで独立して管理する
+**理由**:
+
+- ユーザーのテーマ選好と、背景上テキストの可読性は目的が異なるため
+- 単一の判定に混在させると、UI 視認性とデザイン意図の両方が崩れる
+
+**影響**: `WeatherContext` で `isOverlayThemeDark` と `isCanvasBackgroundDark` を分離提供。PlaylistExplorer/WeatherMonitor/SettingsPanel は用途に応じて参照先を切り替える

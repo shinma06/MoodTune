@@ -39,11 +39,12 @@
 
 ```
 actualWeatherType / actualTimeOfDay   → 実際の天気・時間帯
-weatherType / moodTuningTimeOfDay     → Mood Tuning で設定した値（Context）
-effectiveWeather / effectiveTimeOfDay → 表示用（Mood Tuning があればそちら優先）
-isCanvasBackgroundDark                → 背景上のテキスト・アイコン視認性
+weatherType / moodTuningTimeOfDay     → Context が保持する現在表示値と Mood Tuning 手動時間帯
+effectiveWeather / effectiveTimeOfDay → 表示用の単一ソース（Mood Tuning 優先）
+isCanvasBackgroundDark                → 背景上のテキスト・アイコン視認性（天気×時間帯）
 themePreference                       → Settings で選ぶ overlay テーマ（time/light/dark/system）
 isOverlayThemeDark                    → モーダル・パネルのテーマ明暗（themePreference を反映。canvas判定とは独立）
+isMoodTuningApplied                   → 表示が実際の天気・時間と異なるか（虹 UI 制御）
 displayHour                           → 表示用時刻（1分ごと更新）
 playlistRefreshTrigger                → プレイリスト再生成のトリガー
 ```
@@ -69,6 +70,6 @@ playlistRefreshTrigger                → プレイリスト再生成のトリ�
 ## 使い方
 
 1. 実装を始める前にこのチェックリストを一読する
-2. 不明点があれば `CLAUDE.md` の Architecture Overview / Key Design Decisions を参照
+2. 不明点があれば `CLAUDE.md` と `.cursor/memory/systemPatterns.md` / `.cursor/memory/activeContext.md` を参照
 3. 実装後、「4. 実装後の確認」を行う
 4. 技術負債を感じたら `rules/refactor-overcomplexity.md` を適用

@@ -59,7 +59,7 @@ MoodTune への貢献ありがとうございます。このドキュメント�
 - **YAGNI**: 今の要件を満たす範囲で実装し、不要な抽象化を避ける
 - **決定的なマッピング**: 入力→出力が一意に決まるものは、関数内オブジェクトではなく静的定数で定義する（例: `WEATHER_ICON_MAP`, `BACKGROUNDS`）
 
-新機能・変更前には `.cursor/rules/pre-implementation-check.md` のチェックリストを参照し、実装後に複雑さを感じた場合は `.cursor/rules/refactor-overcomplexity.md` の手順を検討してください。
+新機能・変更前には `.claude/rules/pre-implementation-check.md`（または `.cursor/rules/pre-implementation-check.md`）のチェックリストを参照し、実装後に複雑さを感じた場合は `.claude/rules/refactor-overcomplexity.md`（または `.cursor/rules/refactor-overcomplexity.md`）の手順を検討してください。
 
 ---
 

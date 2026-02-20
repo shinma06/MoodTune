@@ -46,7 +46,7 @@
 ### 1. インストール
 
 ```bash
-git clone https://github.com/your-org/MoodTune.git
+git clone https://github.com/shinma06/MoodTune.git
 cd MoodTune
 npm install
 ```
@@ -82,6 +82,7 @@ npm run dev
 | コマンド | 説明 |
 |----------|------|
 | `npm run dev` | 開発サーバー起動 |
+| `npm run dev:lan` | LAN 公開で開発サーバー起動 |
 | `npm run build` | 本番ビルド |
 | `npm run start` | 本番サーバー起動 |
 | `npm run lint` | ESLint 実行 |
