@@ -38,6 +38,9 @@ UI/UX 改善とコードベースのリファクタリング、Vibeコーディ�
 - オンボーディング導線の統合:
   - `PageClient` と `OnboardingOrchestrator` を導入し、初回導線を `login -> genre-select -> tutorial` で制御
   - ジャンル選択モーダル表示中は `PlaylistExplorer` を `suspended` で停止し、初期プレイリスト構築をブロック
+- 狭い縦幅でのレイアウト順序を安定化:
+  - `PlaylistExplorer` のルートを「通常は `justify-between`、低い高さでは `justify-start`」へ切替（フルページ前提のためスクロール化はしない）
+  - 低い高さ向けにレコードセクションの縮小・余白圧縮（レコードサイズ、セクション間隔）を追加し、ページネーションより下にプレイリスト情報が来る順序を維持
 
 - Context による単一ソース化（背景・テキスト色・天気・時間帯）:
   - `WeatherContext` に `effectiveTimeOfDay`, `effectiveWeather`, `isCanvasBackgroundDark`, `isOverlayThemeDark` を提供

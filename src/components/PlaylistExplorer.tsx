@@ -321,7 +321,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
 
     return (
         <div
-            className="h-dvh min-h-0 flex flex-col items-center justify-between p-4 pb-20 sm:p-6 sm:pb-8 overflow-hidden transition-all duration-1000 ease-in-out relative z-10"
+            className="h-dvh min-h-0 flex flex-col items-center justify-between [@media(max-height:780px)]:justify-start p-4 pb-20 sm:p-6 sm:pb-8 [@media(max-height:780px)]:pb-6 overflow-hidden transition-all duration-1000 ease-in-out relative z-10"
             style={{
                 background: backgroundStyle,
             }}
@@ -375,7 +375,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
             </div>
 
             {/* Vinyl Record Section（縦幅が狭いときはレコードを縮小して重なりを防止） */}
-            <div className="flex-1 min-h-0 flex flex-col items-center justify-center w-full max-w-md relative z-10 py-2 record-section-gap">
+            <div className="flex-1 min-h-0 flex flex-col items-center justify-center w-full max-w-md relative z-10 py-2 [@media(max-height:780px)]:py-1 [@media(max-height:780px)]:flex-none record-section-gap">
                 {/* ヒントは高さを固定しレコード・ページネーションの位置を常に揃える（非Mood Tuning時を基準にずれないよう h-14 で固定） */}
                 <div
                     className={`text-center space-y-0.5 shrink-0 h-14 ${isLoading || openPanel === "mood" || openPanel === "genre" ? "invisible" : ""}`}
@@ -408,7 +408,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
                 {/* レコードと3周メッセージをひとまとまりにし、下はページネーションに隙間なし */}
                 <div className="flex flex-col items-center shrink-0">
                 <div
-                    className="relative w-[min(18rem,42vh)] h-[min(18rem,42vh)] rounded-full transition-shadow duration-200 shrink-0"
+                    className="relative w-[min(18rem,42vh)] h-[min(18rem,42vh)] [@media(max-height:780px)]:w-[min(15rem,36vh)] [@media(max-height:780px)]:h-[min(15rem,36vh)] rounded-full transition-shadow duration-200 shrink-0"
                     style={
                         showRegenerateFeedback
                             ? {
@@ -549,7 +549,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
             </div>
 
             {/* Playlist Info Section（ページネーションとの幅を確保するため上に余白。ジャンル名〜Spotifyボタンの位置関係は固定） */}
-            <div className="w-full max-w-md shrink-0 mt-5 sm:mt-6 space-y-4 sm:space-y-6 pb-4 relative z-10">
+            <div className="w-full max-w-md shrink-0 mt-5 sm:mt-6 [@media(max-height:780px)]:mt-3 space-y-4 sm:space-y-6 [@media(max-height:780px)]:space-y-3 pb-4 [@media(max-height:780px)]:pb-2 relative z-10">
                 <div className="text-center space-y-2 sm:space-y-3">
                     <p className={`text-[10px] sm:text-xs uppercase tracking-widest font-light ${genreColorClass}`}>
                         {isLoadingOrEmpty ? LOADING_GENRE_TEXT : currentPlaylist.genre}
