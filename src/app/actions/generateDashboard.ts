@@ -3,14 +3,18 @@
 import { generateText } from "ai"
 import { openai } from "@ai-sdk/openai"
 import { getSpotifyClient } from "@/lib/spotify-server"
+import { getMockPlaylistInfo } from "@/lib/mock-playlist-data"
 import { WEATHER_TYPE_LABELS, TIME_OF_DAY_LABELS, type Genre } from "@/lib/constants"
 import type { WeatherType, TimeOfDay } from "@/lib/weather-background"
 import type { DashboardItem } from "@/types/dashboard"
 
+/** モック時の意図的な待機時間（ms） */
+const MOCK_DELAY_MS = 1500
+
 export type { DashboardItem }
 
-/** Spotify 未連携時は true。明示的に "false" でない限りモック画像を使用 */
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK_SPOTIFY !== "false"
+/** アプリ全体のモックモード。true のとき GPT と Spotify をスキップしデフォルトデータ＋意図的待機で応答 */
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK !== "false"
 
 /**
  * ジャンル名に基づいてモック画像URLを生成
@@ -148,15 +152,20 @@ export async function generateDashboard(
 
   try {
     let playlistInfos: PlaylistInfo[]
-    try {
-      playlistInfos = await generatePlaylistInfo(weather, time, selectedGenres)
-    } catch {
-      playlistInfos = createFallbackPlaylistInfo(
-        selectedGenres,
-        WEATHER_TYPE_LABELS[weather] ?? "晴れ",
-        TIME_OF_DAY_LABELS[time] ?? "昼"
-      )
+    const weatherLabel = WEATHER_TYPE_LABELS[weather] ?? "晴れ"
+    const timeLabel = TIME_OF_DAY_LABELS[time] ?? "昼"
+
+    if (USE_MOCK) {
+      await new Promise((resolve) => setTimeout(resolve, MOCK_DELAY_MS))
+      playlistInfos = getMockPlaylistInfo(selectedGenres, weatherLabel, timeLabel)
+    } else {
+      try {
+        playlistInfos = await generatePlaylistInfo(weather, time, selectedGenres)
+      } catch {
+        playlistInfos = createFallbackPlaylistInfo(selectedGenres, weatherLabel, timeLabel)
+      }
     }
+
     if (!Array.isArray(playlistInfos) || playlistInfos.length === 0) {
       return []
     }

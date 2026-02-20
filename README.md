@@ -13,7 +13,7 @@
 - **Favorite Music** — 21 ジャンルから 1〜8 個選択。選択はブラウザに保存され、パネルを閉じたときに変更分だけプレイリストを再生成
 - **Mood Tuning** — 天気・時間帯を手動で切り替えてプレビュー。開発・テストや「今は夜の雨の気分」で試すのに便利
 - **レコード盤 UI** — スワイプ/ドラッグでプレイリストを切り替え。右に 3 周で表示中ジャンルを再生成、左に 3 周で全件再生成
-- **AI 生成** — OpenAI で天気・時間・ジャンルに応じたプレイリストタイトルと検索クエリを生成。Spotify 連携時はアートワーク取得、未連携時はモック画像
+- **AI 生成** — 本番時は OpenAI でタイトル・検索クエリを生成。モックモード時はデフォルトデータで即時表示（意図的 1.5 秒待機あり）。Spotify 連携時はアートワーク取得、モック時は placeholder 画像
 - **Spotify 保存** — ログイン時は「Spotifyで再生」で MoodTune プレイリストを 1 本だけ上書き or 新規作成し、トラックを追加して Spotify アプリで再生可能
 
 ---
@@ -59,12 +59,12 @@ npm install
 | `AUTH_SPOTIFY_ID` | Spotify 時 | Spotify Developer の Client ID |
 | `AUTH_SPOTIFY_SECRET` | Spotify 時 | トークンリフレッシュ用。Spotify Developer の Client Secret |
 | `AUTH_URL` / `NEXTAUTH_URL` | Spotify 時 | アプリのベース URL（例: `http://127.0.0.1:3000` または `http://127.0.0.1:3001`）。コールバック URL の算出に使用 |
-| `NEXT_PUBLIC_USE_MOCK_SPOTIFY` | No | 未設定または `true`: モックモード（ログイン不要）。`false` で Spotify ログインを有効化 |
+| `NEXT_PUBLIC_USE_MOCK` | No | アプリ全体のモックモード。未設定または `true`: ログイン不要・OpenAI/Spotify を呼ばずデフォルトデータで動作。`false` で本番モード（GPT・Spotify 利用） |
 | `WXTECH_API_KEY` | 天気 API 推奨 | WxTech API キー（日本: 1km メッシュ、海外: 5km メッシュ）。未設定時は OpenWeatherMap のみ使用 |
 | `NEXT_PUBLIC_WEATHER_API_KEY` | 天気フォールバック | OpenWeatherMap API キー（WxTech 失敗時または WxTech 未設定時に使用） |
 | `GOOGLE_GEOCODING_API_KEY` | 都市名表示時 | Google Geocoding API キー（逆ジオコーディングで都市名取得）。未設定時は OpenWeatherMap の地名を表示 |
 
-**最小構成（Spotify なし・モックで動かす場合）:** `OPENAI_API_KEY` のみ設定すれば起動できます。
+**最小構成（モックモード）:** 環境変数なしで起動可能（`NEXT_PUBLIC_USE_MOCK` 未設定または `true`）。本番モードでは `OPENAI_API_KEY` 必須。
 
 **Spotify ログイン時:**
 

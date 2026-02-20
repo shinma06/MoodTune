@@ -118,11 +118,10 @@ export default function WeatherMoodTuningPanel({
   const actualWeatherTypeNormalized = actualWeatherType ? normalizeWeatherType(actualWeatherType) : null
   const actualTimeOfDay = getTimeOfDay(displayHour)
 
-  /** パネルを閉じたうえで、表示中の天気・時間が実際と異なる場合のみ Mood Tuning 表示（虹色ボタン）を適用 */
-  const isMoodTuningApplied =
-    !isOpen &&
-    (actualWeatherTypeNormalized != null && effectiveWeather !== actualWeatherTypeNormalized ||
-      effectiveTimeOfDay !== actualTimeOfDay)
+  /** 表示中の天気・時間が実際と異なる場合に虹色ボタンを表示（パネル開閉に依存させず一貫したデザインに） */
+  const showRainbowButton =
+    (actualWeatherTypeNormalized != null && effectiveWeather !== actualWeatherTypeNormalized) ||
+    effectiveTimeOfDay !== actualTimeOfDay
 
   /** パネルを開いた時点で「現在の天気・時間」と違う状態を設定していた場合のみリセットボタンを表示 */
   const { openedWeather, openedTimeOfDay, actualWeatherAtOpen, actualTimeOfDayAtOpen } = snapshotRef.current
@@ -152,15 +151,15 @@ export default function WeatherMoodTuningPanel({
 
   return (
     <>
-      {/* トグルボタン（ジャンルパネル開時は非表示）。時間帯に依存せず常に同じ見た目で表示 */}
+      {/* トグルボタン（Favorite Music と同一デザイン）。ジャンルパネル開時は非表示 */}
       {!hideToggleButton && (
-        <div className="fixed bottom-12 left-4 z-50">
-          {isMoodTuningApplied ? (
-            <div className="bg-rainbow p-[2px] rounded-[1.2rem]">
+        <>
+          {showRainbowButton ? (
+            <div className="fixed bottom-12 left-4 z-50 bg-rainbow p-[2px] rounded-[1.2rem]">
               <Button
                 variant="outline"
                 size="icon"
-                className="size-[3.1rem] rounded-[calc(1.2rem-2px)] bg-background/95 backdrop-blur-sm border-0 text-foreground [&_svg]:size-6"
+                className="size-[3.1rem] rounded-[calc(1.2rem-2px)] bg-background/80 backdrop-blur-sm border-0 [&_svg]:size-6"
                 onClick={handleTogglePanel}
                 aria-label={isOpen ? "Mood Tuningパネルを閉じる" : "Mood Tuningパネルを開く"}
               >
@@ -171,14 +170,18 @@ export default function WeatherMoodTuningPanel({
             <Button
               variant="outline"
               size="icon"
-              className={`size-[3.1rem] rounded-[1.2rem] backdrop-blur-sm border-border text-foreground [&_svg]:size-6 ${isOpen ? "bg-primary text-primary-foreground border-primary" : "bg-background/80 hover:bg-background/90"}`}
+              className={`
+                fixed bottom-12 left-4 z-50 size-[3.1rem] rounded-[1.2rem] bg-background/80 backdrop-blur-sm
+                [&_svg]:size-6
+                ${isOpen ? "bg-primary text-primary-foreground" : ""}
+              `}
               onClick={handleTogglePanel}
               aria-label={isOpen ? "Mood Tuningパネルを閉じる" : "Mood Tuningパネルを開く"}
             >
               <Sparkles className="size-6" />
             </Button>
           )}
-        </div>
+        </>
       )}
 
       {isOpen && (

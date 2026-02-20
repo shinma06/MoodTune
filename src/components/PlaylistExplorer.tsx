@@ -596,15 +596,15 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
                     )}
                 </div>
 
-                {/* Spotify 再生ボタン（モック時は disabled で表示） */}
+                {/* Spotify 再生ボタン（アプリのモックモード時は disabled で表示） */}
                 {(() => {
-                    const isMockSpotify = process.env.NEXT_PUBLIC_USE_MOCK_SPOTIFY !== "false"
+                    const isMockMode = process.env.NEXT_PUBLIC_USE_MOCK !== "false"
                     const spotifyDisabled =
-                        isMockSpotify ||
+                        isMockMode ||
                         isLoadingOrEmpty ||
                         isSaving ||
                         currentPlaylist.trackUris.length === 0
-                    const disabledReason = isMockSpotify
+                    const disabledReason = isMockMode
                         ? "Spotify連携時のみ利用できます"
                         : isSaving
                             ? null
@@ -613,7 +613,7 @@ export default function PlaylistExplorer({ playlists: initialPlaylists, suspende
                               : currentPlaylist.trackUris.length === 0
                                 ? "再生できる曲を取得できませんでした。しばらく経ってからお試しください。"
                                 : null
-                    const buttonLabel = isMockSpotify
+                    const buttonLabel = isMockMode
                         ? "Spotifyで再生（モック中）"
                         : isSaving
                             ? "保存中..."
