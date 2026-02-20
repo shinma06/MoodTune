@@ -12,7 +12,7 @@ MoodTune への貢献ありがとうございます。このドキュメント�
    cd MoodTune
    npm install
    ```
-2. [README.md](./README.md) の「環境変数」に従い `.env.local` を用意する（`OPENAI_API_KEY` 必須。Spotify 利用時は認証関連も設定）
+2. [README.md](./README.md) の「環境変数」に従い `.env.local` を用意する（最低限 `OPENAI_API_KEY` でモックモードが動作します）
 3. `npm run dev` で開発サーバーを起動し、動作を確認する
 
 ---
