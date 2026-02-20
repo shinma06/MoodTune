@@ -2,9 +2,9 @@
 
 ## 重要な技術的決定とその理由（ADR）
 
-### ADR-001: Next.js 15 App Router の採用
+### ADR-001: Next.js App Router の採用
 
-**決定**: Next.js 15 の App Router を使用
+**決定**: Next.js App Router を使用（現在は Next.js 16）
 **理由**:
 
 - Server Components によるパフォーマンス向上
@@ -111,7 +111,7 @@
 **理由**:
 
 - 天気取得失敗/ローディング時や Mood Tuning 手動設定時の表示不整合を防ぐ
-- `effectiveTimeOfDay`, `effectiveWeather`, `isDark`, `displayHour` を一箇所で管理し、全コンポーネントが同じ値を参照する
+- `effectiveTimeOfDay`, `effectiveWeather`, `isCanvasBackgroundDark`, `isOverlayThemeDark`, `displayHour` を一箇所で管理し、全コンポーネントが同じ値を参照する
 
 **影響**: `WeatherContext` に上記プロパティを追加。PlaylistExplorer, WeatherMonitor, WeatherMoodTuningPanel, WeatherAnimation が Context から取得
 
@@ -193,7 +193,7 @@
 
 ### ADR-016: 初回アクセス時の背景・時間帯の初期化（isTimeInitialized）
 
-**決定**: SSR/初回はサーバー時刻に依存せず `displayHour` を 0 で初期化し、クライアントで現地時刻を設定したあと `isTimeInitialized = true` にする。未初期化時は `effectiveTimeOfDay = "day"`, `isDark = false` で中性背景を使う
+**決定**: SSR/初回はサーバー時刻に依存せず `displayHour` を 0 で初期化し、クライアントで現地時刻を設定したあと `isTimeInitialized = true` にする。未初期化時は `effectiveTimeOfDay = "day"`, `isCanvasBackgroundDark = false`, `isOverlayThemeDark = false` で中性背景を使う
 **理由**:
 
 - ハイドレーションのずれや一瞬の誤った時間帯表示を防ぐ

@@ -2,19 +2,19 @@
 
 **天気と時間帯に合わせた音楽プレイリスト提案アプリ**
 
-現在の天気・時間帯に応じた背景とアニメーションで、そのときの気分に合うプレイリストをレコード盤風 UI で探索できます。Favorite Music（ジャンル選択）と Mood Tuning（天気・時間の手動設定）で好みに合わせて更新可能。Spotify 連携はオプションで、未設定時はモックモードでログイン不要で動作します。
+現在の天気・時間帯に応じた背景とアニメーションで、そのときの気分に合うプレイリストをレコード盤風 UI で探索できます。`Favorite Music`（ジャンル選択）と `Mood Tuning`（天気・時間の手動設定）で好みに合わせて更新可能です。Spotify 連携はオプションで、モックモードではログイン不要で動作します。
 
 ---
 
 ## 主な機能
 
-- **天気・時間帯連動** — 位置情報から現在の天気を取得（WxTech 優先: 日本は 1km メッシュ ピンポイント、海外は 5km メッシュ 世界天気予報。失敗時は OpenWeatherMap にフォールバック）。都市名は Google Geocoding API（逆ジオコーディング）で取得。朝/昼/夕方/夜で背景グラデーションとテーマが変化
-- **天気アニメーション** — 雨・雪・雲・霧など、天気に応じたビジュアルで没入感のある UI
-- **Favorite Music** — 21 ジャンルから 1〜8 個選択。選択はブラウザに保存され、パネルを閉じたときに変更分だけプレイリストを再生成
-- **Mood Tuning** — 天気・時間帯を手動で切り替えてプレビュー。開発・テストや「今は夜の雨の気分」で試すのに便利
-- **レコード盤 UI** — スワイプ/ドラッグでプレイリストを切り替え。右に 3 周で表示中ジャンルを再生成、左に 3 周で全件再生成
-- **AI 生成** — 本番時は OpenAI でタイトル・検索クエリを生成。モックモード時はデフォルトデータで即時表示（意図的 0.5 秒待機あり）。Spotify 連携時はアートワーク取得、モック時は placeholder 画像
-- **Spotify 保存** — ログイン時は「Spotifyで再生」で MoodTune プレイリストを 1 本だけ上書き or 新規作成し、トラックを追加して Spotify アプリで再生可能
+- **天気・時間帯連動**: 位置情報から天気を取得（WxTech 優先、日本 1km / 海外 5km。失敗時は OpenWeatherMap にフォールバック）
+- **都市名の精度向上**: Google Geocoding API の逆ジオコーディングを利用（失敗時は OpenWeatherMap 都市名へフォールバック）
+- **Favorite Music**: 21 ジャンルから最大 4 つ選択。選択は localStorage に保存され、パネルを閉じたときに差分だけ再生成
+- **Mood Tuning**: 天気・時間帯を手動で変更してプレビュー。パネルを閉じるときに変更があれば全件再生成
+- **レコード UI**: スワイプ/ドラッグでジャンル切替。右 3 周で表示中ジャンル再生成、左 3 周で全件再生成
+- **オンボーディング**: 初回はジャンル選択モーダルとチュートリアルを表示（本番モードで未ログイン時はログインモーダルを表示）
+- **Spotify 保存**: `Spotifyで再生` で MoodTune プレイリスト 1 本を上書きまたは新規作成
 
 ---
 
@@ -22,25 +22,25 @@
 
 | 分野 | 技術 |
 |------|------|
-| Framework | Next.js 15 (App Router) |
+| Framework | Next.js 16 (App Router) |
 | Language | TypeScript |
-| Styling | Tailwind CSS 4, shadcn/ui (Radix UI), Lucide React |
+| Styling | Tailwind CSS 4, shadcn/ui, Lucide React |
 | Auth | Spotify PKCE (Authorization Code with PKCE) |
 | AI | Vercel AI SDK + OpenAI |
-| External API | WxTech（天気・日本/世界）, OpenWeatherMap（天気フォールバック）, Google Geocoding API（都市名）, Spotify Web API（オプション） |
+| External API | WxTech, OpenWeatherMap, Google Geocoding API, Spotify Web API |
 
 ---
 
 ## 必要環境
 
-- Node.js 18+
-- npm / pnpm / yarn / bun のいずれか
+- Node.js 20 以上推奨
+- npm
 
 ---
 
 ## クイックスタート
 
-### 1. リポジトリのクローンと依存関係のインストール
+### 1. インストール
 
 ```bash
 git clone https://github.com/your-org/MoodTune.git
@@ -48,39 +48,30 @@ cd MoodTune
 npm install
 ```
 
-### 2. 環境変数の設定
+### 2. 環境変数
 
-リポジトリルートに `.env.local` を作成し、必要な変数を設定します。
+`.env.local` を作成し、用途に応じて設定してください。
 
 | 変数名 | 必須 | 説明 |
 |--------|------|------|
-| `OPENAI_API_KEY` | **Yes** | プレイリストのタイトル・検索クエリ生成用 OpenAI API キー |
-| `AUTH_SECRET` | 認証時 | セッション暗号化用（32 文字以上推奨。例: `openssl rand -base64 32`）。Spotify ログインを有効にする場合に必要 |
-| `AUTH_SPOTIFY_ID` | Spotify 時 | Spotify Developer の Client ID |
-| `AUTH_SPOTIFY_SECRET` | Spotify 時 | トークンリフレッシュ用。Spotify Developer の Client Secret |
-| `AUTH_URL` / `NEXTAUTH_URL` | Spotify 時 | アプリのベース URL（例: `http://127.0.0.1:3000` または `http://127.0.0.1:3001`）。コールバック URL の算出に使用 |
-| `NEXT_PUBLIC_USE_MOCK` | No | アプリ全体のモックモード。未設定または `true`: ログイン不要・OpenAI/Spotify を呼ばずデフォルトデータで動作。`false` で本番モード（GPT・Spotify 利用） |
-| `WXTECH_API_KEY` | 天気 API 推奨 | WxTech API キー（日本: 1km メッシュ、海外: 5km メッシュ）。未設定時は OpenWeatherMap のみ使用 |
-| `NEXT_PUBLIC_WEATHER_API_KEY` | 天気フォールバック | OpenWeatherMap API キー（WxTech 失敗時または WxTech 未設定時に使用） |
-| `GOOGLE_GEOCODING_API_KEY` | 都市名表示時 | Google Geocoding API キー（逆ジオコーディングで都市名取得）。未設定時は OpenWeatherMap の地名を表示 |
+| `NEXT_PUBLIC_USE_MOCK` | No | 未設定または `true` でモックモード（ログイン不要、OpenAI/Spotify 未使用） |
+| `OPENAI_API_KEY` | 本番時 | プレイリスト生成（本番モード時） |
+| `AUTH_SECRET` | Spotify ログイン時 | セッション暗号化キー（32 文字以上推奨） |
+| `AUTH_SPOTIFY_ID` | Spotify ログイン時 | Spotify Client ID |
+| `AUTH_SPOTIFY_SECRET` | Spotify ログイン時 | Spotify Client Secret |
+| `AUTH_URL` / `NEXTAUTH_URL` | Spotify ログイン時 | 例: `http://127.0.0.1:3000` |
+| `WXTECH_API_KEY` | 推奨 | WxTech API キー |
+| `NEXT_PUBLIC_WEATHER_API_KEY` | フォールバック時 | OpenWeatherMap API キー |
+| `GOOGLE_GEOCODING_API_KEY` | 都市名表示時 | Google Geocoding API キー |
 
-**最小構成（モックモード）:** 環境変数なしで起動可能（`NEXT_PUBLIC_USE_MOCK` 未設定または `true`）。本番モードでは `OPENAI_API_KEY` 必須。
+**最小構成（モック）**: 環境変数なしで起動可能です。  
+**本番モード**: `NEXT_PUBLIC_USE_MOCK=false` かつ `OPENAI_API_KEY` が必要です。
 
-**Spotify ログイン時:**
-
-1. **`AUTH_SECRET`** — 必須。32 文字以上推奨（例: `openssl rand -base64 32`）。
-2. **`AUTH_SPOTIFY_ID`** と **`AUTH_SPOTIFY_SECRET`** — 両方設定し、余分なスペースやクォートを含めない。
-3. **`AUTH_URL` または `NEXTAUTH_URL`** — 起動するポートと一致させる（例: `http://127.0.0.1:3001`）。
-4. **Spotify Developer Dashboard** — [Redirect URIs](https://developer.spotify.com/dashboard) に **`http://127.0.0.1:3001/api/auth/spotify/callback`**（使用ポートに合わせる）を追加。`127.0.0.1` と `localhost` は別扱いのため、ブラウザは **`http://127.0.0.1:3001`** で開くことを推奨。
-5. `.env.local` 変更後は開発サーバーを再起動する。
-
-### 3. 開発サーバーの起動
+### 3. 開発サーバー
 
 ```bash
 npm run dev
 ```
-
-ブラウザで [http://localhost:3000](http://localhost:3000) を開きます。
 
 ---
 
@@ -88,94 +79,45 @@ npm run dev
 
 | コマンド | 説明 |
 |----------|------|
-| `npm run dev` | 開発サーバー起動（ホットリロード） |
-| `npm run build` | 本番用ビルド |
-| `npm run start` | 本番サーバー起動（`build` 実行後） |
-| `npm run lint` | ESLint でコードチェック |
+| `npm run dev` | 開発サーバー起動 |
+| `npm run build` | 本番ビルド |
+| `npm run start` | 本番サーバー起動 |
+| `npm run lint` | ESLint 実行 |
 
 ---
 
-## プロジェクト構造（概要）
+## プロジェクト構造（抜粋）
 
 ```
 src/
-├── app/                    # Next.js App Router
-│   ├── actions/            # Server Actions（generateDashboard 等）
-│   ├── api/                # API Routes
-│   │   ├── auth/           # Spotify PKCE: spotify（認可）, spotify/callback（トークン交換）, signout
-│   │   ├── weather/        # 天気・geocode プロキシ
-│   ├── page.tsx            # メインページ
-│   ├── layout.tsx
-│   └── loading.tsx
-├── auth.ts                 # セッション取得（auth()）。Spotify PKCE ログイン対応
-├── components/             # React コンポーネント
-│   ├── ui/                 # shadcn/ui
-│   ├── PlaylistExplorer.tsx # レコード盤・プレイリスト表示
-│   ├── GenreSelector.tsx   # Favorite Music パネル
-│   ├── WeatherMonitor.tsx  # 位置・天気取得
-│   ├── WeatherAnimation.tsx
-│   └── WeatherMoodTuningPanel.tsx # Mood Tuning パネル
-├── contexts/
-│   └── WeatherContext.tsx  # 天気・時間帯・表示状態の単一ソース
+├── app/
+│   ├── actions/            # generateDashboard, saveToSpotify
+│   ├── api/
+│   │   ├── auth/           # spotify, callback, signout, error
+│   │   ├── geocode/        # 都市名逆ジオコーディング
+│   │   └── weather/        # 天気API + owm-city
+│   ├── PageClient.tsx      # PlaylistExplorer + Onboarding
+│   └── page.tsx
+├── components/
+│   ├── onboarding/         # Login/GenreSelect/Tutorial モーダル
+│   ├── PlaylistExplorer.tsx
+│   ├── GenreSelector.tsx
+│   ├── WeatherMonitor.tsx
+│   └── WeatherMoodTuningPanel.tsx
+├── contexts/WeatherContext.tsx
 ├── hooks/
-│   ├── useGeolocation.ts
-│   ├── useLocalStorage.ts  # ジャンル選択の永続化
-│   └── useVinylRotation.ts # レコード回転・3 周で再生成
 ├── lib/
-│   ├── constants.ts        # ジャンル定義・定数
-│   ├── mock-playlist-data.ts # モック用デフォルトプレイリスト
-│   ├── playlist-utils.ts
-│   ├── spotify-pkce.ts     # Spotify PKCE（認可 URL・トークン交換）
-│   ├── spotify-server.ts   # Spotify API クライアント（サーバー側）
-│   ├── spotify-session.ts  # セッション暗号化クッキー・リフレッシュ
-│   ├── weather-api.ts
-│   ├── weather-background.ts
-│   └── weather-utils.ts
-└── types/                  # TypeScript 型定義
+└── types/
 ```
 
 ---
 
-## データフロー（要約）
+## 今後の予定
 
-1. **WeatherMonitor** — 位置情報 → `/api/weather`（天気）と `/api/geocode`（都市名）を並列取得 → WeatherContext 更新
-2. **PlaylistExplorer** — WeatherContext から天気・時間帯・背景を取得。`useLocalStorage` でジャンルを取得し、プレイリスト表示・再生成を担当
-3. **GenreSelector** — ジャンル選択 → localStorage 更新。パネル閉じ時に PlaylistExplorer が差分を検知し、追加ジャンル分のみ API で再生成
-4. **WeatherMoodTuningPanel (Mood Tuning)** — 手動で天気・時間を設定 → WeatherContext 更新 → 全コンポーネントに反映。パネル閉じ時に変更があればプレイリストを再生成
-
----
-
-## デプロイ
-
-[Vercel](https://vercel.com) にデプロイする場合:
-
-1. リポジトリを Vercel にインポート
-2. 環境変数（`OPENAI_API_KEY` 等）を設定
-3. デプロイ
-
-```bash
-npm run build
-```
-
-が成功することを確認してからデプロイしてください。
+- アプリ内再生機能
+- ユーザー設定（位置情報再取得・更新間隔など）
+- オフライン対応、通知機能
 
 ---
 
-## 今後の予定（未実装）
-
-- プレイリストの実際の音楽再生（アプリ内再生）
-- ユーザー設定（位置情報の再取得、天気更新間隔など）
-
----
-
-## 参考リンク
-
-- [Next.js Documentation](https://nextjs.org/docs)
-- [shadcn/ui](https://ui.shadcn.com/)
-- [OpenWeatherMap API](https://openweathermap.org/api)
-- [Spotify Web API](https://developer.spotify.com/documentation/web-api)
-- [Spotify Authorization Code with PKCE](https://developer.spotify.com/documentation/web-api/tutorials/code-pkce-flow)
-
----
-
-貢献については [CONTRIBUTING.md](./CONTRIBUTING.md) を参照してください。
+貢献方法は `CONTRIBUTING.md` を参照してください。

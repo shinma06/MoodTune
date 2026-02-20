@@ -31,7 +31,7 @@ MoodTune への貢献ありがとうございます。このドキュメント�
 
 ### 技術スタック・方針
 
-- **Framework**: Next.js 15 (App Router)
+- **Framework**: Next.js 16 (App Router)
 - **Language**: TypeScript（明示的な型定義を推奨、`any` は避ける）
 - **Styling**: Tailwind CSS のみ。UI コンポーネントは shadcn/ui を優先する
 - **Components**: 関数コンポーネント。デフォルトは Server Component、`useState` 等が必要な場合のみ `'use client'` を使用する
@@ -67,7 +67,7 @@ MoodTune への貢献ありがとうございます。このドキュメント�
 
 | 役割                                  | 役割の概要                                                                                                                 |
 | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| **WeatherContext**                    | 天気・時間帯・表示用の `effectiveWeather` / `effectiveTimeOfDay` / `isDark` の単一ソース。Mood Tuning の手動値もここで管理 |
+| **WeatherContext**                    | 天気・時間帯・表示用の `effectiveWeather` / `effectiveTimeOfDay` / `isCanvasBackgroundDark` / `isOverlayThemeDark` の単一ソース。Mood Tuning の手動値もここで管理 |
 | **useLocalStorage (selected-genres)** | ジャンル選択の永続化。空配列は無効として扱い、初回・他タブ時はデフォルトに修復                                             |
 | **PlaylistExplorer**                  | Context とジャンルを統合し、プレイリスト表示・差分更新・全件再生成を担当                                                   |
 

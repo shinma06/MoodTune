@@ -12,7 +12,7 @@ UI/UX 改善とコードベースのリファクタリング、Vibeコーディ�
   - `PlaylistExplorer`, `WeatherMonitor` およびドキュメント（activeContext, systemPatterns, README, decisionLog, pre-implementation-check）内の参照をすべて上記に合わせて更新
 - 天気の 10 分ポーリングと自動更新の整理:
   - `WeatherMonitor`: 10 分ポーリングは **Mood Tuning 中（isMoodTuning）は実行しない**（`isMoodTuningRef.current` でスキップ）。初回成功後に `lastCoordsRef` で再取得、バックグラウンド時はローディング表示なし
-  - 自動更新時も天気・時間帯変化時と同様の処理をすべて実行: Context 更新に加え、`playlistAutoUpdate` が有効ならプレイリスト再生成まで実施。再生成時の文言を自動更新専用に分離: `LoadingMode "auto"`、`getLoadingTitleText("auto")` = 「天気・時間の変化に合わせて再生成中」、`getLoadingGenreText("auto")` = 「天気・時間に合わせて更新中...」。時間帯変化 effect と天気変化 effect からは `refreshPlaylists({ autoUpdate: true })` を呼び、ユーザー操作（Mood Tuning パネルからの再生成等）は従来どおり `refreshPlaylists()` で「全件再生成中」
+  - 自動更新時も天気・時間帯変化時と同様の処理をすべて実行: 時間帯変化 effect と天気変化 effect から `refreshPlaylists({ autoUpdate: true })` を呼び、再生成時の文言を自動更新専用に分離（`LoadingMode "auto"`）。ユーザー操作（Mood Tuning パネルからの再生成等）は従来どおり `refreshPlaylists()` で「全件再生成中」
 - 天気取得を WxTech 優先に変更（API 切り替え完了、テスト用表示は削除済み）:
   - `GET /api/weather`: WxTech を優先。日本域は 1km メッシュ ピンポイント（`/api/v1/ss1wx`）、海外は 5km メッシュ 世界天気予報（`/api/v2/global/wx`）。失敗時は OpenWeatherMap にフォールバック。レスポンスは OpenWeatherMap 互換に正規化（クライアント変更不要）
   - Base URL は `https://wxtech.weathernews.com`（api. サブドメインは付けない）。公式エンドポイントは `lib/wxtech-weather.ts` のコメントに記載
@@ -35,6 +35,9 @@ UI/UX 改善とコードベースのリファクタリング、Vibeコーディ�
 - リファクタリング: 静的テーブル化
   - `weather-background.ts`: `BACKGROUNDS` 定数に背景グラデーションを移動
   - `weather-utils.ts`: `WEATHER_ICON_MAP`, `WEATHER_THEME_COLORS`, `WEATHER_THEME_COLORS_DARK` を静的定数化
+- オンボーディング導線の統合:
+  - `PageClient` と `OnboardingOrchestrator` を導入し、初回導線を `login -> genre-select -> tutorial` で制御
+  - ジャンル選択モーダル表示中は `PlaylistExplorer` を `suspended` で停止し、初期プレイリスト構築をブロック
 
 - Context による単一ソース化（背景・テキスト色・天気・時間帯）:
   - `WeatherContext` に `effectiveTimeOfDay`, `effectiveWeather`, `isCanvasBackgroundDark`, `isOverlayThemeDark` を提供

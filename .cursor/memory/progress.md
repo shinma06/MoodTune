@@ -9,13 +9,14 @@
 - ✅ 天気と時間帯に応じた背景色の動的変化（4色グラデーション）
 - ✅ 天気アイコンの表示とテーマカラー
 - ✅ Clear かつ夜の場合の月アイコン表示
-- ✅ 暗い背景時のテキスト色自動調整（effectiveWeather / effectiveTimeOfDay / isDark）
+- ✅ 暗い背景時のテキスト色自動調整（`isCanvasBackgroundDark` / `isOverlayThemeDark` の単一ソース）
 
 ### UI/UX
 - ✅ レコード盤風のプレイリスト探索 UI
 - ✅ スワイプ/ドラッグでプレイリスト切り替え（45° 閾値）
-- ✅ **Favorite Music パネル**（右下）: 21 ジャンルから 1〜8 個選択、選択解除で 0 件も許可（警告・パネル閉じ不可）
+- ✅ **Favorite Music パネル**（右下）: 21 ジャンルから最大 4 個選択、選択解除で 0 件も許可（警告・パネル閉じ不可）
 - ✅ **Mood Tuning パネル**（左下）: 天気・時間帯の手動設定、実際の天気・時間に戻すボタン（条件付き表示）
+- ✅ **オンボーディングモーダル**: `login -> genre-select -> tutorial` の初回導線制御（PageClient + OnboardingOrchestrator）
 - ✅ 天気モニター（日時、気温、都市名、天気アイコン）
 - ✅ パネル展開ボタンは角丸・アイコン比率を維持したサイズ（2.8rem / rounded 1.1rem）
 
@@ -52,7 +53,7 @@
 ### 初期化・ポーリング
 - ✅ 初回アクセス時の背景・時間帯の初期化（`isTimeInitialized`、`INITIAL_BACKGROUND_GRADIENT`）
 - ✅ 天気の 10 分ポーリング（Mood Tuning 中はスキップ、バックグラウンド時はローディング表示なし）
-- ✅ 天気・時間帯変化時のプレイリスト自動更新（`playlistAutoUpdate`、LoadingMode `"auto"` 文言）
+- ✅ 天気・時間帯変化時のプレイリスト自動更新（非 Mood Tuning 時、LoadingMode `"auto"` 文言）
 
 ### コード品質
 - ✅ 背景・天気アイコン・テーマ色の静的定数化（`BACKGROUNDS`, `WEATHER_ICON_MAP`, `WEATHER_THEME_COLORS` 等）
