@@ -57,7 +57,7 @@ function ToggleSettingRow({
   isOverlayThemeDark,
 }: ToggleSettingRowProps) {
   return (
-    <div className="flex items-center justify-between gap-3">
+    <div className="flex items-center justify-between gap-3 w-full min-w-0">
       <div
         className={`flex items-center gap-2 text-xs sm:text-sm ${
           isOverlayThemeDark ? "text-white/90" : "text-foreground/90"
@@ -119,9 +119,9 @@ export default function SettingsPanel({ isUnauthenticated }: SettingsPanelProps)
     : "text-muted-foreground hover:text-foreground"
 
   const sectionTitleMap: Record<Exclude<SettingsView, "menu">, string> = {
-    favorite: "Select Genre",
-    appearance: "Appearance",
-    playback: "Playback",
+    favorite: "ジャンルを選択",
+    appearance: "表示",
+    playback: "再生",
   }
   const sectionIconMap: Record<Exclude<SettingsView, "menu">, ReactNode> = {
     favorite: <Music className="w-4 h-4" />,
@@ -130,8 +130,8 @@ export default function SettingsPanel({ isUnauthenticated }: SettingsPanelProps)
   }
 
   return (
-    <div className={wrapperClass}>
-      <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
+    <div className={`${wrapperClass} min-w-0 w-full`}>
+      <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 w-full min-w-0">
         {view !== "menu" && (
           <div className="space-y-2.5 pb-1 mb-1">
             <Button
@@ -155,53 +155,53 @@ export default function SettingsPanel({ isUnauthenticated }: SettingsPanelProps)
 
         {view === "menu" && (
           <>
-            <div className="space-y-3">
+            <div className="space-y-3 w-full min-w-0">
               <div className={`flex items-center gap-2 text-sm font-medium ${titleClass}`}>
                 <Settings2 className="w-4 h-4" />
-                Settings
+                設定
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 w-full min-w-0">
                 <Button
                   type="button"
                   variant="outline"
-                  className={menuButtonClass}
+                  className={`${menuButtonClass} w-full`}
                   onClick={() => setView("favorite")}
                 >
                   <span className="flex items-center gap-2">
                     <Music className="w-4 h-4" />
-                    Select Genre
+                    ジャンルを選択
                   </span>
                   <ChevronRight className="w-4 h-4" />
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
-                  className={menuButtonClass}
+                  className={`${menuButtonClass} w-full`}
                   onClick={() => setView("appearance")}
                 >
                   <span className="flex items-center gap-2">
                     <Palette className="w-4 h-4" />
-                    Appearance
+                    表示
                   </span>
                   <ChevronRight className="w-4 h-4" />
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
-                  className={menuButtonClass}
+                  className={`${menuButtonClass} w-full`}
                   onClick={() => setView("playback")}
                 >
                   <span className="flex items-center gap-2">
                     <Disc3 className="w-4 h-4" />
-                    Playback
+                    再生
                   </span>
                   <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>
             </div>
 
-            <div className={`pt-3 border-t ${isOverlayThemeDark ? "border-white/10" : "border-border/50"} space-y-2`}>
-              <p className={`text-xs font-medium ${helperTextClass}`}>Account</p>
+            <div className={`pt-3 border-t ${isOverlayThemeDark ? "border-white/10" : "border-border/50"} space-y-2 w-full min-w-0`}>
+              <p className={`text-xs font-medium ${helperTextClass}`}>アカウント</p>
               <Button
                 type="button"
                 className={accountButtonClass}
@@ -228,14 +228,14 @@ export default function SettingsPanel({ isUnauthenticated }: SettingsPanelProps)
           <div className="pt-2 space-y-4">
             <div className="space-y-2">
               <p className={`text-xs ${helperTextClass}`}>UIテーマ</p>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-1 gap-2 w-full min-w-0">
                 {THEME_OPTIONS.map((option) => (
                   <Button
                     key={option.value}
                     type="button"
                     size="sm"
                     variant={themePreference === option.value ? "default" : "outline"}
-                    className={`h-7 px-3 text-xs ${
+                    className={`h-8 w-full justify-center px-3 text-xs ${
                       isOverlayThemeDark
                         ? themePreference === option.value
                           ? "bg-white text-slate-900 border-white hover:bg-white/90"
@@ -252,14 +252,14 @@ export default function SettingsPanel({ isUnauthenticated }: SettingsPanelProps)
 
             <div className="space-y-2">
               <p className={`text-xs ${helperTextClass}`}>Mood Tuning中の天気表示</p>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-1 gap-2 w-full min-w-0">
                 {MOOD_WEATHER_DISPLAY_OPTIONS.map((option) => (
                   <Button
                     key={option.value}
                     type="button"
                     size="sm"
                     variant={moodTuningWeatherDisplay === option.value ? "default" : "outline"}
-                    className={`h-7 px-3 text-xs ${
+                    className={`h-8 w-full justify-center px-3 text-xs ${
                       isOverlayThemeDark
                         ? moodTuningWeatherDisplay === option.value
                           ? "bg-white text-slate-900 border-white hover:bg-white/90"
@@ -277,7 +277,7 @@ export default function SettingsPanel({ isUnauthenticated }: SettingsPanelProps)
         )}
 
         {view === "playback" && (
-          <div className="pt-2 space-y-3">
+          <div className="pt-2 space-y-3 w-full min-w-0">
             <ToggleSettingRow
               icon={<RotateCw className="w-4 h-4" />}
               label="自動回転"

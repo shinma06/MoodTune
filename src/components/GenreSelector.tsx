@@ -67,7 +67,7 @@ export default function GenreSelector({ flat = false }: GenreSelectorProps) {
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 text-sm font-medium text-white">
               <Music className="w-4 h-4" />
-              Select Genre
+              ジャンルを選択
               <span className="text-xs font-normal text-white/40">
                 {selectedGenres.length}/{MAX_SELECTED_GENRES}
               </span>
@@ -129,7 +129,7 @@ export default function GenreSelector({ flat = false }: GenreSelectorProps) {
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm font-medium flex items-center gap-2">
               <Music className="w-4 h-4" />
-              Select Genre
+              ジャンルを選択
               <span className="text-xs font-normal text-muted-foreground">
                 {selectedGenres.length}/{MAX_SELECTED_GENRES}
               </span>
@@ -196,7 +196,7 @@ export default function GenreSelector({ flat = false }: GenreSelectorProps) {
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <Music className="w-4 h-4" />
-            Select Genre
+            ジャンルを選択
             <span className="text-xs font-normal text-muted-foreground">
               {selectedGenres.length}/{MAX_SELECTED_GENRES}
             </span>
