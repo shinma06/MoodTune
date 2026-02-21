@@ -23,13 +23,13 @@
 
 ## テクノロジースタック
 
-| 分野 | 技術 |
-|------|------|
-| Framework | Next.js 16 (App Router) |
-| Language | TypeScript |
-| Styling | Tailwind CSS 4, shadcn/ui, Lucide React |
-| Auth | Spotify PKCE (Authorization Code with PKCE) |
-| AI | Vercel AI SDK + OpenAI |
+| 分野         | 技術                                                          |
+| ------------ | ------------------------------------------------------------- |
+| Framework    | Next.js 16 (App Router)                                       |
+| Language     | TypeScript                                                    |
+| Styling      | Tailwind CSS 4, shadcn/ui, Lucide React                       |
+| Auth         | Spotify PKCE (Authorization Code with PKCE)                   |
+| AI           | Vercel AI SDK + OpenAI                                        |
 | External API | WxTech, OpenWeatherMap, Google Geocoding API, Spotify Web API |
 
 ---
@@ -55,16 +55,16 @@ npm install
 
 `.env.local` を作成し、用途に応じて設定してください。
 
-| 変数名 | 必須 | 説明 |
-|--------|------|------|
-| `OPENAI_API_KEY` | Spotifyログイン時 | ログイン済みユーザー向けのプレイリスト生成（非ログイン時は固定データ） |
-| `AUTH_SECRET` | Spotify ログイン時 | セッション暗号化キー（32 文字以上推奨） |
-| `AUTH_SPOTIFY_ID` | Spotify ログイン時 | Spotify Client ID |
-| `AUTH_SPOTIFY_SECRET` | Spotify ログイン時 | Spotify Client Secret |
-| `AUTH_URL` / `NEXTAUTH_URL` | Spotify ログイン時 | 例: `http://127.0.0.1:3000` |
-| `WXTECH_API_KEY` | 推奨 | WxTech API キー |
-| `NEXT_PUBLIC_WEATHER_API_KEY` | フォールバック時 | OpenWeatherMap API キー |
-| `GOOGLE_GEOCODING_API_KEY` | 都市名表示時 | Google Geocoding API キー |
+| 変数名                        | 必須               | 説明                                                                   |
+| ----------------------------- | ------------------ | ---------------------------------------------------------------------- |
+| `OPENAI_API_KEY`              | Spotifyログイン時  | ログイン済みユーザー向けのプレイリスト生成（非ログイン時は固定データ） |
+| `AUTH_SECRET`                 | Spotify ログイン時 | セッション暗号化キー（32 文字以上推奨）                                |
+| `AUTH_SPOTIFY_ID`             | Spotify ログイン時 | Spotify Client ID                                                      |
+| `AUTH_SPOTIFY_SECRET`         | Spotify ログイン時 | Spotify Client Secret                                                  |
+| `AUTH_URL` / `NEXTAUTH_URL`   | Spotify ログイン時 | 例: `http://127.0.0.1:3000`                                            |
+| `WXTECH_API_KEY`              | 推奨               | WxTech API キー                                                        |
+| `NEXT_PUBLIC_WEATHER_API_KEY` | フォールバック時   | OpenWeatherMap API キー                                                |
+| `GOOGLE_GEOCODING_API_KEY`    | 都市名表示時       | Google Geocoding API キー                                              |
 
 **最小構成（非ログイン）**: 環境変数なしで起動可能です（固定データで動作）。  
 **Spotify連携を使う場合**: `OPENAI_API_KEY` と Spotify 認証関連の環境変数が必要です。
@@ -79,13 +79,13 @@ npm run dev
 
 ## 利用可能なスクリプト
 
-| コマンド | 説明 |
-|----------|------|
-| `npm run dev` | 開発サーバー起動 |
+| コマンド          | 説明                       |
+| ----------------- | -------------------------- |
+| `npm run dev`     | 開発サーバー起動           |
 | `npm run dev:lan` | LAN 公開で開発サーバー起動 |
-| `npm run build` | 本番ビルド |
-| `npm run start` | 本番サーバー起動 |
-| `npm run lint` | ESLint 実行 |
+| `npm run build`   | 本番ビルド                 |
+| `npm run start`   | 本番サーバー起動           |
+| `npm run lint`    | ESLint 実行                |
 
 ---
 
@@ -120,9 +120,7 @@ src/
 
 ## 今後の予定
 
-- アプリ内再生機能
-- ユーザー設定（位置情報再取得・更新間隔など）
-- オフライン対応、通知機能
+- UIの改善
 
 ---
 
