@@ -30,7 +30,7 @@
 | Styling      | Tailwind CSS 4, shadcn/ui, Lucide React                       |
 | Auth         | Spotify PKCE (Authorization Code with PKCE)                   |
 | AI           | Vercel AI SDK + OpenAI                                        |
-| External API | WxTech, OpenWeatherMap, Google Geocoding API, Spotify Web API |
+| External API | WxTech, OpenWeatherMap, Google Geocoding API, Spotify Web API（[2026年2月改定](https://developer.spotify.com/documentation/web-api/tutorials/february-2026-migration-guide)準拠） |
 
 ---
 

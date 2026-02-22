@@ -102,6 +102,7 @@ async function searchTrack(
 ): Promise<{ uri: string; imageUrl: string | null } | null> {
   try {
     const query = `artist:${artist} track:${title}`
+    // 2026年2月改定: GET /search の limit は最大10・デフォルト5。1件取得で問題なし。
     const response = await spotifyClient.searchTracks(query, { limit: 1 })
     const track = response.body.tracks?.items?.[0]
     if (!track) return null
