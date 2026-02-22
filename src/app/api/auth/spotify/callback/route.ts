@@ -9,7 +9,9 @@ const COOKIE_OPTIONS = { path: "/", maxAge: 0 }
 
 /** Step 3: Callback from Spotify — exchange code for tokens, set session, redirect to /. */
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
+  const requestUrl = new URL(request.url)
+  const requestOrigin = requestUrl.origin
+  const { searchParams } = requestUrl
   const code = searchParams.get("code")
   const state = searchParams.get("state")
   const error = searchParams.get("error")
@@ -23,17 +25,19 @@ export async function GET(request: NextRequest) {
   cookieStore.set(VERIFIER_COOKIE, "", COOKIE_OPTIONS)
 
   if (error) {
-    const base = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? "http://127.0.0.1:3000"
-    return NextResponse.redirect(`${base}/api/auth/spotify/error?error=${encodeURIComponent(error)}`)
+    return NextResponse.redirect(
+      `${requestOrigin}/api/auth/spotify/error?error=${encodeURIComponent(error)}`
+    )
   }
 
   if (!code || !state || state !== savedState || !codeVerifier) {
-    const base = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? "http://127.0.0.1:3000"
-    return NextResponse.redirect(`${base}/api/auth/spotify/error?error=invalid_callback`)
+    return NextResponse.redirect(
+      `${requestOrigin}/api/auth/spotify/error?error=invalid_callback`
+    )
   }
 
   try {
-    const data = await exchangeCodeForTokens(code, codeVerifier)
+    const data = await exchangeCodeForTokens(code, codeVerifier, requestOrigin)
     await setSessionCookie({
       accessToken: data.access_token,
       refreshToken: data.refresh_token ?? "",
@@ -41,10 +45,10 @@ export async function GET(request: NextRequest) {
     })
   } catch (e) {
     console.error("[spotify callback]", e)
-    const base = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? "http://127.0.0.1:3000"
-    return NextResponse.redirect(`${base}/api/auth/spotify/error?error=token_exchange_failed`)
+    return NextResponse.redirect(
+      `${requestOrigin}/api/auth/spotify/error?error=token_exchange_failed`
+    )
   }
 
-  const base = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? "http://127.0.0.1:3000"
-  return NextResponse.redirect(`${base}/`)
+  return NextResponse.redirect(`${requestOrigin}/`)
 }

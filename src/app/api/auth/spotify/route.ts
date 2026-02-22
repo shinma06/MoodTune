@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { buildAuthorizeUrl } from "@/lib/spotify-pkce"
 import crypto from "node:crypto"
@@ -14,9 +14,10 @@ const COOKIE_OPTIONS = {
 }
 
 /** Step 1–2: Generate PKCE, store code_verifier + state in cookies, redirect to Spotify authorize. */
-export async function GET() {
+export async function GET(request: NextRequest) {
   const state = crypto.randomBytes(24).toString("base64url")
-  const { url, codeVerifier } = await buildAuthorizeUrl(state)
+  const requestOrigin = new URL(request.url).origin
+  const { url, codeVerifier } = await buildAuthorizeUrl(state, requestOrigin)
 
   const cookieStore = await cookies()
   cookieStore.set(STATE_COOKIE, state, COOKIE_OPTIONS)

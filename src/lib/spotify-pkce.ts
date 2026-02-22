@@ -31,19 +31,29 @@ export async function generateCodeChallenge(verifier: string): Promise<string> {
     .replace(/\//g, "_")
 }
 
-/** Canonical redirect URI (must match Spotify Dashboard exactly). */
-export function getRedirectUri(): string {
+/**
+ * Canonical redirect URI (must match Spotify Dashboard exactly).
+ * @param originOverride - リクエストのオリジン（プレビュー/本番で同一ドメインにそろえるため）。未指定時は AUTH_URL を使用。
+ */
+export function getRedirectUri(originOverride?: string): string {
   const base =
-    process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? "http://127.0.0.1:3000"
-  const url = new URL(base)
+    originOverride ??
+    process.env.AUTH_URL ??
+    process.env.NEXTAUTH_URL ??
+    "http://127.0.0.1:3000"
+  const url = new URL(base.startsWith("http") ? base : `https://${base}`)
   return `${url.origin}/api/auth/spotify/callback`
 }
 
-/** Build Spotify authorize URL (Step 2: Request User Authorization). */
-export async function buildAuthorizeUrl(state: string): Promise<{
-  url: string
-  codeVerifier: string
-}> {
+/**
+ * Build Spotify authorize URL (Step 2: Request User Authorization).
+ * @param state - OAuth state
+ * @param requestOrigin - リクエストのオリジン（プレビュー時はそのドメインでコールバックするため）
+ */
+export async function buildAuthorizeUrl(
+  state: string,
+  requestOrigin?: string
+): Promise<{ url: string; codeVerifier: string }> {
   const codeVerifier = generateCodeVerifier()
   const codeChallenge = await generateCodeChallenge(codeVerifier)
   const clientId = process.env.AUTH_SPOTIFY_ID
@@ -52,7 +62,7 @@ export async function buildAuthorizeUrl(state: string): Promise<{
   const params = new URLSearchParams({
     client_id: clientId,
     response_type: "code",
-    redirect_uri: getRedirectUri(),
+    redirect_uri: getRedirectUri(requestOrigin),
     scope: SPOTIFY_SCOPES,
     code_challenge_method: "S256",
     code_challenge: codeChallenge,
@@ -66,10 +76,12 @@ export async function buildAuthorizeUrl(state: string): Promise<{
 /**
  * Exchange authorization code for tokens (Step 3: Request access token).
  * PKCE flow: no client_secret, only client_id + code_verifier.
+ * @param redirectOrigin - 認可時に使用した redirect_uri のオリジン（コールバックのリクエスト元と一致させる）
  */
 export async function exchangeCodeForTokens(
   code: string,
-  codeVerifier: string
+  codeVerifier: string,
+  redirectOrigin?: string
 ): Promise<{
   access_token: string
   refresh_token?: string
@@ -82,7 +94,7 @@ export async function exchangeCodeForTokens(
   const body = new URLSearchParams({
     grant_type: "authorization_code",
     code,
-    redirect_uri: getRedirectUri(),
+    redirect_uri: getRedirectUri(redirectOrigin),
     client_id: clientId,
     code_verifier: codeVerifier,
   })
