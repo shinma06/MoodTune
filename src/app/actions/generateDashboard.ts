@@ -2,7 +2,7 @@
 
 import { generateText } from "ai"
 import { openai } from "@ai-sdk/openai"
-import { getSpotifyClient } from "@/lib/spotify-server"
+import { searchTracks } from "@/lib/spotify-api"
 import { getSession } from "@/lib/spotify-session"
 import { getMockPlaylistInfo } from "@/lib/mock-playlist-data"
 import { WEATHER_TYPE_LABELS, TIME_OF_DAY_LABELS, type Genre } from "@/lib/constants"
@@ -103,15 +103,15 @@ tracksには各ジャンルの雰囲気・天気・時間帯に合った楽曲�
  * 1曲分のSpotify track URI と アルバム画像URLを取得
  */
 async function searchTrack(
-  spotifyClient: NonNullable<Awaited<ReturnType<typeof getSpotifyClient>>>,
+  token: string,
   artist: string,
   title: string
 ): Promise<{ uri: string; imageUrl: string | null } | null> {
   try {
     const query = `artist:${artist} track:${title}`
-    // 2026年2月改定: GET /search の limit は最大10・デフォルト5。1件取得で問題なし。
-    const response = await spotifyClient.searchTracks(query, { limit: 1 })
-    const track = response.body.tracks?.items?.[0]
+    const response = await searchTracks(token, query, { limit: 1 })
+    if (!response.ok || !response.data) return null
+    const track = response.data.tracks?.items?.[0]
     if (!track) return null
     return {
       uri: track.uri,
@@ -180,15 +180,7 @@ export async function generateDashboard(
       return []
     }
 
-    let spotifyClient: Awaited<ReturnType<typeof getSpotifyClient>> = null
-    if (isLoggedIn) {
-      try {
-        spotifyClient = await getSpotifyClient()
-      } catch (e) {
-        logServerError(LOG_TAG, "get_spotify_client", e, { weather, time })
-        spotifyClient = null
-      }
-    }
+    const token = session?.accessToken ?? null
 
     // レート制限(429)回避: ジャンルごとに直列、曲検索は同時2件まで
     const SPOTIFY_SEARCH_CONCURRENCY = 2
@@ -199,11 +191,11 @@ export async function generateDashboard(
       let imageUrl = getMockImageUrl(info?.genre ?? "")
       let trackUris: string[] = []
 
-      if (isLoggedIn && spotifyClient && Array.isArray(info.tracks) && info.tracks.length > 0) {
+      if (isLoggedIn && token && Array.isArray(info.tracks) && info.tracks.length > 0) {
         const results = await mapWithConcurrency(
           info.tracks,
           SPOTIFY_SEARCH_CONCURRENCY,
-          (t) => searchTrack(spotifyClient!, t.artist, t.title)
+          (t) => searchTrack(token, t.artist, t.title)
         )
 
         for (const result of results) {

@@ -1,12 +1,12 @@
 "use server"
 
+import { spotifyFetch } from "@/lib/spotify-api"
 import { getSession } from "@/lib/spotify-session"
 import { logServerError, logServerWarn } from "@/lib/server-log"
 
 const LOG_TAG = "SaveToSpotify"
 
 const PLAYLIST_NAME = "MoodTune"
-const SPOTIFY_API = "https://api.spotify.com/v1"
 const MAX_TRACKS_PER_REQUEST = 100
 
 export type SaveToSpotifyResult =
@@ -18,66 +18,6 @@ function formatSpotifyError(error?: string, status?: number): string {
   return status === 401
     ? "Spotify の認証が切れています。再度ログインしてください。"
     : "Spotify でエラーが発生しました。しばらくしてからお試しください。"
-}
-
-type SpotifyErrorBody = {
-  error?: { status?: number; message?: string }
-}
-
-async function spotifyFetch<T>(
-  token: string,
-  path: string,
-  options: RequestInit = {}
-): Promise<{ ok: boolean; status: number; data?: T; error?: string }> {
-  const url = path.startsWith("http") ? path : `${SPOTIFY_API}${path}`
-  let res: Response
-  try {
-    res = await fetch(url, {
-      ...options,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-        ...(options.headers as Record<string, string>),
-      },
-    })
-  } catch (e) {
-    logServerError(LOG_TAG, "spotify_fetch_network", e, { path, method: options.method ?? "GET" })
-    throw e
-  }
-  const text = await res.text()
-  let data: T | SpotifyErrorBody | undefined
-  try {
-    data = text ? (JSON.parse(text) as T | SpotifyErrorBody) : undefined
-  } catch (e) {
-    logServerError(LOG_TAG, "spotify_fetch_parse_body", e, {
-      path,
-      status: res.status,
-      bodyPreview: text.slice(0, 200),
-    })
-  }
-  if (!res.ok) {
-    const errBody = data as SpotifyErrorBody | undefined
-    const errMsg =
-      errBody?.error?.message ??
-      (typeof data === "object" && data && "error" in data
-        ? String((data as { error: unknown }).error)
-        : undefined)
-    logServerWarn(LOG_TAG, "spotify_fetch_error", errMsg ?? `HTTP ${res.status}`, {
-      path,
-      status: res.status,
-      errorMessage: errMsg,
-    })
-    return { ok: false, status: res.status, error: errMsg }
-  }
-  // 200 だが JSON パースに失敗している場合はエラー扱い（上記 catch で data が未設定のまま）
-  if (data === undefined) {
-    logServerWarn(LOG_TAG, "spotify_fetch_parse_body", "OK response but invalid JSON", {
-      path,
-      status: res.status,
-    })
-    return { ok: false, status: 502, error: "Invalid response body" }
-  }
-  return { ok: true, status: res.status, data: data as T }
 }
 
 /** Add tracks in chunks (Spotify allows max 100 per request). */

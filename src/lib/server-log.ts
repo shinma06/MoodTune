@@ -14,6 +14,35 @@ function formatError(error: unknown): { name: string; message: string; stack?: s
       cause: error.cause != null ? String(error.cause) : undefined,
     }
   }
+  // Spotify API 等が throw する { statusCode, body } 形式のオブジェクトを読める形にする
+  if (error != null && typeof error === "object") {
+    const obj = error as Record<string, unknown>
+    const statusCode = obj.statusCode ?? obj.status
+    const body = obj.body ?? obj.error
+    if (typeof statusCode === "number") {
+      let bodyStr = ""
+      if (body != null) {
+        if (typeof body === "string") bodyStr = body
+        else if (typeof (body as { message?: unknown }).message === "string")
+          bodyStr = (body as { message: string }).message
+        else bodyStr = JSON.stringify(body)
+      }
+      return {
+        name: (obj.name as string) ?? "ApiError",
+        message: `HTTP ${statusCode}${bodyStr ? `: ${bodyStr}` : ""}`,
+        stack: typeof obj.stack === "string" ? obj.stack : undefined,
+      }
+    }
+    // その他のオブジェクトは JSON で出して [object Object] を避ける
+    try {
+      return {
+        name: (obj.name as string) ?? "Unknown",
+        message: typeof obj.message === "string" ? obj.message : JSON.stringify(error),
+      }
+    } catch {
+      return { name: "Unknown", message: String(error) }
+    }
+  }
   return {
     name: "Unknown",
     message: String(error),

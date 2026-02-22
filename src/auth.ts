@@ -1,7 +1,7 @@
 import { getSession as getSpotifySession } from "@/lib/spotify-session"
 
 /**
- * Session shape used by page.tsx (isUnauthenticated) and spotify-server.ts (accessToken).
+ * Session shape used by page.tsx (isUnauthenticated) and spotify-api / spotify-session (accessToken).
  */
 export interface Session {
   accessToken?: string
