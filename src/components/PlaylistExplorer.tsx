@@ -122,7 +122,13 @@ export default function PlaylistExplorer({
     const refreshPlaylistsRef = useRef(refreshPlaylists)
     refreshPlaylistsRef.current = refreshPlaylists
 
-    /** 現在のジャンルの楽曲を "MoodTune" Spotify プレイリストに保存して開く */
+    /** モバイル端末かどうか（ネイティブSpotifyアプリへの遷移に使用） */
+    const isMobile = useCallback(() => {
+        if (typeof navigator === "undefined") return false
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.maxTouchPoints != null && navigator.maxTouchPoints > 0 && window.innerWidth < 1024)
+    }, [])
+
+    /** 現在のジャンルの楽曲を "MoodTune" Spotify プレイリストに保存して開く（モバイルではネイティブアプリを優先） */
     const handleSaveToSpotify = useCallback(async () => {
         if (isUnauthenticated) {
             onRequestLoginModal?.()
@@ -134,7 +140,35 @@ export default function PlaylistExplorer({
         try {
             const result = await saveToSpotify(currentPlaylist.title, currentPlaylist.trackUris)
             if (result.success) {
-                window.open(result.playlistUrl, "_blank", "noopener,noreferrer")
+                const playlistUrl = result.playlistUrl
+                const playlistId = playlistUrl.match(/\/playlist\/([a-zA-Z0-9]+)/)?.[1]
+
+                if (isMobile() && playlistId) {
+                    // モバイル: spotify: URI でネイティブアプリのプレイリスト画面を開く（未インストール時はウェブにフォールバック）
+                    const spotifyUri = `spotify:playlist:${playlistId}`
+                    let fallbackTimer: ReturnType<typeof setTimeout> | null = null
+                    const cancelFallback = () => {
+                        if (fallbackTimer != null) {
+                            clearTimeout(fallbackTimer)
+                            fallbackTimer = null
+                        }
+                    }
+                    const onVisibilityChange = () => {
+                        if (document.hidden) {
+                            cancelFallback()
+                            document.removeEventListener("visibilitychange", onVisibilityChange)
+                        }
+                    }
+                    fallbackTimer = setTimeout(() => {
+                        fallbackTimer = null
+                        document.removeEventListener("visibilitychange", onVisibilityChange)
+                        window.open(playlistUrl, "_blank", "noopener,noreferrer")
+                    }, 2500)
+                    document.addEventListener("visibilitychange", onVisibilityChange)
+                    window.location.href = spotifyUri
+                } else {
+                    window.open(playlistUrl, "_blank", "noopener,noreferrer")
+                }
             } else {
                 setSaveError(result.error)
             }
@@ -143,7 +177,7 @@ export default function PlaylistExplorer({
         } finally {
             setIsSaving(false)
         }
-    }, [isUnauthenticated, onRequestLoginModal, isLoadingOrEmpty, isSaving, currentPlaylist])
+    }, [isUnauthenticated, onRequestLoginModal, isLoadingOrEmpty, isSaving, currentPlaylist, isMobile])
 
     /** 表示中の1ジャンルだけ現在の天気・時間で再構築（レコード右3周で発火） */
     const refreshPlaylistByGenre = useCallback(async (genre: Genre) => {
