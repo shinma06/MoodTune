@@ -2,7 +2,7 @@
 
 import { generateText } from "ai"
 import { openai } from "@ai-sdk/openai"
-import { searchTracks } from "@/lib/spotify-api"
+import { searchTracks, SPOTIFY_RATE_LIMIT_ERROR } from "@/lib/spotify-api"
 import { getSession } from "@/lib/spotify-session"
 import { getMockPlaylistInfo } from "@/lib/mock-playlist-data"
 import { WEATHER_TYPE_LABELS, TIME_OF_DAY_LABELS, type Genre } from "@/lib/constants"
@@ -13,6 +13,12 @@ import { logServerError, logServerWarn } from "@/lib/server-log"
 const LOG_TAG = "GenerateDashboard"
 
 export type { DashboardItem }
+
+/** generateDashboard の返却型。rateLimit が true のときは「リクエスト過多」メッセージを表示する */
+export type GenerateDashboardResult = {
+  playlists: DashboardItem[]
+  rateLimit?: boolean
+}
 
 /**
  * ジャンル名に基づいてモック画像URLを生成
@@ -99,17 +105,27 @@ tracksには各ジャンルの雰囲気・天気・時間帯に合った楽曲�
   }
 }
 
+/** 1曲検索の結果。rateLimit のときは 429 を受けたことを示す */
+type SearchTrackResult =
+  | { uri: string; imageUrl: string | null }
+  | null
+  | { rateLimit: true }
+
 /**
- * 1曲分のSpotify track URI と アルバム画像URLを取得
+ * 1曲分のSpotify track URI と アルバム画像URLを取得。
+ * 429 のときは { rateLimit: true } を返し、呼び出し元でメッセージ表示に使う。
  */
 async function searchTrack(
   token: string,
   artist: string,
   title: string
-): Promise<{ uri: string; imageUrl: string | null } | null> {
+): Promise<SearchTrackResult> {
   try {
     const query = `artist:${artist} track:${title}`
     const response = await searchTracks(token, query, { limit: 1 })
+    if (response.status === 429 || response.error === SPOTIFY_RATE_LIMIT_ERROR) {
+      return { rateLimit: true }
+    }
     if (!response.ok || !response.data) return null
     const track = response.data.tracks?.items?.[0]
     if (!track) return null
@@ -142,16 +158,22 @@ async function mapWithConcurrency<T, R>(
 }
 
 /**
- * ダッシュボードデータを生成
- * エラー時は空配列を返し、Server Action が常に正常レスポンスを返すようにする（クライアントの "unexpected response" を防ぐ）
+ * ダッシュボードデータを生成。
+ * エラー時は playlists を空配列にして返し、Server Action が常に正常レスポンスを返すようにする（クライアントの "unexpected response" を防ぐ）。
+ * 429 を検知した場合は rateLimit: true を付与し、クライアントで「リクエスト過多」メッセージを表示する。
  */
 export async function generateDashboard(
   weather: WeatherType,
   time: TimeOfDay,
   selectedGenres: Genre[]
-): Promise<DashboardItem[]> {
+): Promise<GenerateDashboardResult> {
+  const emptyResult = (rateLimit?: boolean): GenerateDashboardResult => ({
+    playlists: [],
+    ...(rateLimit && { rateLimit: true }),
+  })
+
   if (!Array.isArray(selectedGenres) || selectedGenres.length === 0) {
-    return []
+    return emptyResult()
   }
 
   try {
@@ -177,7 +199,7 @@ export async function generateDashboard(
     }
 
     if (!Array.isArray(playlistInfos) || playlistInfos.length === 0) {
-      return []
+      return emptyResult()
     }
 
     const token = session?.accessToken ?? null
@@ -185,6 +207,7 @@ export async function generateDashboard(
     // レート制限(429)回避: ジャンルごとに直列、曲検索は同時2件まで
     const SPOTIFY_SEARCH_CONCURRENCY = 2
     const dashboardItems: DashboardItem[] = []
+    let rateLimitHit = false
 
     for (let index = 0; index < playlistInfos.length; index++) {
       const info = playlistInfos[index]
@@ -199,10 +222,17 @@ export async function generateDashboard(
         )
 
         for (const result of results) {
-          if (result) trackUris.push(result.uri)
+          if (result && "rateLimit" in result) {
+            rateLimitHit = true
+          } else if (result && "uri" in result) {
+            trackUris.push(result.uri)
+          }
         }
 
-        const firstImage = results.find((r) => r?.imageUrl)?.imageUrl
+        const firstImage = results.find(
+          (r): r is { uri: string; imageUrl: string | null } =>
+            r != null && "uri" in r && "imageUrl" in r
+        )?.imageUrl
         if (firstImage) imageUrl = firstImage
       }
 
@@ -215,13 +245,13 @@ export async function generateDashboard(
       })
     }
 
-    return dashboardItems
+    return { playlists: dashboardItems, ...(rateLimitHit && { rateLimit: true }) }
   } catch (error) {
     logServerError(LOG_TAG, "generate_dashboard", error, {
       weather,
       time,
       genresCount: selectedGenres?.length ?? 0,
     })
-    return []
+    return emptyResult()
   }
 }

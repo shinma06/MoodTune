@@ -58,6 +58,8 @@ export default function PlaylistExplorer({
     const [loadingMode, setLoadingMode] = useState<LoadingMode>(null)
     const [isSaving, setIsSaving] = useState(false)
     const [saveError, setSaveError] = useState<string | null>(null)
+    /** Spotify のレート制限(429)で一部取得できなかったときに true。ユーザーに「リクエスト過多」を伝える */
+    const [rateLimitMessage, setRateLimitMessage] = useState(false)
     const { autoRotationEnabled, tonearmVisible, noteEffectEnabled } = useSettings()
 
     /** パネルを開いた時点のジャンル（閉じたときの差分計算用） */
@@ -107,9 +109,10 @@ export default function PlaylistExplorer({
         setLoadingMode(options?.autoUpdate ? "auto" : "all")
         setIsLoading(true)
         try {
-            const generated = await generateDashboard(effectiveWeather, effectiveTimeOfDay, selectedGenres as Genre[])
-            setPlaylists(generated)
-            setCurrentIndex((prev) => Math.min(prev, Math.max(0, generated.length - 1)))
+            const result = await generateDashboard(effectiveWeather, effectiveTimeOfDay, selectedGenres as Genre[])
+            setPlaylists(result.playlists)
+            setRateLimitMessage(result.rateLimit ?? false)
+            setCurrentIndex((prev) => Math.min(prev, Math.max(0, result.playlists.length - 1)))
         } catch (error) {
             console.error("Failed to refresh playlists:", error)
         } finally {
@@ -186,9 +189,10 @@ export default function PlaylistExplorer({
         setLoadingMode("single")
         setIsLoading(true)
         try {
-            const generated = await generateDashboard(effectiveWeather, effectiveTimeOfDay, [genre])
-            const newItem = generated[0]
+            const result = await generateDashboard(effectiveWeather, effectiveTimeOfDay, [genre])
+            const newItem = result.playlists[0]
             if (!newItem) return
+            setRateLimitMessage((prev) => prev || (result.rateLimit ?? false))
             setPlaylists((prev) => {
                 if (!prev) return [newItem]
                 return prev.map((p) => (p.genre === genre ? newItem : p))
@@ -229,7 +233,9 @@ export default function PlaylistExplorer({
 
             let newPlaylists: DashboardItem[] = []
             if (diff.added.length > 0) {
-                newPlaylists = await generateDashboard(effectiveWeather, effectiveTimeOfDay, diff.added as Genre[])
+                const result = await generateDashboard(effectiveWeather, effectiveTimeOfDay, diff.added as Genre[])
+                newPlaylists = result.playlists
+                if (result.rateLimit) setRateLimitMessage(true)
             }
 
             const allMap = new Map<string, DashboardItem>()
@@ -663,6 +669,11 @@ export default function PlaylistExplorer({
                             : "Spotifyで再生"
                     return (
                         <div className="flex flex-col items-center gap-2">
+                            {rateLimitMessage && (
+                                <p className="text-xs text-amber-300/95 text-center max-w-[260px]" role="status">
+                                    リクエストが多すぎます。しばらく時間をおいてから再度お試しください。
+                                </p>
+                            )}
                             <Button
                                 onClick={handleSaveToSpotify}
                                 disabled={!needsSpotifyLogin && spotifyDisabled}
