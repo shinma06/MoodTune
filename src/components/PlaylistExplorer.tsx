@@ -660,7 +660,9 @@ export default function PlaylistExplorer({
                             : isLoadingOrEmpty
                               ? "プレイリストを読み込み中です"
                               : currentPlaylist.trackUris.length === 0
-                                ? "再生できる曲を取得できませんでした。しばらく経ってからお試しください。"
+                                ? rateLimitMessage
+                                  ? "リクエストが多すぎます。しばらく時間をおいてから再度お試しください。"
+                                  : "再生できる曲を取得できませんでした。しばらく経ってからお試しください。"
                                 : null
                     const buttonLabel = needsSpotifyLogin
                         ? "Spotifyでログインして再生"
@@ -669,11 +671,6 @@ export default function PlaylistExplorer({
                             : "Spotifyで再生"
                     return (
                         <div className="flex flex-col items-center gap-2">
-                            {rateLimitMessage && (
-                                <p className="text-xs text-amber-300/95 text-center max-w-[260px]" role="status">
-                                    リクエストが多すぎます。しばらく時間をおいてから再度お試しください。
-                                </p>
-                            )}
                             <Button
                                 onClick={handleSaveToSpotify}
                                 disabled={!needsSpotifyLogin && spotifyDisabled}
