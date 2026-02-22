@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { exchangeCodeForTokens } from "@/lib/spotify-pkce"
 import { setSessionCookie } from "@/lib/spotify-session"
+import { logServerError, logServerWarn } from "@/lib/server-log"
+
+const LOG_TAG = "Spotify Auth (callback)"
 
 const STATE_COOKIE = "spotify_oauth_state"
 const VERIFIER_COOKIE = "spotify_code_verifier"
@@ -25,12 +28,23 @@ export async function GET(request: NextRequest) {
   cookieStore.set(VERIFIER_COOKIE, "", COOKIE_OPTIONS)
 
   if (error) {
+    logServerWarn(LOG_TAG, "oauth_error_param", error, {
+      error,
+      hasCode: !!code,
+      hasState: !!state,
+    })
     return NextResponse.redirect(
       `${requestOrigin}/api/auth/spotify/error?error=${encodeURIComponent(error)}`
     )
   }
 
   if (!code || !state || state !== savedState || !codeVerifier) {
+    logServerWarn(LOG_TAG, "invalid_callback", "missing or mismatch code/state/verifier", {
+      hasCode: !!code,
+      hasState: !!state,
+      stateMatch: state === savedState,
+      hasCodeVerifier: !!codeVerifier,
+    })
     return NextResponse.redirect(
       `${requestOrigin}/api/auth/spotify/error?error=invalid_callback`
     )
@@ -44,7 +58,10 @@ export async function GET(request: NextRequest) {
       expiresAt: Date.now() + data.expires_in * 1000,
     })
   } catch (e) {
-    console.error("[spotify callback]", e)
+    logServerError(LOG_TAG, "token_exchange_or_set_session", e, {
+      hasCode: !!code,
+      redirectOrigin: requestOrigin,
+    })
     return NextResponse.redirect(
       `${requestOrigin}/api/auth/spotify/error?error=token_exchange_failed`
     )

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { parseLatLon } from "@/lib/parse-lat-lon"
+import { logServerError, logServerWarn } from "@/lib/server-log"
+
+const LOG_TAG = "Weather API (owm-city)"
 
 /**
  * OpenWeatherMap のみを呼び、都市名(name)だけを返す。
@@ -10,6 +13,10 @@ export async function GET(request: NextRequest) {
   try {
     const parsed = parseLatLon(request.nextUrl.searchParams)
     if (!parsed.ok) {
+      logServerWarn(LOG_TAG, "parse_lat_lon", parsed.error, {
+        status: parsed.status,
+        searchParams: Object.fromEntries(request.nextUrl.searchParams),
+      })
       return NextResponse.json({ error: "無効な緯度経度です" }, { status: 400 })
     }
     const { lat: latNum, lon: lonNum } = parsed
@@ -18,6 +25,7 @@ export async function GET(request: NextRequest) {
 
     const apiKey = process.env.NEXT_PUBLIC_WEATHER_API_KEY
     if (!apiKey) {
+      logServerWarn(LOG_TAG, "missing_api_key", "NEXT_PUBLIC_WEATHER_API_KEY not set", {})
       return NextResponse.json(
         { error: "OpenWeatherMap APIキーが設定されていません" },
         { status: 500 }
@@ -37,18 +45,38 @@ export async function GET(request: NextRequest) {
     })
 
     if (!response.ok) {
-      const err = await response.json().catch(() => ({}))
+      const err = await response.json().catch((e) => {
+        logServerError(LOG_TAG, "owm_city_error_body_parse", e, { status: response.status })
+        return {}
+      })
+      logServerWarn(LOG_TAG, "owm_city_http_error", (err as { message?: string }).message ?? `HTTP ${response.status}`, {
+        status: response.status,
+        lat,
+        lon,
+      })
       return NextResponse.json(
-        { error: "都市情報の取得に失敗しました", details: err.message },
+        { error: "都市情報の取得に失敗しました", details: (err as { message?: string }).message },
         { status: response.status }
       )
     }
 
-    const data = (await response.json()) as { name?: string }
+    let data: { name?: string }
+    try {
+      data = (await response.json()) as { name?: string }
+    } catch (e) {
+      logServerError(LOG_TAG, "owm_city_response_json", e, { status: response.status })
+      return NextResponse.json(
+        { error: "都市データの解析に失敗しました" },
+        { status: 502 }
+      )
+    }
     const name = typeof data.name === "string" ? data.name : ""
     return NextResponse.json({ name }, { status: 200 })
   } catch (error) {
-    console.error("[Weather API] owm-city error:", error)
+    logServerError(LOG_TAG, "get_owm_city", error, {
+      url: request.url,
+      searchParams: Object.fromEntries(request.nextUrl.searchParams),
+    })
     return NextResponse.json(
       {
         error: "サーバーエラーが発生しました",

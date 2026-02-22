@@ -1,5 +1,8 @@
 import crypto from "node:crypto"
 import { cookies } from "next/headers"
+import { logServerError, logServerWarn } from "@/lib/server-log"
+
+const LOG_TAG = "Spotify Session"
 
 const COOKIE_NAME = "spotify_session"
 const COOKIE_MAX_AGE = 30 * 24 * 60 * 60 // 30 days
@@ -13,8 +16,10 @@ export interface SpotifySession {
 
 function getSecret(): Buffer {
   const secret = process.env.AUTH_SECRET
-  if (!secret || secret.length < 32)
+  if (!secret || secret.length < 32) {
+    logServerWarn(LOG_TAG, "get_secret", "AUTH_SECRET missing or too short", { length: secret?.length ?? 0 })
     throw new Error("AUTH_SECRET must be at least 32 chars")
+  }
   return crypto.createHash("sha256").update(secret).digest()
 }
 
@@ -55,7 +60,8 @@ function decrypt(value: string): SpotifySession | null {
       refreshToken: data.refreshToken,
       expiresAt: data.expiresAt,
     }
-  } catch {
+  } catch (e) {
+    logServerError(LOG_TAG, "decrypt_session", e, { valueLength: value?.length ?? 0 })
     return null
   }
 }
@@ -66,7 +72,13 @@ async function refreshSpotifyToken(
 ): Promise<SpotifySession | null> {
   const id = process.env.AUTH_SPOTIFY_ID
   const secret = process.env.AUTH_SPOTIFY_SECRET
-  if (!id || !secret) return null
+  if (!id || !secret) {
+    logServerWarn(LOG_TAG, "refresh_token", "AUTH_SPOTIFY_ID or AUTH_SPOTIFY_SECRET not set", {
+      hasId: !!id,
+      hasSecret: !!secret,
+    })
+    return null
+  }
   try {
     const res = await fetch("https://accounts.spotify.com/api/token", {
       method: "POST",
@@ -79,7 +91,14 @@ async function refreshSpotifyToken(
         refresh_token: refreshToken,
       }),
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      const errText = await res.text()
+      logServerWarn(LOG_TAG, "refresh_token_response", `HTTP ${res.status}`, {
+        status: res.status,
+        bodyPreview: errText.slice(0, 200),
+      })
+      return null
+    }
     const data = (await res.json()) as {
       access_token: string
       refresh_token?: string
@@ -90,7 +109,8 @@ async function refreshSpotifyToken(
       refreshToken: data.refresh_token ?? refreshToken,
       expiresAt: Date.now() + data.expires_in * 1000,
     }
-  } catch {
+  } catch (e) {
+    logServerError(LOG_TAG, "refresh_token", e, {})
     return null
   }
 }

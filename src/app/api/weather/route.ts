@@ -3,6 +3,9 @@ import { parseLatLon } from "@/lib/parse-lat-lon"
 import { isInJapan, wxCodeToWeatherType, WXTECH_API_BASE } from "@/lib/wxtech-weather"
 import { WEATHER_TYPE_LABELS } from "@/lib/constants"
 import type { WeatherType } from "@/lib/weather-background"
+import { logServerError, logServerWarn } from "@/lib/server-log"
+
+const LOG_TAG = "Weather API"
 
 /** OpenWeatherMap 互換のレスポンス型（クライアントがそのまま利用） */
 interface NormalizedWeatherResponse {
@@ -15,6 +18,10 @@ export async function GET(request: NextRequest) {
   try {
     const parsed = parseLatLon(request.nextUrl.searchParams)
     if (!parsed.ok) {
+      logServerWarn(LOG_TAG, "parse_lat_lon", parsed.error, {
+        status: parsed.status,
+        searchParams: Object.fromEntries(request.nextUrl.searchParams),
+      })
       return NextResponse.json({ error: parsed.error }, { status: parsed.status })
     }
     const { lat: latNum, lon: lonNum } = parsed
@@ -29,10 +36,11 @@ export async function GET(request: NextRequest) {
       if (result.normalized) {
         return NextResponse.json(result.normalized, { status: 200 })
       }
-      console.error("[Weather API] WxTech fallback:", result.reason)
+      logServerWarn(LOG_TAG, "wxtech_fallback", result.reason ?? "unknown", { lat, lon })
     }
 
     if (!owmKey) {
+      logServerWarn(LOG_TAG, "missing_api_key", "WxTech 未使用 or OWM キー未設定", { hasWxTech: !!wxTechKey })
       return NextResponse.json(
         { error: "天気APIキーが設定されていません（WxTech または OpenWeatherMap）" },
         { status: 500 }
@@ -41,7 +49,16 @@ export async function GET(request: NextRequest) {
 
     const owmResponse = await fetchOpenWeatherMap(owmKey, lat, lon)
     if (!owmResponse.ok) {
-      const errorData = await owmResponse.json().catch(() => ({}))
+      const errorData = await owmResponse.json().catch((e) => {
+        logServerError(LOG_TAG, "owm_error_body_parse", e, { status: owmResponse.status })
+        return {}
+      })
+      logServerWarn(LOG_TAG, "owm_http_error", errorData.message || `HTTP ${owmResponse.status}`, {
+        status: owmResponse.status,
+        lat,
+        lon,
+        detail: (errorData as { message?: string }).message,
+      })
       return NextResponse.json(
         {
           error: "天気情報の取得に失敗しました",
@@ -50,10 +67,22 @@ export async function GET(request: NextRequest) {
         { status: owmResponse.status }
       )
     }
-    const data = await owmResponse.json()
+    let data: unknown
+    try {
+      data = await owmResponse.json()
+    } catch (e) {
+      logServerError(LOG_TAG, "owm_response_json", e, { status: owmResponse.status })
+      return NextResponse.json(
+        { error: "天気データの解析に失敗しました", details: "Invalid JSON" },
+        { status: 502 }
+      )
+    }
     return NextResponse.json(data, { status: 200 })
   } catch (error) {
-    console.error("天気APIエラー:", error)
+    logServerError(LOG_TAG, "get_weather", error, {
+      url: request.url,
+      searchParams: Object.fromEntries(request.nextUrl.searchParams),
+    })
     return NextResponse.json(
       {
         error: "サーバーエラーが発生しました",
@@ -106,21 +135,32 @@ async function fetchWxTechWeather(
       } catch {
         // use raw text
       }
+      logServerWarn(LOG_TAG, "wxtech_http_error", `HTTP ${response.status}`, {
+        status: response.status,
+        url,
+        detail: detail.slice(0, 200),
+      })
       return {
         reason: `HTTP ${response.status}: ${detail.slice(0, 200)}`,
       }
     }
 
-    const body = await response.json().catch((e) => {
+    let body: { wxdata?: unknown }
+    try {
+      body = await response.json()
+    } catch (e) {
+      logServerError(LOG_TAG, "wxtech_response_json", e, { url })
       throw new Error(`JSON parse: ${e instanceof Error ? e.message : String(e)}`)
-    })
+    }
 
     const wxdata = body.wxdata
     if (!Array.isArray(wxdata) || wxdata.length === 0) {
+      logServerWarn(LOG_TAG, "wxtech_invalid_body", "wxdata missing or empty", { url })
       return { reason: "wxdata missing or empty" }
     }
     const srf = wxdata[0].srf
     if (!Array.isArray(srf) || srf.length === 0) {
+      logServerWarn(LOG_TAG, "wxtech_invalid_body", "srf missing or empty", { url })
       return { reason: "srf missing or empty" }
     }
 
@@ -139,6 +179,7 @@ async function fetchWxTechWeather(
       },
     }
   } catch (e) {
+    logServerError(LOG_TAG, "fetch_wxtech_weather", e, { url, lat, lon })
     const err = e instanceof Error ? e : new Error(String(e))
     const msg = err.message
     const cause = err.cause != null ? String(err.cause) : ""

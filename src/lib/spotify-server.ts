@@ -1,5 +1,8 @@
 import SpotifyWebApi from "spotify-web-api-node"
 import { auth } from "@/auth"
+import { logServerError } from "@/lib/server-log"
+
+const LOG_TAG = "Spotify Server"
 
 /**
  * Spotify API クライアントを初期化して返す
@@ -22,7 +25,7 @@ export async function getSpotifyClient(): Promise<SpotifyWebApi | null> {
 
     return spotifyApi
   } catch (error) {
-    console.error("Failed to initialize Spotify client:", error)
+    logServerError(LOG_TAG, "get_spotify_client", error, {})
     return null
   }
 }

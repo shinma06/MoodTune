@@ -8,6 +8,9 @@ import { getMockPlaylistInfo } from "@/lib/mock-playlist-data"
 import { WEATHER_TYPE_LABELS, TIME_OF_DAY_LABELS, type Genre } from "@/lib/constants"
 import type { WeatherType, TimeOfDay } from "@/lib/weather-background"
 import type { DashboardItem } from "@/types/dashboard"
+import { logServerError, logServerWarn } from "@/lib/server-log"
+
+const LOG_TAG = "GenerateDashboard"
 
 export type { DashboardItem }
 
@@ -87,7 +90,11 @@ tracksには各ジャンルの雰囲気・天気・時間帯に合った楽曲�
     }
     return createFallbackPlaylistInfo(genres, weatherLabel, timeLabel)
   } catch (error) {
-    console.error("Failed to generate playlist info:", error)
+    logServerError(LOG_TAG, "generate_playlist_info", error, {
+      weather,
+      time,
+      genres: genres.join(","),
+    })
     return createFallbackPlaylistInfo(genres, weatherLabel, timeLabel)
   }
 }
@@ -110,7 +117,8 @@ async function searchTrack(
       uri: track.uri,
       imageUrl: track.album?.images?.[0]?.url ?? null,
     }
-  } catch {
+  } catch (e) {
+    logServerError(LOG_TAG, "search_track", e, { artist, title })
     return null
   }
 }
@@ -158,7 +166,12 @@ export async function generateDashboard(
     } else {
       try {
         playlistInfos = await generatePlaylistInfo(weather, time, selectedGenres)
-      } catch {
+      } catch (e) {
+        logServerError(LOG_TAG, "generate_playlist_info_fallback", e, {
+          weather,
+          time,
+          genres: selectedGenres.join(","),
+        })
         playlistInfos = createFallbackPlaylistInfo(selectedGenres, weatherLabel, timeLabel)
       }
     }
@@ -171,7 +184,8 @@ export async function generateDashboard(
     if (isLoggedIn) {
       try {
         spotifyClient = await getSpotifyClient()
-      } catch {
+      } catch (e) {
+        logServerError(LOG_TAG, "get_spotify_client", e, { weather, time })
         spotifyClient = null
       }
     }
@@ -211,7 +225,11 @@ export async function generateDashboard(
 
     return dashboardItems
   } catch (error) {
-    console.error("Failed to generate dashboard:", error)
+    logServerError(LOG_TAG, "generate_dashboard", error, {
+      weather,
+      time,
+      genresCount: selectedGenres?.length ?? 0,
+    })
     return []
   }
 }

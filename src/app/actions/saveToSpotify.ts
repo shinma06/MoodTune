@@ -1,6 +1,9 @@
 "use server"
 
 import { getSession } from "@/lib/spotify-session"
+import { logServerError, logServerWarn } from "@/lib/server-log"
+
+const LOG_TAG = "SaveToSpotify"
 
 const PLAYLIST_NAME = "MoodTune"
 const SPOTIFY_API = "https://api.spotify.com/v1"
@@ -27,20 +30,30 @@ async function spotifyFetch<T>(
   options: RequestInit = {}
 ): Promise<{ ok: boolean; status: number; data?: T; error?: string }> {
   const url = path.startsWith("http") ? path : `${SPOTIFY_API}${path}`
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      ...(options.headers as Record<string, string>),
-    },
-  })
+  let res: Response
+  try {
+    res = await fetch(url, {
+      ...options,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        ...(options.headers as Record<string, string>),
+      },
+    })
+  } catch (e) {
+    logServerError(LOG_TAG, "spotify_fetch_network", e, { path, method: options.method ?? "GET" })
+    throw e
+  }
   const text = await res.text()
   let data: T | SpotifyErrorBody | undefined
   try {
     data = text ? (JSON.parse(text) as T | SpotifyErrorBody) : undefined
-  } catch {
-    // ignore
+  } catch (e) {
+    logServerError(LOG_TAG, "spotify_fetch_parse_body", e, {
+      path,
+      status: res.status,
+      bodyPreview: text.slice(0, 200),
+    })
   }
   if (!res.ok) {
     const errBody = data as SpotifyErrorBody | undefined
@@ -49,7 +62,20 @@ async function spotifyFetch<T>(
       (typeof data === "object" && data && "error" in data
         ? String((data as { error: unknown }).error)
         : undefined)
+    logServerWarn(LOG_TAG, "spotify_fetch_error", errMsg ?? `HTTP ${res.status}`, {
+      path,
+      status: res.status,
+      errorMessage: errMsg,
+    })
     return { ok: false, status: res.status, error: errMsg }
+  }
+  // 200 だが JSON パースに失敗している場合はエラー扱い（上記 catch で data が未設定のまま）
+  if (data === undefined) {
+    logServerWarn(LOG_TAG, "spotify_fetch_parse_body", "OK response but invalid JSON", {
+      path,
+      status: res.status,
+    })
+    return { ok: false, status: 502, error: "Invalid response body" }
   }
   return { ok: true, status: res.status, data: data as T }
 }
@@ -79,11 +105,19 @@ export async function saveToSpotify(
   trackUris: string[]
 ): Promise<SaveToSpotifyResult> {
   if (trackUris.length === 0) {
+    logServerWarn(LOG_TAG, "save_to_spotify", "No track URIs provided", { title })
     return { success: false, error: "再生できる楽曲がありません" }
   }
 
-  const session = await getSession()
+  let session
+  try {
+    session = await getSession()
+  } catch (e) {
+    logServerError(LOG_TAG, "get_session", e, { title })
+    return { success: false, error: "セッションの取得に失敗しました" }
+  }
   if (!session) {
+    logServerWarn(LOG_TAG, "save_to_spotify", "User not logged in", { title })
     return { success: false, error: "Spotifyにログインしてください" }
   }
 
@@ -105,6 +139,10 @@ export async function saveToSpotify(
       }),
     })
     if (!updateRes.ok) {
+      logServerWarn(LOG_TAG, "update_playlist", updateRes.error ?? "unknown", {
+        playlistId: existingId,
+        status: updateRes.status,
+      })
       return { success: false, error: formatSpotifyError(updateRes.error, updateRes.status) }
     }
 
@@ -118,12 +156,20 @@ export async function saveToSpotify(
       }
     )
     if (!replaceRes.ok) {
+      logServerWarn(LOG_TAG, "replace_playlist_items", replaceRes.error ?? "unknown", {
+        playlistId: existingId,
+        status: replaceRes.status,
+      })
       return { success: false, error: formatSpotifyError(replaceRes.error, replaceRes.status) }
     }
     const rest = trackUris.slice(MAX_TRACKS_PER_REQUEST)
     if (rest.length > 0) {
       const addRes = await addTracksInChunks(token, existingId, rest)
       if (!addRes.ok) {
+        logServerWarn(LOG_TAG, "add_tracks_chunks", addRes.error ?? "unknown", {
+          playlistId: existingId,
+          status: addRes.status,
+        })
         return { success: false, error: formatSpotifyError(addRes.error, addRes.status) }
       }
     }
@@ -138,12 +184,20 @@ export async function saveToSpotify(
       }),
     })
     if (!createRes.ok) {
+      logServerWarn(LOG_TAG, "create_playlist", createRes.error ?? "unknown", {
+        status: createRes.status,
+        playlistName,
+      })
       return { success: false, error: formatSpotifyError(createRes.error, createRes.status) }
     }
     playlistId = createRes.data!.id
 
     const addRes = await addTracksInChunks(token, playlistId, trackUris)
     if (!addRes.ok) {
+      logServerWarn(LOG_TAG, "add_tracks_after_create", addRes.error ?? "unknown", {
+        playlistId,
+        status: addRes.status,
+      })
       return { success: false, error: formatSpotifyError(addRes.error, addRes.status) }
     }
   }
@@ -163,7 +217,13 @@ async function findMoodTunePlaylist(token: string): Promise<string | null> {
       items: Array<{ id: string; name: string }>;
     }>(token, `/me/playlists?limit=${limit}&offset=${offset}`)
 
-    if (!res.ok || !res.data) return null
+    if (!res.ok || !res.data) {
+      logServerWarn(LOG_TAG, "find_playlist_fetch", res.error ?? `HTTP ${res.status}`, {
+        offset,
+        status: res.status,
+      })
+      return null
+    }
 
     const found = res.data.items.find((p) => p.name.startsWith(PLAYLIST_NAME))
     if (found) return found.id

@@ -1,5 +1,7 @@
 import crypto from "node:crypto"
+import { logServerError, logServerWarn } from "@/lib/server-log"
 
+const LOG_TAG = "Spotify PKCE"
 const SPOTIFY_AUTHORIZE = "https://accounts.spotify.com/authorize"
 const SPOTIFY_TOKEN = "https://accounts.spotify.com/api/token"
 
@@ -57,7 +59,10 @@ export async function buildAuthorizeUrl(
   const codeVerifier = generateCodeVerifier()
   const codeChallenge = await generateCodeChallenge(codeVerifier)
   const clientId = process.env.AUTH_SPOTIFY_ID
-  if (!clientId) throw new Error("AUTH_SPOTIFY_ID is not set")
+  if (!clientId) {
+    logServerWarn(LOG_TAG, "build_authorize_url", "AUTH_SPOTIFY_ID is not set", { requestOrigin })
+    throw new Error("AUTH_SPOTIFY_ID is not set")
+  }
 
   const params = new URLSearchParams({
     client_id: clientId,
@@ -89,7 +94,10 @@ export async function exchangeCodeForTokens(
   scope?: string
 }> {
   const clientId = process.env.AUTH_SPOTIFY_ID
-  if (!clientId) throw new Error("AUTH_SPOTIFY_ID is not set")
+  if (!clientId) {
+    logServerWarn(LOG_TAG, "exchange_tokens", "AUTH_SPOTIFY_ID is not set", { redirectOrigin })
+    throw new Error("AUTH_SPOTIFY_ID is not set")
+  }
 
   const body = new URLSearchParams({
     grant_type: "authorization_code",
@@ -107,6 +115,11 @@ export async function exchangeCodeForTokens(
 
   if (!res.ok) {
     const err = await res.text()
+    logServerError(LOG_TAG, "exchange_tokens_response", new Error(`Spotify token error: ${res.status} ${err}`), {
+      status: res.status,
+      bodyPreview: err.slice(0, 300),
+      redirectOrigin,
+    })
     throw new Error(`Spotify token error: ${res.status} ${err}`)
   }
 
