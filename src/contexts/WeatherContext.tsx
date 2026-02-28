@@ -130,31 +130,52 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
     setPlaylistRefreshTrigger((prev) => prev + 1)
   }, [])
 
+  const contextValue = useMemo<WeatherContextType>(() => ({
+    isTimeInitialized,
+    displayHour,
+    actualTimeOfDay,
+    effectiveTimeOfDay,
+    effectiveWeather,
+    isCanvasBackgroundDark,
+    isOverlayThemeDark,
+    themePreference,
+    setThemePreference,
+    weatherType,
+    setWeatherType,
+    actualWeatherType,
+    setActualWeatherType,
+    moodTuningTimeOfDay,
+    setMoodTuningTimeOfDay,
+    isMoodTuning,
+    setIsMoodTuning,
+    isMoodTuningApplied,
+    playlistRefreshTrigger,
+    requestPlaylistRefresh,
+  }), [
+    isTimeInitialized,
+    displayHour,
+    actualTimeOfDay,
+    effectiveTimeOfDay,
+    effectiveWeather,
+    isCanvasBackgroundDark,
+    isOverlayThemeDark,
+    themePreference,
+    setThemePreference,
+    weatherType,
+    setWeatherType,
+    actualWeatherType,
+    setActualWeatherType,
+    moodTuningTimeOfDay,
+    setMoodTuningTimeOfDay,
+    isMoodTuning,
+    setIsMoodTuning,
+    isMoodTuningApplied,
+    playlistRefreshTrigger,
+    requestPlaylistRefresh,
+  ])
+
   return (
-    <WeatherContext.Provider
-      value={{
-        isTimeInitialized,
-        displayHour,
-        actualTimeOfDay,
-        effectiveTimeOfDay,
-        effectiveWeather,
-        isCanvasBackgroundDark,
-        isOverlayThemeDark,
-        themePreference,
-        setThemePreference,
-        weatherType,
-        setWeatherType,
-        actualWeatherType,
-        setActualWeatherType,
-        moodTuningTimeOfDay,
-        setMoodTuningTimeOfDay,
-        isMoodTuning,
-        setIsMoodTuning,
-        isMoodTuningApplied,
-        playlistRefreshTrigger,
-        requestPlaylistRefresh,
-      }}
-    >
+    <WeatherContext.Provider value={contextValue}>
       {children}
     </WeatherContext.Provider>
   )
