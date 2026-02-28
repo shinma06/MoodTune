@@ -127,6 +127,8 @@ export async function saveToSpotify(
   }
 }
 
+const MAX_PLAYLIST_PAGES = 20
+
 async function findMoodTunePlaylist(
   token: string,
   _userId: string
@@ -134,7 +136,7 @@ async function findMoodTunePlaylist(
   let offset = 0
   const limit = 50
 
-  while (true) {
+  for (let page = 0; page < MAX_PLAYLIST_PAGES; page++) {
     const res = await spotifyFetch<{
       items: Array<{ id: string; name: string }>
     }>(token, `/me/playlists?limit=${limit}&offset=${offset}`)
