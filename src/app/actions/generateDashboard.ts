@@ -29,10 +29,9 @@ function createFallbackPlaylistInfo(
   weatherLabel: string,
   timeLabel: string
 ): PlaylistInfo[] {
-  return genres.map((genre) => ({
-    genre,
-    title: `${weatherLabel}の${timeLabel}に聴く${genre}`,
-    tracks: [],
+  return getMockPlaylistInfo(genres, weatherLabel, timeLabel).map((info) => ({
+    ...info,
+    tracks: (info.tracks ?? []).slice(0, 10),
   }))
 }
 
@@ -60,7 +59,7 @@ async function generatePlaylistInfo(
   ]
 }
 
-tracksには各ジャンルの雰囲気・天気・時間帯に合った楽曲を15曲リストアップしてください。
+tracksには各ジャンルの雰囲気・天気・時間帯に合った楽曲を10曲リストアップしてください。
 実際にSpotifyに存在する楽曲・アーティストを選んでください。
 出力はJSON配列形式で、各ジャンルごとに1つのオブジェクトを含めてください。`
 
@@ -73,7 +72,11 @@ tracksには各ジャンルの雰囲気・天気・時間帯に合った楽曲�
     const jsonMatch = text.match(/\[[\s\S]*\]/)
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0])
-      return Array.isArray(parsed) ? parsed : [parsed]
+      const list = Array.isArray(parsed) ? parsed : [parsed]
+      return list.map((p: PlaylistInfo) => ({
+        ...p,
+        tracks: (p.tracks ?? []).slice(0, 10),
+      }))
     }
     return createFallbackPlaylistInfo(genres, weatherLabel, timeLabel)
   } catch (error) {
@@ -177,7 +180,7 @@ export async function generateDashboard(
         )
 
         for (const result of results) {
-          if (result) trackUris.push(result.uri)
+          if (result && trackUris.length < 8) trackUris.push(result.uri)
         }
 
         const firstImage = results.find((r) => r?.imageUrl)?.imageUrl
