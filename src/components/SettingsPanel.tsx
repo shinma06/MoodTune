@@ -5,6 +5,7 @@ import GenreSelector from "@/components/GenreSelector"
 import { useSettings } from "@/hooks/useSettings"
 import { useWeather } from "@/contexts/WeatherContext"
 import { Button } from "@/components/ui/button"
+import { getOverlayStyles } from "@/lib/overlay-theme"
 import {
   DEFAULT_THEME_PREFERENCE,
   type MoodTuningWeatherDisplayMode,
@@ -46,23 +47,14 @@ interface ToggleSettingRowProps {
   label: string
   value: boolean
   onChange: (next: boolean) => void
-  isOverlayThemeDark: boolean
+  isDark: boolean
 }
 
-function ToggleSettingRow({
-  icon,
-  label,
-  value,
-  onChange,
-  isOverlayThemeDark,
-}: ToggleSettingRowProps) {
+function ToggleSettingRow({ icon, label, value, onChange, isDark }: ToggleSettingRowProps) {
+  const s = getOverlayStyles(isDark)
   return (
     <div className="flex items-center justify-between gap-3 w-full min-w-0">
-      <div
-        className={`flex items-center gap-2 text-xs sm:text-sm ${
-          isOverlayThemeDark ? "text-white/90" : "text-foreground/90"
-        }`}
-      >
+      <div className={`flex items-center gap-2 text-xs sm:text-sm ${isDark ? "text-white/90" : "text-foreground/90"}`}>
         {icon}
         <span>{label}</span>
       </div>
@@ -70,13 +62,7 @@ function ToggleSettingRow({
         type="button"
         size="sm"
         variant={value ? "default" : "outline"}
-        className={`h-7 px-3 text-xs ${
-          isOverlayThemeDark
-            ? value
-              ? "bg-white text-slate-900 border-white hover:bg-white/90"
-              : "bg-transparent border-white/30 text-white/80 hover:bg-white/10"
-            : ""
-        }`}
+        className={`h-7 px-3 text-xs ${value ? s.toggleOn : s.toggleOff}`}
         onClick={() => onChange(!value)}
       >
         {value ? "ON" : "OFF"}
@@ -99,11 +85,12 @@ export default function SettingsPanel({ isUnauthenticated }: SettingsPanelProps)
     setMoodTuningWeatherDisplay,
   } = useSettings()
 
-  const wrapperClass = isOverlayThemeDark
-    ? "w-full rounded-2xl bg-slate-900/95 border border-white/10 shadow-xl"
-    : "w-full rounded-2xl bg-background/80 backdrop-blur-sm border border-border/50 shadow-xl"
-  const titleClass = isOverlayThemeDark ? "text-white" : "text-foreground"
-  const helperTextClass = isOverlayThemeDark ? "text-white/60" : "text-muted-foreground"
+  const s = getOverlayStyles(isOverlayThemeDark)
+
+  const wrapperClass = `w-full rounded-2xl backdrop-blur-sm border shadow-xl ${s.container}`
+  const menuButtonClass = `h-10 justify-between px-3 text-sm ${
+    isOverlayThemeDark ? "bg-transparent border-white/25 text-white/90 hover:bg-white/12 hover:text-white" : ""
+  }`
 
   const shouldShowLoginButton = isUnauthenticated
   const accountButtonLabel = shouldShowLoginButton ? "Spotifyでログイン" : "ログアウト"
@@ -111,12 +98,6 @@ export default function SettingsPanel({ isUnauthenticated }: SettingsPanelProps)
   const accountButtonClass = shouldShowLoginButton
     ? "w-full flex items-center justify-center gap-2 bg-[#1DB954] hover:bg-[#1ed760] text-black font-semibold rounded-full px-6"
     : "w-full flex items-center justify-center gap-2 bg-[#1DB954] hover:bg-red-500 text-black font-semibold rounded-full px-6"
-  const menuButtonClass = `h-10 justify-between px-3 text-sm ${
-    isOverlayThemeDark ? "bg-transparent border-white/25 text-white/90 hover:bg-white/12 hover:text-white" : ""
-  }`
-  const backButtonClass = isOverlayThemeDark
-    ? "text-white/80 hover:text-white hover:bg-white/10"
-    : "text-muted-foreground hover:text-foreground"
 
   const sectionTitleMap: Record<Exclude<SettingsView, "menu">, string> = {
     favorite: "ジャンルを選択",
@@ -129,6 +110,9 @@ export default function SettingsPanel({ isUnauthenticated }: SettingsPanelProps)
     playback: <Settings2 className="w-4 h-4" />,
   }
 
+  const optionBtnClass = (isSelected: boolean) =>
+    `h-8 w-full justify-center px-3 text-xs ${isSelected ? s.buttonSelected : s.buttonUnselected}`
+
   return (
     <div className={`${wrapperClass} min-w-0 w-full`}>
       <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 w-full min-w-0">
@@ -138,14 +122,14 @@ export default function SettingsPanel({ isUnauthenticated }: SettingsPanelProps)
               type="button"
               variant="ghost"
               size="sm"
-              className={`h-8 px-2 ${backButtonClass}`}
+              className={`h-8 px-2 ${s.backButton}`}
               onClick={() => setView("menu")}
             >
               <ArrowLeft className="w-4 h-4 mr-1" />
               戻る
             </Button>
             {view !== "favorite" && (
-              <p className={`text-base font-semibold tracking-wide ${titleClass} flex items-center gap-2`}>
+              <p className={`text-base font-semibold tracking-wide ${s.title} flex items-center gap-2`}>
                 {sectionIconMap[view]}
                 {sectionTitleMap[view]}
               </p>
@@ -156,7 +140,7 @@ export default function SettingsPanel({ isUnauthenticated }: SettingsPanelProps)
         {view === "menu" && (
           <>
             <div className="space-y-3 w-full min-w-0">
-              <div className={`flex items-center gap-2 text-sm font-medium ${titleClass}`}>
+              <div className={`flex items-center gap-2 text-sm font-medium ${s.title}`}>
                 <Settings2 className="w-4 h-4" />
                 設定
               </div>
@@ -200,8 +184,8 @@ export default function SettingsPanel({ isUnauthenticated }: SettingsPanelProps)
               </div>
             </div>
 
-            <div className={`pt-3 border-t ${isOverlayThemeDark ? "border-white/10" : "border-border/50"} space-y-2 w-full min-w-0`}>
-              <p className={`text-xs font-medium ${helperTextClass}`}>アカウント</p>
+            <div className={`pt-3 border-t ${s.border} space-y-2 w-full min-w-0`}>
+              <p className={`text-xs font-medium ${s.muted}`}>アカウント</p>
               <Button
                 type="button"
                 className={accountButtonClass}
@@ -225,7 +209,7 @@ export default function SettingsPanel({ isUnauthenticated }: SettingsPanelProps)
         {view === "appearance" && (
           <div className="pt-2 space-y-4">
             <div className="space-y-2">
-              <p className={`text-xs ${helperTextClass}`}>UIテーマ</p>
+              <p className={`text-xs ${s.muted}`}>UIテーマ</p>
               <div className="grid grid-cols-1 gap-2 w-full min-w-0">
                 {THEME_OPTIONS.map((option) => (
                   <Button
@@ -233,13 +217,7 @@ export default function SettingsPanel({ isUnauthenticated }: SettingsPanelProps)
                     type="button"
                     size="sm"
                     variant={themePreference === option.value ? "default" : "outline"}
-                    className={`h-8 w-full justify-center px-3 text-xs ${
-                      isOverlayThemeDark
-                        ? themePreference === option.value
-                          ? "bg-white text-slate-900 border-white hover:bg-white/90"
-                          : "bg-transparent border-white/30 text-white/80 hover:bg-white/10"
-                        : ""
-                    }`}
+                    className={optionBtnClass(themePreference === option.value)}
                     onClick={() => setThemePreference(option.value)}
                   >
                     {option.label}
@@ -249,7 +227,7 @@ export default function SettingsPanel({ isUnauthenticated }: SettingsPanelProps)
             </div>
 
             <div className="space-y-2">
-              <p className={`text-xs ${helperTextClass}`}>Mood Tuning中の天気表示</p>
+              <p className={`text-xs ${s.muted}`}>Mood Tuning中の天気表示</p>
               <div className="grid grid-cols-1 gap-2 w-full min-w-0">
                 {MOOD_WEATHER_DISPLAY_OPTIONS.map((option) => (
                   <Button
@@ -257,13 +235,7 @@ export default function SettingsPanel({ isUnauthenticated }: SettingsPanelProps)
                     type="button"
                     size="sm"
                     variant={moodTuningWeatherDisplay === option.value ? "default" : "outline"}
-                    className={`h-8 w-full justify-center px-3 text-xs ${
-                      isOverlayThemeDark
-                        ? moodTuningWeatherDisplay === option.value
-                          ? "bg-white text-slate-900 border-white hover:bg-white/90"
-                          : "bg-transparent border-white/30 text-white/80 hover:bg-white/10"
-                        : ""
-                    }`}
+                    className={optionBtnClass(moodTuningWeatherDisplay === option.value)}
                     onClick={() => setMoodTuningWeatherDisplay(option.value)}
                   >
                     {option.label}
@@ -281,27 +253,27 @@ export default function SettingsPanel({ isUnauthenticated }: SettingsPanelProps)
               label="自動回転"
               value={autoRotationEnabled}
               onChange={setAutoRotationEnabled}
-              isOverlayThemeDark={isOverlayThemeDark}
+              isDark={isOverlayThemeDark}
             />
             <ToggleSettingRow
               icon={<Disc className="w-4 h-4" />}
               label="トーンアーム表示"
               value={tonearmVisible}
               onChange={setTonearmVisible}
-              isOverlayThemeDark={isOverlayThemeDark}
+              isDark={isOverlayThemeDark}
             />
             <ToggleSettingRow
               icon={<Music2 className="w-4 h-4" />}
               label="音符エフェクト"
               value={noteEffectEnabled}
               onChange={setNoteEffectEnabled}
-              isOverlayThemeDark={isOverlayThemeDark}
+              isDark={isOverlayThemeDark}
             />
           </div>
         )}
 
         {view === "appearance" && themePreference === DEFAULT_THEME_PREFERENCE && (
-          <p className={`text-[11px] px-1 ${helperTextClass}`}>
+          <p className={`text-[11px] px-1 ${s.muted}`}>
             時間テーマは現地時刻に応じてオーバーレイ UI のライト/ダークを切り替えます。
           </p>
         )}
