@@ -2,27 +2,14 @@
 
 import { generateText } from "ai"
 import { openai } from "@ai-sdk/openai"
-import { searchTracks, SPOTIFY_RATE_LIMIT_ERROR } from "@/lib/spotify-api"
-import { getSession } from "@/lib/spotify-session"
+import { spotifyFetch, getAccessToken } from "@/lib/spotify-server"
 import { getMockPlaylistInfo } from "@/lib/mock-playlist-data"
 import { WEATHER_TYPE_LABELS, TIME_OF_DAY_LABELS, type Genre } from "@/lib/constants"
 import type { WeatherType, TimeOfDay } from "@/lib/weather-background"
 import type { DashboardItem } from "@/types/dashboard"
-import { logServerError, logServerWarn } from "@/lib/server-log"
-
-const LOG_TAG = "GenerateDashboard"
 
 export type { DashboardItem }
 
-/** generateDashboard の返却型。rateLimit が true のときは「リクエスト過多」メッセージを表示する */
-export type GenerateDashboardResult = {
-  playlists: DashboardItem[]
-  rateLimit?: boolean
-}
-
-/**
- * ジャンル名に基づいてモック画像URLを生成
- */
 function getMockImageUrl(genre: string): string {
   const genreHash = genre
     .split("")
@@ -37,9 +24,6 @@ type PlaylistInfo = {
   tracks: TrackCandidate[]
 }
 
-/**
- * フォールバック用のプレイリスト情報を生成
- */
 function createFallbackPlaylistInfo(
   genres: Genre[],
   weatherLabel: string,
@@ -52,9 +36,6 @@ function createFallbackPlaylistInfo(
   }))
 }
 
-/**
- * AIを使用してジャンルごとのタイトルと楽曲候補リストを生成
- */
 async function generatePlaylistInfo(
   weather: WeatherType,
   time: TimeOfDay,
@@ -96,50 +77,39 @@ tracksには各ジャンルの雰囲気・天気・時間帯に合った楽曲�
     }
     return createFallbackPlaylistInfo(genres, weatherLabel, timeLabel)
   } catch (error) {
-    logServerError(LOG_TAG, "generate_playlist_info", error, {
-      weather,
-      time,
-      genres: genres.join(","),
-    })
+    console.error("Failed to generate playlist info:", error)
     return createFallbackPlaylistInfo(genres, weatherLabel, timeLabel)
   }
 }
 
-/** 1曲検索の結果。rateLimit のときは 429 を受けたことを示す */
-type SearchTrackResult =
-  | { uri: string; imageUrl: string | null }
-  | null
-  | { rateLimit: true }
+type SpotifyTrack = {
+  uri: string
+  album?: { images?: Array<{ url: string }> }
+}
+type SpotifySearchResult = {
+  tracks?: { items?: SpotifyTrack[] }
+}
 
-/**
- * 1曲分のSpotify track URI と アルバム画像URLを取得。
- * 429 のときは { rateLimit: true } を返し、呼び出し元でメッセージ表示に使う。
- */
 async function searchTrack(
   token: string,
   artist: string,
   title: string
-): Promise<SearchTrackResult> {
-  try {
-    const query = `artist:${artist} track:${title}`
-    const response = await searchTracks(token, query, { limit: 1 })
-    if (response.status === 429 || response.error === SPOTIFY_RATE_LIMIT_ERROR) {
-      return { rateLimit: true }
-    }
-    if (!response.ok || !response.data) return null
-    const track = response.data.tracks?.items?.[0]
-    if (!track) return null
-    return {
-      uri: track.uri,
-      imageUrl: track.album?.images?.[0]?.url ?? null,
-    }
-  } catch (e) {
-    logServerError(LOG_TAG, "search_track", e, { artist, title })
-    return null
+): Promise<{ uri: string; imageUrl: string | null } | null> {
+  const query = encodeURIComponent(`artist:${artist} track:${title}`)
+  const res = await spotifyFetch<SpotifySearchResult>(
+    token,
+    `/search?type=track&q=${query}&limit=1`
+  )
+  if (!res.ok) return null
+  const track = res.data.tracks?.items?.[0]
+  if (!track) return null
+  return {
+    uri: track.uri,
+    imageUrl: track.album?.images?.[0]?.url ?? null,
   }
 }
 
-/** 同時実行数を制限して Promise を実行（429 レート制限回避） */
+/** Concurrency limiter to avoid Spotify 429 rate limits. */
 async function mapWithConcurrency<T, R>(
   items: T[],
   limit: number,
@@ -158,27 +128,21 @@ async function mapWithConcurrency<T, R>(
 }
 
 /**
- * ダッシュボードデータを生成。
- * エラー時は playlists を空配列にして返し、Server Action が常に正常レスポンスを返すようにする（クライアントの "unexpected response" を防ぐ）。
- * 429 を検知した場合は rateLimit: true を付与し、クライアントで「リクエスト過多」メッセージを表示する。
+ * ダッシュボードデータを生成
+ * エラー時は空配列を返し、Server Action が常に正常レスポンスを返すようにする
  */
 export async function generateDashboard(
   weather: WeatherType,
   time: TimeOfDay,
   selectedGenres: Genre[]
-): Promise<GenerateDashboardResult> {
-  const emptyResult = (rateLimit?: boolean): GenerateDashboardResult => ({
-    playlists: [],
-    ...(rateLimit && { rateLimit: true }),
-  })
-
+): Promise<DashboardItem[]> {
   if (!Array.isArray(selectedGenres) || selectedGenres.length === 0) {
-    return emptyResult()
+    return []
   }
 
   try {
-    const session = await getSession()
-    const isLoggedIn = Boolean(session)
+    const token = await getAccessToken()
+    const isLoggedIn = Boolean(token)
     let playlistInfos: PlaylistInfo[]
     const weatherLabel = WEATHER_TYPE_LABELS[weather] ?? "晴れ"
     const timeLabel = TIME_OF_DAY_LABELS[time] ?? "昼"
@@ -188,26 +152,17 @@ export async function generateDashboard(
     } else {
       try {
         playlistInfos = await generatePlaylistInfo(weather, time, selectedGenres)
-      } catch (e) {
-        logServerError(LOG_TAG, "generate_playlist_info_fallback", e, {
-          weather,
-          time,
-          genres: selectedGenres.join(","),
-        })
+      } catch {
         playlistInfos = createFallbackPlaylistInfo(selectedGenres, weatherLabel, timeLabel)
       }
     }
 
     if (!Array.isArray(playlistInfos) || playlistInfos.length === 0) {
-      return emptyResult()
+      return []
     }
 
-    const token = session?.accessToken ?? null
-
-    // レート制限(429)回避: ジャンルごとに直列、曲検索は同時2件まで
     const SPOTIFY_SEARCH_CONCURRENCY = 2
     const dashboardItems: DashboardItem[] = []
-    let rateLimitHit = false
 
     for (let index = 0; index < playlistInfos.length; index++) {
       const info = playlistInfos[index]
@@ -222,17 +177,10 @@ export async function generateDashboard(
         )
 
         for (const result of results) {
-          if (result && "rateLimit" in result) {
-            rateLimitHit = true
-          } else if (result && "uri" in result) {
-            trackUris.push(result.uri)
-          }
+          if (result) trackUris.push(result.uri)
         }
 
-        const firstImage = results.find(
-          (r): r is { uri: string; imageUrl: string | null } =>
-            r != null && "uri" in r && "imageUrl" in r
-        )?.imageUrl
+        const firstImage = results.find((r) => r?.imageUrl)?.imageUrl
         if (firstImage) imageUrl = firstImage
       }
 
@@ -245,13 +193,9 @@ export async function generateDashboard(
       })
     }
 
-    return { playlists: dashboardItems, ...(rateLimitHit && { rateLimit: true }) }
+    return dashboardItems
   } catch (error) {
-    logServerError(LOG_TAG, "generate_dashboard", error, {
-      weather,
-      time,
-      genresCount: selectedGenres?.length ?? 0,
-    })
-    return emptyResult()
+    console.error("Failed to generate dashboard:", error)
+    return []
   }
 }

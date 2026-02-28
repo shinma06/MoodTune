@@ -1,10 +1,6 @@
 "use server"
 
-import { spotifyFetch } from "@/lib/spotify-api"
-import { getSession } from "@/lib/spotify-session"
-import { logServerError, logServerWarn } from "@/lib/server-log"
-
-const LOG_TAG = "SaveToSpotify"
+import { getAccessToken, spotifyFetch } from "@/lib/spotify-server"
 
 const PLAYLIST_NAME = "MoodTune"
 const MAX_TRACKS_PER_REQUEST = 100
@@ -28,7 +24,7 @@ async function addTracksInChunks(
 ): Promise<{ ok: boolean; status: number; error?: string }> {
   for (let i = 0; i < uris.length; i += MAX_TRACKS_PER_REQUEST) {
     const chunk = uris.slice(i, i + MAX_TRACKS_PER_REQUEST)
-    const res = await spotifyFetch(token, `/playlists/${playlistId}/items`, {
+    const res = await spotifyFetch(token, `/playlists/${playlistId}/tracks`, {
       method: "POST",
       body: JSON.stringify({ uris: chunk }),
     })
@@ -45,25 +41,24 @@ export async function saveToSpotify(
   trackUris: string[]
 ): Promise<SaveToSpotifyResult> {
   if (trackUris.length === 0) {
-    logServerWarn(LOG_TAG, "save_to_spotify", "No track URIs provided", { title })
     return { success: false, error: "再生できる楽曲がありません" }
   }
 
-  let session
-  try {
-    session = await getSession()
-  } catch (e) {
-    logServerError(LOG_TAG, "get_session", e, { title })
-    return { success: false, error: "セッションの取得に失敗しました" }
-  }
-  if (!session) {
-    logServerWarn(LOG_TAG, "save_to_spotify", "User not logged in", { title })
+  const token = await getAccessToken()
+  if (!token) {
     return { success: false, error: "Spotifyにログインしてください" }
   }
 
-  const token = session.accessToken
+  const meRes = await spotifyFetch<{ id: string }>(token, "/me")
+  if (!meRes.ok) {
+    return {
+      success: false,
+      error: formatSpotifyError(meRes.error, meRes.status),
+    }
+  }
+  const userId = meRes.data.id
 
-  const existingId = await findMoodTunePlaylist(token)
+  const existingId = await findMoodTunePlaylist(token, userId)
   const playlistName = `${PLAYLIST_NAME}: ${title}`
   const description = "MoodTuneが天気と時間帯に合わせて生成したプレイリスト"
 
@@ -79,10 +74,6 @@ export async function saveToSpotify(
       }),
     })
     if (!updateRes.ok) {
-      logServerWarn(LOG_TAG, "update_playlist", updateRes.error ?? "unknown", {
-        playlistId: existingId,
-        status: updateRes.status,
-      })
       return { success: false, error: formatSpotifyError(updateRes.error, updateRes.status) }
     }
 
@@ -96,48 +87,36 @@ export async function saveToSpotify(
       }
     )
     if (!replaceRes.ok) {
-      logServerWarn(LOG_TAG, "replace_playlist_items", replaceRes.error ?? "unknown", {
-        playlistId: existingId,
-        status: replaceRes.status,
-      })
       return { success: false, error: formatSpotifyError(replaceRes.error, replaceRes.status) }
     }
     const rest = trackUris.slice(MAX_TRACKS_PER_REQUEST)
     if (rest.length > 0) {
       const addRes = await addTracksInChunks(token, existingId, rest)
       if (!addRes.ok) {
-        logServerWarn(LOG_TAG, "add_tracks_chunks", addRes.error ?? "unknown", {
-          playlistId: existingId,
-          status: addRes.status,
-        })
         return { success: false, error: formatSpotifyError(addRes.error, addRes.status) }
       }
     }
     playlistId = existingId
   } else {
-    const createRes = await spotifyFetch<{ id: string }>(token, "/me/playlists", {
-      method: "POST",
-      body: JSON.stringify({
-        name: playlistName,
-        public: true,
-        description,
-      }),
-    })
+    const createRes = await spotifyFetch<{ id: string }>(
+      token,
+      `/users/${userId}/playlists`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          name: playlistName,
+          public: true,
+          description,
+        }),
+      }
+    )
     if (!createRes.ok) {
-      logServerWarn(LOG_TAG, "create_playlist", createRes.error ?? "unknown", {
-        status: createRes.status,
-        playlistName,
-      })
       return { success: false, error: formatSpotifyError(createRes.error, createRes.status) }
     }
-    playlistId = createRes.data!.id
+    playlistId = createRes.data.id
 
     const addRes = await addTracksInChunks(token, playlistId, trackUris)
     if (!addRes.ok) {
-      logServerWarn(LOG_TAG, "add_tracks_after_create", addRes.error ?? "unknown", {
-        playlistId,
-        status: addRes.status,
-      })
       return { success: false, error: formatSpotifyError(addRes.error, addRes.status) }
     }
   }
@@ -148,22 +127,19 @@ export async function saveToSpotify(
   }
 }
 
-async function findMoodTunePlaylist(token: string): Promise<string | null> {
+async function findMoodTunePlaylist(
+  token: string,
+  _userId: string
+): Promise<string | null> {
   let offset = 0
   const limit = 50
 
   while (true) {
     const res = await spotifyFetch<{
-      items: Array<{ id: string; name: string }>;
+      items: Array<{ id: string; name: string }>
     }>(token, `/me/playlists?limit=${limit}&offset=${offset}`)
 
-    if (!res.ok || !res.data) {
-      logServerWarn(LOG_TAG, "find_playlist_fetch", res.error ?? `HTTP ${res.status}`, {
-        offset,
-        status: res.status,
-      })
-      return null
-    }
+    if (!res.ok || !res.data) return null
 
     const found = res.data.items.find((p) => p.name.startsWith(PLAYLIST_NAME))
     if (found) return found.id
