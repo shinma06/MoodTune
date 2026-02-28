@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import WeatherMonitor from "./WeatherMonitor"
 import WeatherAnimation from "./WeatherAnimation"
 import WeatherMoodTuningPanel from "./WeatherMoodTuningPanel"
@@ -8,7 +8,8 @@ import SettingsPanel from "./SettingsPanel"
 import FloatingNoteEffect from "./FloatingNoteEffect"
 import { useSelectedGenres } from "@/hooks/useSelectedGenres"
 import { useWeather } from "@/contexts/WeatherContext"
-import { getWeatherBackground, type TimeOfDay } from "@/lib/weather-background"
+import { usePlaylistManager } from "@/hooks/usePlaylistManager"
+import { getWeatherBackground } from "@/lib/weather-background"
 import { formatGradientBackground, INITIAL_BACKGROUND_GRADIENT } from "@/lib/weather-background-utils"
 import {
     useVinylRotation,
@@ -22,21 +23,17 @@ import {
     getImageUrl,
     LOADING_GENRE_TEXT,
     getLoadingTitleText,
-    EMPTY_PLAYLIST,
-    type LoadingMode,
 } from "@/lib/playlist-utils"
 import { useSettings } from "@/hooks/useSettings"
 import { Music, Loader2, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import SpotifyIcon from "@/components/shared/SpotifyIcon"
-import { generateDashboard } from "@/app/actions/generateDashboard"
 import { saveToSpotify } from "@/app/actions/saveToSpotify"
 import type { DashboardItem } from "@/types/dashboard"
 import type { Genre } from "@/lib/constants"
 
 interface PlaylistExplorerProps {
     playlists?: DashboardItem[]
-    /** true の間はプレイリスト初期構築をスキップ（ジャンル選択モーダル表示中に使用） */
     suspended?: boolean
     isUnauthenticated?: boolean
     onRequestLoginModal?: () => void
@@ -48,43 +45,42 @@ export default function PlaylistExplorer({
     isUnauthenticated = true,
     onRequestLoginModal,
 }: PlaylistExplorerProps) {
-    const [currentIndex, setCurrentIndex] = useState(0)
     const { isTimeInitialized, actualWeatherType, actualTimeOfDay, isMoodTuning, effectiveWeather, effectiveTimeOfDay, playlistRefreshTrigger, isCanvasBackgroundDark, isOverlayThemeDark, isMoodTuningApplied } = useWeather()
-    /** 開いているパネル（null = 両方閉じている）。同時に1つだけ開く */
     const [openPanel, setOpenPanel] = useState<null | "mood" | "genre">(null)
     const [selectedGenres, , isGenresInitialized] = useSelectedGenres()
-    const [playlists, setPlaylists] = useState<DashboardItem[] | null>(initialPlaylists ?? null)
-    const [isLoading, setIsLoading] = useState(false)
-    /** 構築中の種別（初回 / 全件再構築 / 個別 / 追加ジャンルのみ）。表示文言の切り替え用 */
-    const [loadingMode, setLoadingMode] = useState<LoadingMode>(null)
     const [isSaving, setIsSaving] = useState(false)
     const [saveError, setSaveError] = useState<string | null>(null)
     const { autoRotationEnabled, tonearmVisible, noteEffectEnabled } = useSettings()
 
-    /** パネルを開いた時点のジャンル（閉じたときの差分計算用） */
     const genresOnOpenRef = useRef<string[]>([])
-    /** リロード後の初回同期を1回だけ行うためのフラグ */
-    const hasPerformedInitialSyncRef = useRef(false)
-    /** 時間帯・天気の自動更新用の前回値 */
-    const prevTimeOfDayRef = useRef<TimeOfDay | null>(null)
-    const prevActualWeatherRef = useRef<string | null>(null)
 
-    /** 構築失敗時は空のままローディング表示を継続（静的フォールバックは使わない） */
-    const displayPlaylists = useMemo(() => {
-        return playlists && playlists.length > 0 ? playlists : []
-    }, [playlists])
+    const {
+        playlists,
+        currentIndex,
+        setCurrentIndex,
+        isLoading,
+        loadingMode,
+        displayPlaylists,
+        isLoadingOrEmpty,
+        safeCurrentIndex,
+        currentPlaylist,
+        refreshPlaylists,
+        refreshPlaylistByGenre,
+        updatePlaylistsWithDiff,
+    } = usePlaylistManager({
+        initialPlaylists,
+        selectedGenres,
+        isGenresInitialized,
+        effectiveWeather,
+        effectiveTimeOfDay,
+        actualWeatherType,
+        actualTimeOfDay,
+        isMoodTuning,
+        playlistRefreshTrigger,
+        suspended,
+        isGenrePanelOpen: openPanel === "genre",
+    })
 
-    /** ローディング表示を出す条件（構築中 or 未取得・失敗でプレイリストが空） */
-    const isLoadingOrEmpty = isLoading || displayPlaylists.length === 0
-
-    /** 常に配列範囲内のインデックス */
-    const safeCurrentIndex = useMemo(() => {
-        if (displayPlaylists.length === 0) return 0
-        return Math.min(currentIndex, displayPlaylists.length - 1)
-    }, [currentIndex, displayPlaylists.length])
-
-    const currentPlaylist = displayPlaylists[safeCurrentIndex] ?? EMPTY_PLAYLIST
-    /** 現実のレコード色を使うのは (1) 初期同期時の stale J-POP のみ (2) 空状態 のときのみ。それ以外は表示中のジャンルのテーマカラー */
     const isInitialSyncStaleJPop =
         isLoading &&
         playlists?.length === 1 &&
@@ -97,33 +93,6 @@ export default function PlaylistExplorer({
         ? REALISTIC_VINYL_THEME
         : getGenreThemeColors(currentPlaylist.genre)
 
-    /** ローディング中かどうかを ref で保持（useCallback 内で最新値を参照するため） */
-    const isLoadingRef = useRef(false)
-    isLoadingRef.current = isLoading
-
-    /** 現在の天気・時間帯・ジャンルでプレイリストを全件再構築。autoUpdate: true のときは自動更新（天気・時間帯変化）用の文言を表示 */
-    const refreshPlaylists = useCallback(async (options?: { autoUpdate?: boolean }) => {
-        if (selectedGenres.length === 0) return
-        if (isLoadingRef.current) return // ローディング中は無視
-        setLoadingMode(options?.autoUpdate ? "auto" : "all")
-        setIsLoading(true)
-        try {
-            const generated = await generateDashboard(effectiveWeather, effectiveTimeOfDay, selectedGenres as Genre[])
-            setPlaylists(generated)
-            setCurrentIndex((prev) => Math.min(prev, Math.max(0, generated.length - 1)))
-        } catch (error) {
-            console.error("Failed to refresh playlists:", error)
-        } finally {
-            setIsLoading(false)
-            setLoadingMode(null)
-        }
-    }, [effectiveWeather, effectiveTimeOfDay, selectedGenres])
-
-    /** パネル閉時トリガー用 effect が refreshPlaylists の参照変更で再実行されないよう ref に保持 */
-    const refreshPlaylistsRef = useRef(refreshPlaylists)
-    refreshPlaylistsRef.current = refreshPlaylists
-
-    /** 現在のジャンルの楽曲を "MoodTune" Spotify プレイリストに保存して開く */
     const handleSaveToSpotify = useCallback(async () => {
         if (isUnauthenticated) {
             onRequestLoginModal?.()
@@ -146,84 +115,12 @@ export default function PlaylistExplorer({
         }
     }, [isUnauthenticated, onRequestLoginModal, isLoadingOrEmpty, isSaving, currentPlaylist])
 
-    /** 表示中の1ジャンルだけ現在の天気・時間で再構築（レコード右3周で発火） */
-    const refreshPlaylistByGenre = useCallback(async (genre: Genre) => {
-        if (!selectedGenres.includes(genre)) return
-        if (isLoadingRef.current) return // ローディング中は無視
-        setLoadingMode("single")
-        setIsLoading(true)
-        try {
-            const generated = await generateDashboard(effectiveWeather, effectiveTimeOfDay, [genre])
-            const newItem = generated[0]
-            if (!newItem) return
-            setPlaylists((prev) => {
-                if (!prev) return [newItem]
-                return prev.map((p) => (p.genre === genre ? newItem : p))
-            })
-        } catch (error) {
-            console.error("Failed to refresh playlist by genre:", error)
-        } finally {
-            setIsLoading(false)
-            setLoadingMode(null)
-        }
-    }, [effectiveWeather, effectiveTimeOfDay, selectedGenres])
-
-    /** ジャンル差分に応じてプレイリストを更新（追加ジャンルのみAPI呼び出し。既存は currentPlaylists を再利用） */
-    const updatePlaylistsWithDiff = useCallback(async (
-        currentGenres: string[],
-        diff: { added: string[], removed: string[], unchanged: string[] },
-        currentPlaylists: DashboardItem[] | null,
-        isInitialSync = false
-    ) => {
-        if (currentGenres.length === 0) {
-            setPlaylists([])
-            setCurrentIndex(0)
-            return
-        }
-        if (isLoadingRef.current) return // ローディング中は無視
-
-        setLoadingMode(isInitialSync ? "initial" : "added")
-        setIsLoading(true)
-        try {
-            const existingMap = new Map<string, DashboardItem>()
-            if (currentPlaylists) {
-                currentPlaylists.forEach(p => existingMap.set(p.genre, p))
-            }
-
-            const unchangedPlaylists = diff.unchanged
-                .map(genre => existingMap.get(genre))
-                .filter((p): p is DashboardItem => p !== undefined)
-
-            let newPlaylists: DashboardItem[] = []
-            if (diff.added.length > 0) {
-                newPlaylists = await generateDashboard(effectiveWeather, effectiveTimeOfDay, diff.added as Genre[])
-            }
-
-            const allMap = new Map<string, DashboardItem>()
-            unchangedPlaylists.forEach(p => allMap.set(p.genre, p))
-            newPlaylists.forEach(p => allMap.set(p.genre, p))
-
-            const finalPlaylists = currentGenres
-                .map(genre => allMap.get(genre))
-                .filter((p): p is DashboardItem => p !== undefined)
-
-            setPlaylists(finalPlaylists)
-            setCurrentIndex(0)
-        } catch (error) {
-            console.error("Failed to generate dashboard:", error)
-        } finally {
-            setIsLoading(false)
-            setLoadingMode(null)
-        }
-    }, [effectiveWeather, effectiveTimeOfDay])
-
-    /** ジャンル選択パネルの開閉（閉じたときにジャンル変更があればプレイリスト再構築）。0件時は閉じない。 */
     const handleToggleSettings = useCallback(() => {
         if (openPanel !== "genre") {
             genresOnOpenRef.current = [...selectedGenres]
             setOpenPanel("genre")
         } else {
-            if (selectedGenres.length === 0) return // 1つ以上選択するまで閉じない
+            if (selectedGenres.length === 0) return
             setOpenPanel(null)
             if (hasGenresChanged(genresOnOpenRef.current, selectedGenres)) {
                 const diff = getGenresDiff(genresOnOpenRef.current, selectedGenres)
@@ -232,50 +129,9 @@ export default function PlaylistExplorer({
         }
     }, [openPanel, selectedGenres, playlists, updatePlaylistsWithDiff])
 
-    /** localStorage のジャンル読み込み完了後、保存値と表示プレイリストが食い違っていれば同期。suspended 中はスキップ */
-    useEffect(() => {
-        if (suspended || !isGenresInitialized || hasPerformedInitialSyncRef.current) return
-        hasPerformedInitialSyncRef.current = true
-
-        const currentPlaylistGenres = playlists?.map(p => p.genre) ?? []
-        if (hasGenresChanged(currentPlaylistGenres, selectedGenres)) {
-            const diff = getGenresDiff(currentPlaylistGenres, selectedGenres)
-            updatePlaylistsWithDiff(selectedGenres, diff, playlists, true)
-        }
-    }, [suspended, isGenresInitialized, selectedGenres, playlists, updatePlaylistsWithDiff])
-
-    /** 実時刻の時間帯が変わったタイミングでプレイリストを自動更新（手動設定中は行わない）。常に自動更新ONとして動作。 */
-    useEffect(() => {
-        if (isMoodTuning || !isGenresInitialized || selectedGenres.length === 0) return
-        const prev = prevTimeOfDayRef.current
-        prevTimeOfDayRef.current = actualTimeOfDay
-        if (prev !== null && prev !== actualTimeOfDay) {
-            refreshPlaylists({ autoUpdate: true })
-        }
-    }, [actualTimeOfDay, isMoodTuning, isGenresInitialized, selectedGenres.length, refreshPlaylists])
-
-    /** プレイリスト構築中はパネルを閉じ、値変更を防ぐ（同期ずれ防止） */
     useEffect(() => {
         if (isLoading) setOpenPanel(null)
     }, [isLoading])
-
-    /** Mood Tuning パネル閉時のみ: トリガーがインクリメントされたときだけ再構築。openPanel を依存に含めない＝パネル開閉で再実行されない（開くだけで全件再構築・Favorite Music 閉じで上書きするバグを防止）。ジャンルパネル開中は選択変更で発火しないよう openPanel === "genre" でガード。 */
-    useEffect(() => {
-        if (openPanel === "genre") return
-        if (playlistRefreshTrigger === 0 || !isGenresInitialized || selectedGenres.length === 0) return
-        refreshPlaylistsRef.current()
-    }, [playlistRefreshTrigger, isGenresInitialized, selectedGenres.length])
-
-    /** APIが天気の変更を示したタイミングでプレイリストを自動更新（手動設定中は対象外）。常に自動更新ONとして動作。 */
-    useEffect(() => {
-        if (isMoodTuning || !isGenresInitialized || selectedGenres.length === 0) return
-        const current = actualWeatherType ?? null
-        const prev = prevActualWeatherRef.current
-        prevActualWeatherRef.current = current
-        if (prev !== null && prev !== current) {
-            refreshPlaylists({ autoUpdate: true })
-        }
-    }, [actualWeatherType, isMoodTuning, isGenresInitialized, selectedGenres.length, refreshPlaylists])
 
     const backgroundStyle = isTimeInitialized
       ? formatGradientBackground(getWeatherBackground(effectiveWeather, effectiveTimeOfDay))
@@ -298,7 +154,6 @@ export default function PlaylistExplorer({
         onRotationComplete: (direction) => {
             const length = displayPlaylists.length
             if (length === 0) return
-
             if (direction === "next") {
                 setCurrentIndex((prev) => (prev + 1) % length)
             } else {
@@ -315,16 +170,13 @@ export default function PlaylistExplorer({
         idleEnabled: autoRotationEnabled,
     })
 
-    /** 3周フィードバック表示: ドラッグ中・戻り演出でない・1周超 */
     const showRegenerateFeedback =
         isDragging &&
         snapBackDurationMs === null &&
         Math.abs(cumulativeRotation) > REGENERATE_ZONE_ENTRY_DEG
-    /** 3周までの進捗 0〜1（エフェクト強度用） */
     const regenerateProgress = showRegenerateFeedback
         ? Math.min(1, Math.abs(cumulativeRotation) / REGENERATE_THRESHOLD_DEG)
         : 0
-    /** 3周フィードバックの文言 */
     const regenerateMessage = (() => {
         if (!showRegenerateFeedback) return null
         const abs = Math.abs(cumulativeRotation)
@@ -339,14 +191,10 @@ export default function PlaylistExplorer({
     return (
         <div
             className="h-dvh min-h-0 flex flex-col items-center justify-between [@media(max-height:780px)]:justify-start p-4 pb-20 sm:p-6 sm:pb-8 [@media(max-height:780px)]:pb-6 overflow-hidden transition-all duration-1000 ease-in-out relative z-10"
-            style={{
-                background: backgroundStyle,
-            }}
+            style={{ background: backgroundStyle }}
         >
-            {/* Weather Animation */}
             <WeatherAnimation />
 
-            {/* Mood Tuning パネル。ジャンルパネル開時または構築中はボタン非表示・構築中はパネルも閉じる */}
             <WeatherMoodTuningPanel
                 isOpen={openPanel === "mood" && !isLoading}
                 onOpen={() => setOpenPanel("mood")}
@@ -354,7 +202,6 @@ export default function PlaylistExplorer({
                 hideToggleButton={openPanel === "genre" || isLoading}
             />
 
-            {/* Settings Toggle Button（設定・右下）。気分パネル開時または構築中は非表示 */}
             {openPanel !== "mood" && !isLoading && (
                 <Button
                     variant="outline"
@@ -379,21 +226,18 @@ export default function PlaylistExplorer({
                 </Button>
             )}
 
-            {/* Settings Panel（ボタンの上に表示）。構築中は非表示 */}
             {openPanel === "genre" && !isLoading && (
                 <div className="fixed bottom-26 right-4 z-50 w-80 max-w-[calc(100vw-2rem)]">
                     <SettingsPanel isUnauthenticated={isUnauthenticated} />
                 </div>
             )}
 
-            {/* Weather Section（縦幅が狭くても潰れないよう固定。items-center と同様に中央寄せを維持） */}
             <div className="shrink-0 w-full flex justify-center">
                 <WeatherMonitor />
             </div>
 
-            {/* Vinyl Record Section（縦幅が狭いときはレコードを縮小して重なりを防止） */}
+            {/* Vinyl Record Section */}
             <div className="flex-1 min-h-0 flex flex-col items-center justify-center w-full max-w-md relative z-10 py-2 [@media(max-height:780px)]:py-1 [@media(max-height:780px)]:flex-none record-section-gap">
-                {/* ヒントは高さを固定しレコード・ページネーションの位置を常に揃える（非Mood Tuning時を基準にずれないよう h-14 で固定） */}
                 <div
                     className={`text-center space-y-0.5 shrink-0 h-14 ${isLoading || openPanel === "mood" || openPanel === "genre" ? "invisible" : ""}`}
                     aria-hidden={isLoading || openPanel === "mood" || openPanel === "genre"}
@@ -422,7 +266,6 @@ export default function PlaylistExplorer({
                     )}
                 </div>
 
-                {/* レコードと3周メッセージをひとまとまりにし、下はページネーションに隙間なし */}
                 <div className="flex flex-col items-center shrink-0">
                 <div
                     className="relative w-[min(18rem,42vh)] h-[min(18rem,42vh)] [@media(max-height:780px)]:w-[min(15rem,36vh)] [@media(max-height:780px)]:h-[min(15rem,36vh)] rounded-full transition-shadow duration-200 shrink-0"
@@ -434,7 +277,6 @@ export default function PlaylistExplorer({
                             : undefined
                     }
                 >
-                    {/* 固定された影（回転しない） */}
                     <div className="absolute inset-0 rounded-full shadow-2xl pointer-events-none" />
 
                     <div
@@ -454,16 +296,13 @@ export default function PlaylistExplorer({
                         onMouseDown={handleMouseDown}
                         onMouseUp={handleMouseUp}
                     >
-                        {/* Vinyl Disc */}
                         <div className="absolute inset-0 rounded-full overflow-hidden">
                             <div className={`absolute inset-0 bg-linear-to-br ${vinylColors.vinylColor} opacity-92`} />
                             {[...Array(20)].map((_, i) => (
                                 <div
                                     key={i}
                                     className="absolute inset-0 rounded-full border border-white/5"
-                                    style={{
-                                        transform: `scale(${1 - i * 0.04})`,
-                                    }}
+                                    style={{ transform: `scale(${1 - i * 0.04})` }}
                                 />
                             ))}
                             <div className="absolute inset-0 flex items-center justify-center">
@@ -497,28 +336,13 @@ export default function PlaylistExplorer({
                         />
                     )}
 
-                    {/* Tonearm overlay: scale/position from record-tonearm-reference.svg (record r=225, center 225,231.29; pivot 478.50,63.79; tonearm 332×366) */}
                     {tonearmVisible && (
                         <div
                             className="absolute inset-0 pointer-events-none overflow-visible"
                             aria-hidden
-                            style={{
-                                // record-tonearm-reference: record diameter 450, tonearm 332×366 → width 332/450, height 366/450 of container
-                                // Pivot (478.50,63.79) vs record center (225,231.29) → pivot at (106.33%, 12.78%) in container
-                                // tonearm.svg pivot at (221.90/332, 63.79/366) → left/top so that pivot lands at (106.33%, 12.78%)
-                                left: "57.06%",
-                                top: "-1.40%",
-                                width: "73.78%",
-                                height: "81.33%",
-                            }}
+                            style={{ left: "57.06%", top: "-1.40%", width: "73.78%", height: "81.33%" }}
                         >
-                            <svg
-                                className="w-full h-full drop-shadow-md"
-                                viewBox="0 0 332 366"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                                preserveAspectRatio="xMidYMid meet"
-                            >
+                            <svg className="w-full h-full drop-shadow-md" viewBox="0 0 332 366" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
                                 <defs>
                                     <filter id="tonearm-pivot-shadow" x="-50%" y="-50%" width="200%" height="200%">
                                         <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="black" floodOpacity="0.35" />
@@ -535,21 +359,18 @@ export default function PlaylistExplorer({
                     )}
                 </div>
 
-                {/* 3周フィードバック文言（レコードとは少しあけ、ページネーションとは詰める。1行分のスペースは常に確保） */}
                 <div
                     className={`mt-1.5 -mb-0.5 min-h-4 flex items-center justify-center w-full text-center shrink-0 transition-opacity duration-150 leading-none ${regenerateMessage ? "" : "invisible"}`}
                     style={regenerateMessage ? { opacity: 0.7 + regenerateProgress * 0.3 } : undefined}
                     aria-hidden={!regenerateMessage}
                 >
-                    <span
-                        className={`text-xs font-medium whitespace-nowrap ${isCanvasBackgroundDark ? "text-white/90" : "text-foreground/90"}`}
-                    >
+                    <span className={`text-xs font-medium whitespace-nowrap ${isCanvasBackgroundDark ? "text-white/90" : "text-foreground/90"}`}>
                         {regenerateMessage ?? "\u00A0"}
                     </span>
                 </div>
                 </div>
 
-                {/* Indicator dots（ジャンルごとのテーマカラー。Mood Tuning 中は非選択ドットが1本の虹になる） */}
+                {/* Indicator dots */}
                 <div className="flex gap-1.5 shrink-0">
                     {displayPlaylists.map((item, i) => {
                         const colors = (useRealisticVinyl && i === safeCurrentIndex) ? REALISTIC_VINYL_THEME : getGenreThemeColors(item.genre)
@@ -575,7 +396,7 @@ export default function PlaylistExplorer({
                 </div>
             </div>
 
-            {/* Playlist Info Section（ページネーションとの幅を確保するため上に余白。ジャンル名〜Spotifyボタンの位置関係は固定） */}
+            {/* Playlist Info Section */}
             <div className="w-full max-w-md shrink-0 mt-5 sm:mt-6 [@media(max-height:780px)]:mt-3 space-y-4 sm:space-y-6 [@media(max-height:780px)]:space-y-3 pb-4 [@media(max-height:780px)]:pb-2 relative z-10">
                 <div className="text-center space-y-2 sm:space-y-3">
                     <p className={`text-[10px] sm:text-xs uppercase tracking-widest font-light ${genreColorClass}`}>
@@ -587,7 +408,6 @@ export default function PlaylistExplorer({
                 </div>
 
                 <div className="flex items-center justify-center">
-                    {/* ジャケットは常に同一外寸のラッパーで配置を固定（非Mood Tuning時を基準）。虹枠は見た目だけ */}
                     <div className={`p-[2px] rounded-lg shrink-0 w-[calc(6rem+4px)] h-[calc(6rem+4px)] sm:w-[calc(8rem+4px)] sm:h-[calc(8rem+4px)] ${isMoodTuningApplied ? "bg-rainbow" : ""}`}>
                         {isLoadingOrEmpty ? (
                             <div className={`w-24 h-24 sm:w-32 sm:h-32 bg-muted/50 animate-pulse flex items-center justify-center ${isMoodTuningApplied ? "rounded-[calc(1rem-2px)]" : "rounded-lg"}`}>
@@ -607,13 +427,9 @@ export default function PlaylistExplorer({
                     </div>
                 </div>
 
-            {/* Spotify 再生ボタン（非ログイン時はログイン導線として動作） */}
                 {(() => {
                     const needsSpotifyLogin = isUnauthenticated
-                    const spotifyDisabled =
-                        isLoadingOrEmpty ||
-                        isSaving ||
-                        currentPlaylist.trackUris.length === 0
+                    const spotifyDisabled = isLoadingOrEmpty || isSaving || currentPlaylist.trackUris.length === 0
                     const disabledReason = needsSpotifyLogin
                         ? "Spotify機能はログインすると利用できます"
                         : isSaving
@@ -625,9 +441,7 @@ export default function PlaylistExplorer({
                                 : null
                     const buttonLabel = needsSpotifyLogin
                         ? "Spotifyでログインして再生"
-                        : isSaving
-                            ? "保存中..."
-                            : "Spotifyで再生"
+                        : isSaving ? "保存中..." : "Spotifyで再生"
                     return (
                         <div className="flex flex-col items-center gap-2">
                             <Button
