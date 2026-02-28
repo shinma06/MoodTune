@@ -127,7 +127,12 @@ export async function getSession(): Promise<SpotifySession | null> {
   if (Date.now() < session.expiresAt - REFRESH_MARGIN_MS) return session
   const refreshed = await refreshSpotifyToken(session.refreshToken)
   if (!refreshed) return session
-  await setSessionCookie(refreshed)
+  // Cookie can only be set in Server Action or Route Handler; avoid throwing during RSC render.
+  try {
+    await setSessionCookie(refreshed)
+  } catch {
+    // Ignore: this request still gets the refreshed session; cookie will be updated on next Route Handler/Server Action.
+  }
   return refreshed
 }
 
