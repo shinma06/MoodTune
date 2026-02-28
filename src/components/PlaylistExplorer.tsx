@@ -110,9 +110,9 @@ export default function PlaylistExplorer({
         setIsLoading(true)
         try {
             const result = await generateDashboard(effectiveWeather, effectiveTimeOfDay, selectedGenres as Genre[])
-            setPlaylists(result.playlists)
-            setRateLimitMessage(result.rateLimit ?? false)
-            setCurrentIndex((prev) => Math.min(prev, Math.max(0, result.playlists.length - 1)))
+            setPlaylists(result)
+            setRateLimitMessage(false)
+            setCurrentIndex((prev) => Math.min(prev, Math.max(0, result.length - 1)))
         } catch (error) {
             console.error("Failed to refresh playlists:", error)
         } finally {
@@ -190,9 +190,9 @@ export default function PlaylistExplorer({
         setIsLoading(true)
         try {
             const result = await generateDashboard(effectiveWeather, effectiveTimeOfDay, [genre])
-            const newItem = result.playlists[0]
+            const newItem = result[0]
             if (!newItem) return
-            setRateLimitMessage((prev) => prev || (result.rateLimit ?? false))
+            setRateLimitMessage((prev) => prev)
             setPlaylists((prev) => {
                 if (!prev) return [newItem]
                 return prev.map((p) => (p.genre === genre ? newItem : p))
@@ -234,8 +234,7 @@ export default function PlaylistExplorer({
             let newPlaylists: DashboardItem[] = []
             if (diff.added.length > 0) {
                 const result = await generateDashboard(effectiveWeather, effectiveTimeOfDay, diff.added as Genre[])
-                newPlaylists = result.playlists
-                if (result.rateLimit) setRateLimitMessage(true)
+                newPlaylists = result
             }
 
             const allMap = new Map<string, DashboardItem>()
