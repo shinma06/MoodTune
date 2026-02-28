@@ -58,7 +58,7 @@ src/
 │   ├── api/             # API Routes
 │   │   ├── auth/        # Spotify PKCE: spotify（認可）, spotify/callback（トークン交換）, signout, spotify/error
 │   │   ├── geocode/     # 逆ジオコーディング（都市名取得）
-│   │   ├── weather/     # weather, weather/owm-city プロキシ
+│   │   ├── weather/     # weather, weather/owm-city プロキシ（lib/weather-fetch を利用）
 │   ├── page.tsx         # メインページ（PageClient を返す）
 │   ├── PageClient.tsx   # PlaylistExplorer + OnboardingOrchestrator
 │   ├── layout.tsx       # ルートレイアウト（WeatherProvider）
@@ -66,35 +66,43 @@ src/
 ├── auth.ts              # セッション取得（auth()）。Spotify PKCE ログイン・同一インターフェース
 ├── components/
 │   ├── ui/              # shadcn/ui コンポーネント
-│   ├── PlaylistExplorer.tsx      # メイン画面（レコード UI）
-│   ├── GenreSelector.tsx         # Select Genre（ジャンル選択）
-│   ├── SettingsPanel.tsx         # Settings パネル（menu/detail）
-│   ├── FloatingNoteEffect.tsx    # 音符エフェクト
-│   ├── WeatherMonitor.tsx        # 天気モニター
-│   ├── WeatherAnimation.tsx      # 天気アニメーション
-│   ├── onboarding/               # Login/GenreSelect/Tutorial モーダル
+│   ├── shared/          # SpotifyIcon 等の共有コンポーネント
+│   ├── PlaylistExplorer.tsx      # メイン画面（レコード UI）。usePlaylistManager / useSelectedGenres を利用
+│   ├── GenreSelector.tsx         # Select Genre（3モード統一、getOverlayStyles 利用）
+│   ├── SettingsPanel.tsx        # Settings パネル（menu/detail）
+│   ├── FloatingNoteEffect.tsx   # 音符エフェクト
+│   ├── WeatherMonitor.tsx       # 天気モニター
+│   ├── WeatherAnimation.tsx     # 天気アニメーション
+│   ├── onboarding/              # Login/GenreSelect/Tutorial モーダル
 │   └── WeatherMoodTuningPanel.tsx # Mood Tuning パネル
 ├── contexts/
-│   └── WeatherContext.tsx        # 天気・時間帯・表示状態の単一ソース
+│   └── WeatherContext.tsx       # 天気・時間帯・表示状態の単一ソース（value は useMemo でメモ化）
 ├── hooks/
 │   ├── useGeolocation.ts
-│   ├── useLocalStorage.ts        # ジャンル選択の永続化（バリデーション・修復あり）
-│   ├── useSettings.ts            # Settings 値の永続化（theme/rotation/tonearm/note/moodWeatherDisplay）
-│   └── useVinylRotation.ts       # レコード回転（3周で再生成トリガー）
+│   ├── useLocalStorage.ts       # ジャンル選択の永続化（バリデーション・修復あり）
+│   ├── useSettings.ts           # Settings 値の永続化
+│   ├── useVinylRotation.ts      # レコード回転（3周で再生成トリガー）
+│   ├── useSelectedGenres.ts     # ジャンル選択 state（localStorage 連携）
+│   └── usePlaylistManager.ts    # プレイリスト状態・生成・差分更新・自動更新
 ├── lib/
-│   ├── constants.ts              # ジャンル定義・定数
-│   ├── playlist-utils.ts         # プレイリスト関連ユーティリティ
-│   ├── spotify-pkce.ts           # Spotify PKCE（認可URL・トークン交換）
-│   ├── spotify-server.ts         # Spotify API クライアント（サーバー側）
-│   ├── spotify-session.ts        # セッション暗号化クッキー・トークンリフレッシュ
-│   ├── weather-api.ts            # 天気・Geocoding 並列取得
-│   ├── weather-background.ts     # 背景グラデーション（BACKGROUNDS 静的定数）
+│   ├── constants.ts             # ジャンル定義・定数
+│   ├── validators.ts             # バリデーション（isThemePreference, isValidGenreArray 等）
+│   ├── overlay-theme.ts         # オーバーレイスタイル（getOverlayStyles）
+│   ├── utils.ts                 # cn, mapWithConcurrency
+│   ├── weather-fetch.ts         # WxTech/OWM 取得（weather route から利用）
+│   ├── playlist-utils.ts        # プレイリスト関連ユーティリティ
+│   ├── spotify-pkce.ts
+│   ├── spotify-server.ts
+│   ├── spotify-session.ts
+│   ├── weather-api.ts           # 天気・Geocoding 並列取得
+│   ├── weather-background.ts
 │   ├── weather-background-utils.ts
-│   ├── weather-utils.ts          # 天気アイコン・テーマ色（静的定数）
-│   └── wxtech-weather.ts         # WxTech API（日本域判定・天気コードマッピング）
+│   ├── weather-utils.ts
+│   ├── parse-lat-lon.ts         # 緯度経度クエリ検証
+│   └── wxtech-weather.ts
 └── types/
-    ├── dashboard.ts               # DashboardItem
-    ├── spotify-web-api-node.d.ts  # 手動型定義（generateDashboard の Search 用）
+    ├── dashboard.ts
+    ├── spotify-web-api-node.d.ts
     └── weather.ts
 ```
 
@@ -111,9 +119,9 @@ WeatherContext (単一ソース)
   → 画面上UIは isCanvasBackgroundDark、モーダル・パネルは isOverlayThemeDark を参照
 
 PlaylistExplorer
-  → Context から表示用値取得 + useLocalStorage からジャンル取得
-  → generateDashboard(weather, time, genres) Server Action
-  → DashboardItem[] { genre, title, imageUrl, trackUris }
+  → usePlaylistManager（プレイリスト状態・生成・差分更新・自動更新）+ useSelectedGenres（hooks）を利用
+  → Context から表示用値（effectiveWeather, effectiveTimeOfDay, isCanvasBackgroundDark 等）を取得
+  → generateDashboard(weather, time, genres) Server Action → DashboardItem[] { genre, title, imageUrl, trackUris }
 
 SettingsPanel
   → menu（Select Genre / Appearance / Playback / Account）から詳細へ遷移
@@ -152,6 +160,7 @@ playlistRefreshTrigger               → プレイリスト再生成トリガー
 - **ADR-013**: レコード右3周 = 表示中ジャンル単体再生成、左3周 = 全件再生成
 - **ADR-016**: SSR/初回は `displayHour=0`、クライアント現地時刻設定後 `isTimeInitialized=true` に
 - **ADR-017**: 天気10分ポーリングは Mood Tuning 中はスキップ
+- **ADR-020**: リファクタリングで validators / overlay-theme / usePlaylistManager / useSelectedGenres / generateDashboard 構造化出力等を整理（単一ソース・再利用可能ユーティリティ）
 
 ---
 
@@ -185,7 +194,7 @@ async function generateDashboard(...): Promise<DashboardItem[]> { ... }
 
 - **非ログインモード（正式）**: 未ログイン時でもアプリは利用可能。`generateDashboard` は `lib/mock-playlist-data.ts` の固定データを返し、Spotify 固有機能は利用不可
 - Spotify PKCE。`GET /api/auth/spotify` で認可 → コールバックでトークン取得 → セッションは暗号化クッキー。リフレッシュは spotify-session で自動
-- **`generateDashboard`**: ログイン時は GPT-4o → ジャンルごと15曲 `{artist, title}` → Spotify Search で URI + ジャケ写（ヒットしない場合はフォールバック画像）。未ログイン時は固定データ
+- **`generateDashboard`**: ログイン時は Vercel AI SDK v6 の `generateText` + `Output.array()`（zod スキーマ）でジャンルごとのタイトル・トラック候補を構造化出力 → Spotify Search で URI + ジャケ写（ヒットしない場合はフォールバック画像）。未ログイン時は固定データ
 - **`saveToSpotify`**: セッショントークンで Spotify API を直接 fetch。"MoodTune" プレイリスト1本を上書き or 新規作成。未ログイン時のボタン文言は「Spotifyでログインして再生」
 
 ---
@@ -200,7 +209,7 @@ OPENAI_API_KEY=...
 AUTH_SECRET=...                       # セッション暗号化（32文字以上推奨）
 AUTH_SPOTIFY_ID=...
 AUTH_SPOTIFY_SECRET=...
-AUTH_URL=http://127.0.0.1:3000        # または NEXTAUTH_URL。コールバックURL算出に使用（ポート要一致）
+AUTH_URL=http://127.0.0.1:3000        # または NEXTAUTH_URL。ローカルは localhost ではなく 127.0.0.1 を必ず使用（ポート要一致）
 
 # 天気（推奨）
 WXTECH_API_KEY=...                    # WxTech（日本1km/海外5km）

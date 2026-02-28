@@ -7,13 +7,9 @@ import { useLocalStorage } from "@/hooks/useLocalStorage"
 import {
   DEFAULT_THEME_PREFERENCE,
   SETTINGS_STORAGE_KEYS,
-  THEME_PREFERENCES,
   type ThemePreference,
 } from "@/lib/constants"
-
-const isThemePreference = (value: unknown): value is ThemePreference => {
-  return typeof value === "string" && THEME_PREFERENCES.includes(value as ThemePreference)
-}
+import { isThemePreference } from "@/lib/validators"
 
 interface WeatherContextType {
   /** クライアントで現在時刻が確定したか（SSR/初回は false。useEffect で true になり時間帯背景が有効になる） */
@@ -134,31 +130,52 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
     setPlaylistRefreshTrigger((prev) => prev + 1)
   }, [])
 
+  const contextValue = useMemo<WeatherContextType>(() => ({
+    isTimeInitialized,
+    displayHour,
+    actualTimeOfDay,
+    effectiveTimeOfDay,
+    effectiveWeather,
+    isCanvasBackgroundDark,
+    isOverlayThemeDark,
+    themePreference,
+    setThemePreference,
+    weatherType,
+    setWeatherType,
+    actualWeatherType,
+    setActualWeatherType,
+    moodTuningTimeOfDay,
+    setMoodTuningTimeOfDay,
+    isMoodTuning,
+    setIsMoodTuning,
+    isMoodTuningApplied,
+    playlistRefreshTrigger,
+    requestPlaylistRefresh,
+  }), [
+    isTimeInitialized,
+    displayHour,
+    actualTimeOfDay,
+    effectiveTimeOfDay,
+    effectiveWeather,
+    isCanvasBackgroundDark,
+    isOverlayThemeDark,
+    themePreference,
+    setThemePreference,
+    weatherType,
+    setWeatherType,
+    actualWeatherType,
+    setActualWeatherType,
+    moodTuningTimeOfDay,
+    setMoodTuningTimeOfDay,
+    isMoodTuning,
+    setIsMoodTuning,
+    isMoodTuningApplied,
+    playlistRefreshTrigger,
+    requestPlaylistRefresh,
+  ])
+
   return (
-    <WeatherContext.Provider
-      value={{
-        isTimeInitialized,
-        displayHour,
-        actualTimeOfDay,
-        effectiveTimeOfDay,
-        effectiveWeather,
-        isCanvasBackgroundDark,
-        isOverlayThemeDark,
-        themePreference,
-        setThemePreference,
-        weatherType,
-        setWeatherType,
-        actualWeatherType,
-        setActualWeatherType,
-        moodTuningTimeOfDay,
-        setMoodTuningTimeOfDay,
-        isMoodTuning,
-        setIsMoodTuning,
-        isMoodTuningApplied,
-        playlistRefreshTrigger,
-        requestPlaylistRefresh,
-      }}
-    >
+    <WeatherContext.Provider value={contextValue}>
       {children}
     </WeatherContext.Provider>
   )

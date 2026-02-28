@@ -37,6 +37,11 @@
 
 ---
 
+## コードベース（リファクタリング後）
+
+- **プレイリスト生成**: `generateDashboard` は Vercel AI SDK v6 の `Output.array()` + zod スキーマで構造化出力。バリデーション・オーバーレイスタイルは `lib/validators.ts`・`lib/overlay-theme.ts` に集約済み
+- **プレイリスト状態**: `usePlaylistManager`（hooks）で状態・生成・差分更新・自動更新を一元管理。`useSelectedGenres` は hooks に独立
+
 ## 関連ドキュメント
 
 - ユーザー向けの「今後の予定」: `README.md` の「今後の予定（未実装）」

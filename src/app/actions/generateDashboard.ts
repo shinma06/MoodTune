@@ -1,9 +1,11 @@
 "use server"
 
-import { generateText } from "ai"
+import { generateText, Output } from "ai"
 import { openai } from "@ai-sdk/openai"
+import { z } from "zod"
 import { spotifyFetch, getAccessToken } from "@/lib/spotify-server"
 import { getMockPlaylistInfo } from "@/lib/mock-playlist-data"
+import { mapWithConcurrency } from "@/lib/utils"
 import { WEATHER_TYPE_LABELS, TIME_OF_DAY_LABELS, type Genre } from "@/lib/constants"
 import type { WeatherType, TimeOfDay } from "@/lib/weather-background"
 import type { DashboardItem } from "@/types/dashboard"
@@ -24,15 +26,23 @@ type PlaylistInfo = {
   tracks: TrackCandidate[]
 }
 
+const PlaylistInfoElement = z.object({
+  genre: z.string(),
+  title: z.string(),
+  tracks: z.array(z.object({
+    artist: z.string(),
+    title: z.string(),
+  })),
+})
+
 function createFallbackPlaylistInfo(
   genres: Genre[],
   weatherLabel: string,
   timeLabel: string
 ): PlaylistInfo[] {
-  return genres.map((genre) => ({
-    genre,
-    title: `${weatherLabel}の${timeLabel}に聴く${genre}`,
-    tracks: [],
+  return getMockPlaylistInfo(genres, weatherLabel, timeLabel).map((info) => ({
+    ...info,
+    tracks: (info.tracks ?? []).slice(0, 10),
   }))
 }
 
@@ -51,29 +61,22 @@ async function generatePlaylistInfo(
 - 時間帯: ${timeLabel}
 - ジャンル: ${genres.join(", ")}
 
-各ジャンルに対して、以下のJSON形式で出力してください:
-{
-  "genre": "ジャンル名",
-  "title": "プレイリストのタイトル（日本語、30文字以内）",
-  "tracks": [
-    { "artist": "アーティスト名（英語表記）", "title": "曲名（英語表記）" }
-  ]
-}
-
-tracksには各ジャンルの雰囲気・天気・時間帯に合った楽曲を15曲リストアップしてください。
-実際にSpotifyに存在する楽曲・アーティストを選んでください。
-出力はJSON配列形式で、各ジャンルごとに1つのオブジェクトを含めてください。`
+各ジャンルに対して、プレイリストタイトル（日本語、30文字以内）と楽曲リスト（各ジャンル10曲、実在するSpotifyの楽曲・アーティスト、英語表記）を出力してください。`
 
   try {
-    const { text } = await generateText({
+    const { output } = await generateText({
       model: openai("gpt-4o"),
+      output: Output.array({
+        element: PlaylistInfoElement,
+      }),
       prompt,
     })
 
-    const jsonMatch = text.match(/\[[\s\S]*\]/)
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0])
-      return Array.isArray(parsed) ? parsed : [parsed]
+    if (output && output.length > 0) {
+      return output.map((p) => ({
+        ...p,
+        tracks: p.tracks.slice(0, 10),
+      }))
     }
     return createFallbackPlaylistInfo(genres, weatherLabel, timeLabel)
   } catch (error) {
@@ -107,24 +110,6 @@ async function searchTrack(
     uri: track.uri,
     imageUrl: track.album?.images?.[0]?.url ?? null,
   }
-}
-
-/** Concurrency limiter to avoid Spotify 429 rate limits. */
-async function mapWithConcurrency<T, R>(
-  items: T[],
-  limit: number,
-  fn: (item: T, index: number) => Promise<R>
-): Promise<R[]> {
-  const results: R[] = new Array(items.length)
-  let index = 0
-  async function worker(): Promise<void> {
-    while (index < items.length) {
-      const i = index++
-      results[i] = await fn(items[i], i)
-    }
-  }
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => worker()))
-  return results
 }
 
 /**
@@ -177,7 +162,7 @@ export async function generateDashboard(
         )
 
         for (const result of results) {
-          if (result) trackUris.push(result.uri)
+          if (result && trackUris.length < 8) trackUris.push(result.uri)
         }
 
         const firstImage = results.find((r) => r?.imageUrl)?.imageUrl
