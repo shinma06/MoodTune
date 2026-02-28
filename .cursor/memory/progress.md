@@ -55,10 +55,15 @@
 - ✅ 天気の 10 分ポーリング（Mood Tuning 中はスキップ、バックグラウンド時はローディング表示なし）
 - ✅ 天気・時間帯変化時のプレイリスト自動更新（非 Mood Tuning 時、LoadingMode `"auto"` 文言）
 
-### コード品質
+### コード品質・リファクタリング
 - ✅ 背景・天気アイコン・テーマ色の静的定数化（`BACKGROUNDS`, `WEATHER_ICON_MAP`, `WEATHER_THEME_COLORS` 等）
-- ✅ `generateDashboard` の try/catch によるエラーハンドリング（空配列返却）
+- ✅ `generateDashboard` の try/catch によるエラーハンドリング（空配列返却）。Vercel AI SDK v6 `Output.array()` + zod で構造化出力に移行済み
 - ✅ プレイリスト関連ユーティリティの集約（`playlist-utils.ts`: LoadingMode, getLoadingTitleText, getLoadingGenreText 等）
+- ✅ **共通化**: `lib/validators.ts`（バリデーション）、`lib/overlay-theme.ts`（getOverlayStyles）、`components/shared/SpotifyIcon.tsx`
+- ✅ **フック**: `usePlaylistManager`（プレイリスト状態・生成・更新）、`useSelectedGenres` を hooks に独立。GenreSelector は 3 モードを 1 コンポーネントに統一
+- ✅ **API**: 天気取得は `lib/weather-fetch.ts` に抽出。`mapWithConcurrency` は `lib/utils.ts`。`findMoodTunePlaylist` にページネーション安全上限を付与
+- ✅ **WeatherContext**: value を useMemo でメモ化
+- ✅ 未使用パッケージ 38 個を削除
 
 ---
 

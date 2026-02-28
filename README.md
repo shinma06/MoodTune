@@ -98,10 +98,11 @@ src/
 │   ├── api/
 │   │   ├── auth/           # spotify, callback, signout, error
 │   │   ├── geocode/        # 都市名逆ジオコーディング
-│   │   └── weather/        # 天気API + owm-city
+│   │   └── weather/        # 天気API（lib/weather-fetch を利用）+ owm-city
 │   ├── PageClient.tsx      # PlaylistExplorer + Onboarding
 │   └── page.tsx
 ├── components/
+│   ├── shared/             # SpotifyIcon 等
 │   ├── onboarding/         # Login/GenreSelect/Tutorial モーダル
 │   ├── PlaylistExplorer.tsx
 │   ├── GenreSelector.tsx
@@ -112,7 +113,10 @@ src/
 ├── contexts/WeatherContext.tsx
 ├── hooks/
 │   ├── useSettings.ts
-├── lib/
+│   ├── useSelectedGenres.ts
+│   ├── usePlaylistManager.ts
+│   └── useVinylRotation.ts
+├── lib/                    # constants, validators, overlay-theme, weather-fetch, utils, spotify-*, weather-*
 └── types/
 ```
 

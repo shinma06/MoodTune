@@ -11,14 +11,14 @@
 - [ ] **データフローの確認**: この変更は `WeatherContext` / `useLocalStorage` / Server Action のどこに影響するか？
 - [ ] **コンポーネント間連携**: 変更が他のコンポーネントの表示・動作に影響しないか？
   - `WeatherMonitor` ← → `WeatherContext` ← → `PlaylistExplorer`
-  - `GenreSelector` ← → `useLocalStorage` ← → `PlaylistExplorer`
+  - `GenreSelector` ← → `useSelectedGenres`（hooks。内部で useLocalStorage）← → `PlaylistExplorer` / パネル閉じ時の差分更新
   - `WeatherMoodTuningPanel` ← → `WeatherContext` ← → 全コンポーネント
 - [ ] **型の影響**: 新しい型を追加・変更する場合、`types/` 配下に集約されているか？既存型との整合性は？
 
 ### 2. 既存実装の確認
 
 - [ ] **重複実装の回避**: 同様の処理が `lib/` や他のコンポーネントに既に存在しないか？
-- [ ] **ユーティリティの再利用**: `weather-utils.ts`, `playlist-utils.ts`, `constants.ts` に使える関数・定数はないか？
+- [ ] **ユーティリティの再利用**: `weather-utils.ts`, `playlist-utils.ts`, `constants.ts`, `validators.ts`, `overlay-theme.ts`（getOverlayStyles）, `utils.ts`（mapWithConcurrency 等）に使える関数・定数はないか？
 - [ ] **Context の活用**: ローカル state で持つべきか、Context で管理すべきか？
 
 ### 3. シンプルさの検証
@@ -61,10 +61,10 @@ playlistRefreshTrigger                → プレイリスト再生成のトリ�
 ### PlaylistExplorer のデータフロー
 
 ```
-1. Context から effectiveWeather / effectiveTimeOfDay / isCanvasBackgroundDark / isOverlayThemeDark を取得
-2. useSelectedGenres から現在のジャンル配列を取得
-3. ジャンル差分・天気変化を検知してプレイリスト更新
-4. 差分更新（追加ジャンルのみ API）/ 全件更新（Mood Tuning 閉じ時）
+1. usePlaylistManager でプレイリスト状態・生成・差分更新・自動更新を管理（初回同期・天気/時間帯変化・Mood Tuning トリガー含む）
+2. useSelectedGenres（hooks）から現在のジャンル配列を取得
+3. Context から effectiveWeather / effectiveTimeOfDay / isCanvasBackgroundDark / isOverlayThemeDark を取得
+4. ジャンルパネル閉じ時は updatePlaylistsWithDiff（追加ジャンルのみ API）。Mood Tuning 閉じ時は refreshPlaylists（全件再生成）
 ```
 
 ## 使い方

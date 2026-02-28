@@ -237,3 +237,22 @@
 - 単一の判定に混在させると、UI 視認性とデザイン意図の両方が崩れる
 
 **影響**: `WeatherContext` で `isOverlayThemeDark` と `isCanvasBackgroundDark` を分離提供。PlaylistExplorer/WeatherMonitor/SettingsPanel は用途に応じて参照先を切り替える
+
+---
+
+### ADR-020: リファクタリングによる共通化・構造整理（実施済み）
+
+**決定**: バリデーション・オーバーレイスタイル・プレイリストロジック・API 実装を整理し、単一ソースと再利用可能なユーティリティに集約する  
+**理由**:
+
+- 重複コードの削減と今後の開発効率向上
+- 既存要件を変えずに構造と実装の一貫性を高める
+
+**影響**:
+
+- **共通化**: `lib/validators.ts`（isThemePreference, isValidGenreArray 等）、`lib/overlay-theme.ts`（getOverlayStyles）、`components/shared/SpotifyIcon.tsx`
+- **フック分割**: `hooks/useSelectedGenres.ts`、`hooks/usePlaylistManager.ts`（プレイリスト状態・生成・差分更新・自動更新を PlaylistExplorer から抽出）
+- **GenreSelector**: 3 表示モードを 1 コンポーネントに統一。GenreSelectModal は getOverlayStyles でスタイル統一
+- **API**: `generateDashboard` は Vercel AI SDK v6 `Output.array()` + zod で構造化出力。`mapWithConcurrency` は `lib/utils.ts` に移動。天気取得は `lib/weather-fetch.ts` に抽出し route は薄く維持。`findMoodTunePlaylist` はページネーションに安全上限を付与
+- **WeatherContext**: value を `useMemo` でメモ化
+- **依存関係**: 未使用パッケージ 38 個を削除（使用中は @radix-ui/react-slot, react-label 等のみ）

@@ -21,7 +21,7 @@
 ### 天気 API（WxTech 優先・OpenWeatherMap フォールバック）
 - **WxTech**: 日本は 1km メッシュ ピンポイント、海外は 5km メッシュ 世界天気予報。高精度・世界対応
 - **OpenWeatherMap**: WxTech 失敗時または WxTech 未設定時のフォールバック。無料プランあり
-- **実装**: `GET /api/weather` で WxTech を先に呼び出し、レスポンスを OWM 互換に正規化。`lib/wxtech-weather.ts` で日本域判定・天気コード→WeatherType マッピング。API キーはサーバー側のみ（プロキシ）
+- **実装**: `GET /api/weather` は `lib/parse-lat-lon` で緯度経度を検証し、`lib/weather-fetch.ts` の `fetchWxTechWeather` / `fetchOpenWeatherMap` を利用。WxTech のレスポンス正規化・日本域判定・天気コードマッピングは `lib/wxtech-weather.ts`。API キーはサーバー側のみ（プロキシ）
 
 ### Google Geocoding API（逆ジオコーディング）
 - **理由**: 緯度経度から市区町村レベルの地名を取得し、天気モニターに表示
@@ -29,7 +29,7 @@
 
 ### Vercel AI SDK（OpenAI）
 - **理由**: プレイリストのタイトル・検索クエリをジャンル・天気・時間帯に応じて生成するため
-- **使用方針**: Server Action（generateDashboard）内で `generateText` によりジャンル別のタイトル/クエリを生成
+- **使用方針**: Server Action（generateDashboard）内で `generateText` + `Output.array()`（zod スキーマ）によりジャンル別のタイトル/トラック候補を構造化出力。regex による JSON 抽出は廃止済み
 
 ### Spotify PKCE（Authorization Code with PKCE）
 - **理由**: ログイン時のみ Spotify 連携を安全に提供するため
@@ -70,6 +70,7 @@ npm start
 - **パッケージマネージャー**: npm
 - **バージョン管理**: package-lock.json
 - **shadcn/ui追加**: `npx shadcn@latest add [component] --yes`
+- **未使用削除済み**: 使用していない @radix-ui コンポーネント・form/chart 関連など 38 パッケージを削除。現在は button/label/card 等で必要な @radix-ui/react-slot, react-label のみ利用
 
 ## パフォーマンス考慮事項
 - **アニメーション**: CSSアニメーションを優先（JavaScriptアニメーションは避ける）
