@@ -1,11 +1,21 @@
 import { NextRequest, NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { exchangeCodeForTokens } from "@/lib/spotify-pkce"
-import { setSessionCookie } from "@/lib/spotify-session"
+import { buildSessionCookie } from "@/lib/spotify-session"
 
 const STATE_COOKIE = "spotify_oauth_state"
 const VERIFIER_COOKIE = "spotify_code_verifier"
-const COOKIE_OPTIONS = { path: "/", maxAge: 0 }
+
+function getBaseUrl(): string {
+  return process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? "http://127.0.0.1:3000"
+}
+
+function redirectWithCleanup(url: string): NextResponse {
+  const response = NextResponse.redirect(url)
+  response.cookies.set(STATE_COOKIE, "", { path: "/", maxAge: 0 })
+  response.cookies.set(VERIFIER_COOKIE, "", { path: "/", maxAge: 0 })
+  return response
+}
 
 /** Step 3: Callback from Spotify — exchange code for tokens, set session, redirect to /. */
 export async function GET(request: NextRequest) {
@@ -18,33 +28,27 @@ export async function GET(request: NextRequest) {
   const savedState = cookieStore.get(STATE_COOKIE)?.value
   const codeVerifier = cookieStore.get(VERIFIER_COOKIE)?.value
 
-  // Clear PKCE cookies regardless of outcome
-  cookieStore.set(STATE_COOKIE, "", COOKIE_OPTIONS)
-  cookieStore.set(VERIFIER_COOKIE, "", COOKIE_OPTIONS)
-
   if (error) {
-    const base = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? "http://127.0.0.1:3000"
-    return NextResponse.redirect(`${base}/api/auth/spotify/error?error=${encodeURIComponent(error)}`)
+    return redirectWithCleanup(`${getBaseUrl()}/api/auth/spotify/error?error=${encodeURIComponent(error)}`)
   }
 
   if (!code || !state || state !== savedState || !codeVerifier) {
-    const base = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? "http://127.0.0.1:3000"
-    return NextResponse.redirect(`${base}/api/auth/spotify/error?error=invalid_callback`)
+    return redirectWithCleanup(`${getBaseUrl()}/api/auth/spotify/error?error=invalid_callback`)
   }
 
   try {
     const data = await exchangeCodeForTokens(code, codeVerifier)
-    await setSessionCookie({
+    const { name, value, options } = buildSessionCookie({
       accessToken: data.access_token,
       refreshToken: data.refresh_token ?? "",
       expiresAt: Date.now() + data.expires_in * 1000,
     })
+
+    const response = redirectWithCleanup(`${getBaseUrl()}/`)
+    response.cookies.set(name, value, options)
+    return response
   } catch (e) {
     console.error("[spotify callback]", e)
-    const base = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? "http://127.0.0.1:3000"
-    return NextResponse.redirect(`${base}/api/auth/spotify/error?error=token_exchange_failed`)
+    return redirectWithCleanup(`${getBaseUrl()}/api/auth/spotify/error?error=token_exchange_failed`)
   }
-
-  const base = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? "http://127.0.0.1:3000"
-  return NextResponse.redirect(`${base}/`)
 }

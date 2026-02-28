@@ -1,7 +1,7 @@
 import crypto from "node:crypto"
 import { cookies } from "next/headers"
 
-const COOKIE_NAME = "spotify_session"
+export const SESSION_COOKIE_NAME = "spotify_session"
 const COOKIE_MAX_AGE = 30 * 24 * 60 * 60 // 30 days
 const REFRESH_MARGIN_MS = 60_000 // refresh if expires in < 1 min
 
@@ -60,26 +60,36 @@ function decrypt(value: string): SpotifySession | null {
   }
 }
 
-/** Refresh access token using refresh_token (uses client_secret). */
+/** Refresh access token using PKCE-compatible refresh (client_id in body, no client_secret). */
 async function refreshSpotifyToken(
   refreshToken: string
 ): Promise<SpotifySession | null> {
-  const id = process.env.AUTH_SPOTIFY_ID
-  const secret = process.env.AUTH_SPOTIFY_SECRET
-  if (!id || !secret) return null
+  const clientId = process.env.AUTH_SPOTIFY_ID
+  if (!clientId) return null
   try {
     const res = await fetch("https://accounts.spotify.com/api/token", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        Authorization: `Basic ${Buffer.from(`${id}:${secret}`).toString("base64")}`,
-      },
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         grant_type: "refresh_token",
         refresh_token: refreshToken,
+        client_id: clientId,
       }),
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      const bodyPreview = await res.text().catch(() => "")
+      console.warn(
+        `[Spotify Session] WARN phase=refresh_token_response`,
+        JSON.stringify({
+          tag: "Spotify Session",
+          phase: "refresh_token_response",
+          at: new Date().toISOString(),
+          message: `HTTP ${res.status}`,
+          context: { status: res.status, bodyPreview: bodyPreview.slice(0, 200) },
+        })
+      )
+      return null
+    }
     const data = (await res.json()) as {
       access_token: string
       refresh_token?: string
@@ -90,7 +100,8 @@ async function refreshSpotifyToken(
       refreshToken: data.refresh_token ?? refreshToken,
       expiresAt: Date.now() + data.expires_in * 1000,
     }
-  } catch {
+  } catch (e) {
+    console.error("[Spotify Session] refresh token fetch error:", e)
     return null
   }
 }
@@ -100,13 +111,17 @@ async function refreshSpotifyToken(
  */
 export async function getSession(): Promise<SpotifySession | null> {
   const cookieStore = await cookies()
-  const raw = cookieStore.get(COOKIE_NAME)?.value
+  const raw = cookieStore.get(SESSION_COOKIE_NAME)?.value
   if (!raw) return null
   let session = decrypt(raw)
   if (!session) return null
   if (Date.now() < session.expiresAt - REFRESH_MARGIN_MS) return session
   const refreshed = await refreshSpotifyToken(session.refreshToken)
-  if (!refreshed) return session
+  if (!refreshed) {
+    // Token expired and refresh failed (e.g. revoked) — clear stale cookie and treat as unauthenticated
+    try { await clearSessionCookie() } catch { /* RSC context */ }
+    return null
+  }
   // Cookie can only be set in Server Action or Route Handler; avoid throwing during RSC render.
   try {
     await setSessionCookie(refreshed)
@@ -116,20 +131,32 @@ export async function getSession(): Promise<SpotifySession | null> {
   return refreshed
 }
 
-/** Set session cookie (used from callback route). */
-export async function setSessionCookie(session: SpotifySession): Promise<void> {
-  const cookieStore = await cookies()
-  cookieStore.set(COOKIE_NAME, encrypt(session), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: COOKIE_MAX_AGE,
-  })
+const SESSION_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax" as const,
+  path: "/",
+  maxAge: COOKIE_MAX_AGE,
 }
 
-/** Clear session cookie (sign out). */
+/** Build session cookie {name, value, options} for use on NextResponse. */
+export function buildSessionCookie(session: SpotifySession) {
+  return {
+    name: SESSION_COOKIE_NAME,
+    value: encrypt(session),
+    options: SESSION_COOKIE_OPTIONS,
+  } as const
+}
+
+/** Set session cookie via cookies() — only works in Server Action / Route Handler. */
+export async function setSessionCookie(session: SpotifySession): Promise<void> {
+  const cookieStore = await cookies()
+  const { name, value, options } = buildSessionCookie(session)
+  cookieStore.set(name, value, options)
+}
+
+/** Clear session cookie via cookies() — only works in Server Action / Route Handler. */
 export async function clearSessionCookie(): Promise<void> {
   const cookieStore = await cookies()
-  cookieStore.delete(COOKIE_NAME)
+  cookieStore.delete(SESSION_COOKIE_NAME)
 }

@@ -1,9 +1,8 @@
 "use server"
 
-import { getSession } from "@/lib/spotify-session"
+import { getAccessToken, spotifyFetch } from "@/lib/spotify-server"
 
 const PLAYLIST_NAME = "MoodTune"
-const SPOTIFY_API = "https://api.spotify.com/v1"
 const MAX_TRACKS_PER_REQUEST = 100
 
 export type SaveToSpotifyResult =
@@ -15,43 +14,6 @@ function formatSpotifyError(error?: string, status?: number): string {
   return status === 401
     ? "Spotify の認証が切れています。再度ログインしてください。"
     : "Spotify でエラーが発生しました。しばらくしてからお試しください。"
-}
-
-type SpotifyErrorBody = {
-  error?: { status?: number; message?: string }
-}
-
-async function spotifyFetch<T>(
-  token: string,
-  path: string,
-  options: RequestInit = {}
-): Promise<{ ok: boolean; status: number; data?: T; error?: string }> {
-  const url = path.startsWith("http") ? path : `${SPOTIFY_API}${path}`
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      ...(options.headers as Record<string, string>),
-    },
-  })
-  const text = await res.text()
-  let data: T | SpotifyErrorBody | undefined
-  try {
-    data = text ? (JSON.parse(text) as T | SpotifyErrorBody) : undefined
-  } catch {
-    // ignore
-  }
-  if (!res.ok) {
-    const errBody = data as SpotifyErrorBody | undefined
-    const errMsg =
-      errBody?.error?.message ??
-      (typeof data === "object" && data && "error" in data
-        ? String((data as { error: unknown }).error)
-        : undefined)
-    return { ok: false, status: res.status, error: errMsg }
-  }
-  return { ok: true, status: res.status, data: data as T }
 }
 
 /** Add tracks in chunks (Spotify allows max 100 per request). */
@@ -82,12 +44,10 @@ export async function saveToSpotify(
     return { success: false, error: "再生できる楽曲がありません" }
   }
 
-  const session = await getSession()
-  if (!session) {
+  const token = await getAccessToken()
+  if (!token) {
     return { success: false, error: "Spotifyにログインしてください" }
   }
-
-  const token = session.accessToken
 
   const meRes = await spotifyFetch<{ id: string }>(token, "/me")
   if (!meRes.ok) {
@@ -96,7 +56,7 @@ export async function saveToSpotify(
       error: formatSpotifyError(meRes.error, meRes.status),
     }
   }
-  const userId = meRes.data!.id
+  const userId = meRes.data.id
 
   const existingId = await findMoodTunePlaylist(token, userId)
   const playlistName = `${PLAYLIST_NAME}: ${title}`
@@ -153,7 +113,7 @@ export async function saveToSpotify(
     if (!createRes.ok) {
       return { success: false, error: formatSpotifyError(createRes.error, createRes.status) }
     }
-    playlistId = createRes.data!.id
+    playlistId = createRes.data.id
 
     const addRes = await addTracksInChunks(token, playlistId, trackUris)
     if (!addRes.ok) {
@@ -176,7 +136,7 @@ async function findMoodTunePlaylist(
 
   while (true) {
     const res = await spotifyFetch<{
-      items: Array<{ id: string; name: string }>;
+      items: Array<{ id: string; name: string }>
     }>(token, `/me/playlists?limit=${limit}&offset=${offset}`)
 
     if (!res.ok || !res.data) return null

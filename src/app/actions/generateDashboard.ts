@@ -2,8 +2,7 @@
 
 import { generateText } from "ai"
 import { openai } from "@ai-sdk/openai"
-import { getSpotifyClient } from "@/lib/spotify-server"
-import { getSession } from "@/lib/spotify-session"
+import { spotifyFetch, getAccessToken } from "@/lib/spotify-server"
 import { getMockPlaylistInfo } from "@/lib/mock-playlist-data"
 import { WEATHER_TYPE_LABELS, TIME_OF_DAY_LABELS, type Genre } from "@/lib/constants"
 import type { WeatherType, TimeOfDay } from "@/lib/weather-background"
@@ -11,9 +10,6 @@ import type { DashboardItem } from "@/types/dashboard"
 
 export type { DashboardItem }
 
-/**
- * ジャンル名に基づいてモック画像URLを生成
- */
 function getMockImageUrl(genre: string): string {
   const genreHash = genre
     .split("")
@@ -28,9 +24,6 @@ type PlaylistInfo = {
   tracks: TrackCandidate[]
 }
 
-/**
- * フォールバック用のプレイリスト情報を生成
- */
 function createFallbackPlaylistInfo(
   genres: Genre[],
   weatherLabel: string,
@@ -43,9 +36,6 @@ function createFallbackPlaylistInfo(
   }))
 }
 
-/**
- * AIを使用してジャンルごとのタイトルと楽曲候補リストを生成
- */
 async function generatePlaylistInfo(
   weather: WeatherType,
   time: TimeOfDay,
@@ -92,29 +82,34 @@ tracksには各ジャンルの雰囲気・天気・時間帯に合った楽曲�
   }
 }
 
-/**
- * 1曲分のSpotify track URI と アルバム画像URLを取得
- */
+type SpotifyTrack = {
+  uri: string
+  album?: { images?: Array<{ url: string }> }
+}
+type SpotifySearchResult = {
+  tracks?: { items?: SpotifyTrack[] }
+}
+
 async function searchTrack(
-  spotifyClient: NonNullable<Awaited<ReturnType<typeof getSpotifyClient>>>,
+  token: string,
   artist: string,
   title: string
 ): Promise<{ uri: string; imageUrl: string | null } | null> {
-  try {
-    const query = `artist:${artist} track:${title}`
-    const response = await spotifyClient.searchTracks(query, { limit: 1 })
-    const track = response.body.tracks?.items?.[0]
-    if (!track) return null
-    return {
-      uri: track.uri,
-      imageUrl: track.album?.images?.[0]?.url ?? null,
-    }
-  } catch {
-    return null
+  const query = encodeURIComponent(`artist:${artist} track:${title}`)
+  const res = await spotifyFetch<SpotifySearchResult>(
+    token,
+    `/search?type=track&q=${query}&limit=1`
+  )
+  if (!res.ok) return null
+  const track = res.data.tracks?.items?.[0]
+  if (!track) return null
+  return {
+    uri: track.uri,
+    imageUrl: track.album?.images?.[0]?.url ?? null,
   }
 }
 
-/** 同時実行数を制限して Promise を実行（429 レート制限回避） */
+/** Concurrency limiter to avoid Spotify 429 rate limits. */
 async function mapWithConcurrency<T, R>(
   items: T[],
   limit: number,
@@ -134,7 +129,7 @@ async function mapWithConcurrency<T, R>(
 
 /**
  * ダッシュボードデータを生成
- * エラー時は空配列を返し、Server Action が常に正常レスポンスを返すようにする（クライアントの "unexpected response" を防ぐ）
+ * エラー時は空配列を返し、Server Action が常に正常レスポンスを返すようにする
  */
 export async function generateDashboard(
   weather: WeatherType,
@@ -146,8 +141,8 @@ export async function generateDashboard(
   }
 
   try {
-    const session = await getSession()
-    const isLoggedIn = Boolean(session)
+    const token = await getAccessToken()
+    const isLoggedIn = Boolean(token)
     let playlistInfos: PlaylistInfo[]
     const weatherLabel = WEATHER_TYPE_LABELS[weather] ?? "晴れ"
     const timeLabel = TIME_OF_DAY_LABELS[time] ?? "昼"
@@ -166,16 +161,6 @@ export async function generateDashboard(
       return []
     }
 
-    let spotifyClient: Awaited<ReturnType<typeof getSpotifyClient>> = null
-    if (isLoggedIn) {
-      try {
-        spotifyClient = await getSpotifyClient()
-      } catch {
-        spotifyClient = null
-      }
-    }
-
-    // レート制限(429)回避: ジャンルごとに直列、曲検索は同時2件まで
     const SPOTIFY_SEARCH_CONCURRENCY = 2
     const dashboardItems: DashboardItem[] = []
 
@@ -184,11 +169,11 @@ export async function generateDashboard(
       let imageUrl = getMockImageUrl(info?.genre ?? "")
       let trackUris: string[] = []
 
-      if (isLoggedIn && spotifyClient && Array.isArray(info.tracks) && info.tracks.length > 0) {
+      if (isLoggedIn && token && Array.isArray(info.tracks) && info.tracks.length > 0) {
         const results = await mapWithConcurrency(
           info.tracks,
           SPOTIFY_SEARCH_CONCURRENCY,
-          (t) => searchTrack(spotifyClient!, t.artist, t.title)
+          (t) => searchTrack(token, t.artist, t.title)
         )
 
         for (const result of results) {
