@@ -63,6 +63,10 @@
    - 機能実装後、「これより簡単な方法はなかったか？」を自問する
    - 複雑になった場合は `.cursor/rules/refactor-overcomplexity.md` のプロセスを適用
 
+## Local Server URL
+
+- ローカル開発時は **localhost を使わず、必ず `http://127.0.0.1:ポート番号` を使用する。AUTH_URL・Redirect URI・ドキュメントの例も同様。
+
 ## Tech Stack
 
 - **Framework:** Next.js 15 (App Router)
