@@ -6,7 +6,7 @@ import WeatherAnimation from "./WeatherAnimation"
 import WeatherMoodTuningPanel from "./WeatherMoodTuningPanel"
 import SettingsPanel from "./SettingsPanel"
 import FloatingNoteEffect from "./FloatingNoteEffect"
-import { useSelectedGenres } from "./GenreSelector"
+import { useSelectedGenres } from "@/hooks/useSelectedGenres"
 import { useWeather } from "@/contexts/WeatherContext"
 import { getWeatherBackground, type TimeOfDay } from "@/lib/weather-background"
 import { formatGradientBackground, INITIAL_BACKGROUND_GRADIENT } from "@/lib/weather-background-utils"
@@ -52,7 +52,7 @@ export default function PlaylistExplorer({
     const { isTimeInitialized, actualWeatherType, actualTimeOfDay, isMoodTuning, effectiveWeather, effectiveTimeOfDay, playlistRefreshTrigger, isCanvasBackgroundDark, isOverlayThemeDark, isMoodTuningApplied } = useWeather()
     /** 開いているパネル（null = 両方閉じている）。同時に1つだけ開く */
     const [openPanel, setOpenPanel] = useState<null | "mood" | "genre">(null)
-    const [selectedGenres, isGenresInitialized] = useSelectedGenres()
+    const [selectedGenres, , isGenresInitialized] = useSelectedGenres()
     const [playlists, setPlaylists] = useState<DashboardItem[] | null>(initialPlaylists ?? null)
     const [isLoading, setIsLoading] = useState(false)
     /** 構築中の種別（初回 / 全件再構築 / 個別 / 追加ジャンルのみ）。表示文言の切り替え用 */
