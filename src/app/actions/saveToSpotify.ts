@@ -24,7 +24,7 @@ async function addTracksInChunks(
 ): Promise<{ ok: boolean; status: number; error?: string }> {
   for (let i = 0; i < uris.length; i += MAX_TRACKS_PER_REQUEST) {
     const chunk = uris.slice(i, i + MAX_TRACKS_PER_REQUEST)
-    const res = await spotifyFetch(token, `/playlists/${playlistId}/tracks`, {
+    const res = await spotifyFetch(token, `/playlists/${playlistId}/items`, {
       method: "POST",
       body: JSON.stringify({ uris: chunk }),
     })
@@ -49,16 +49,7 @@ export async function saveToSpotify(
     return { success: false, error: "Spotifyにログインしてください" }
   }
 
-  const meRes = await spotifyFetch<{ id: string }>(token, "/me")
-  if (!meRes.ok) {
-    return {
-      success: false,
-      error: formatSpotifyError(meRes.error, meRes.status),
-    }
-  }
-  const userId = meRes.data.id
-
-  const existingId = await findMoodTunePlaylist(token, userId)
+  const existingId = await findMoodTunePlaylist(token)
   const playlistName = `${PLAYLIST_NAME}: ${title}`
   const description = "MoodTuneが天気と時間帯に合わせて生成したプレイリスト"
 
@@ -100,7 +91,7 @@ export async function saveToSpotify(
   } else {
     const createRes = await spotifyFetch<{ id: string }>(
       token,
-      `/users/${userId}/playlists`,
+      `/me/playlists`,
       {
         method: "POST",
         body: JSON.stringify({
@@ -128,8 +119,7 @@ export async function saveToSpotify(
 }
 
 async function findMoodTunePlaylist(
-  token: string,
-  _userId: string
+  token: string
 ): Promise<string | null> {
   let offset = 0
   const limit = 50

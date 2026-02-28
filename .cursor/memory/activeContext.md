@@ -9,8 +9,8 @@
 - Next.js 16 / React 19 / TypeScript で App Router 構成
 - 未ログイン利用を正式サポート（固定データでプレイリスト表示）
 - ログイン時のみ OpenAI 生成 + Spotify Search でトラック URI を解決
-- Spotify 認証は PKCE、セッションは暗号化クッキー + PKCE 準拠トークンリフレッシュ（client_id in body, no secret）
-- Spotify API 呼び出しは共通 `spotifyFetch`（`lib/spotify-server.ts`）を使用（`spotify-web-api-node` 依存を廃止）
+- Spotify 認証は PKCE（スコープ: `playlist-read-private`, `playlist-modify-public`, `playlist-modify-private`）、セッションは暗号化クッキー + PKCE 準拠トークンリフレッシュ（client_id in body, no secret）
+- Spotify API 呼び出しは共通 `spotifyFetch`（`lib/spotify-server.ts`）を使用。2026年2月改定対応済み（`POST /me/playlists`, `/playlists/{id}/items`）
 - Route Handler のクッキー操作は `NextResponse.cookies` に統一（`cookies()` + redirect の不整合を解消）
 - 天気は WxTech 優先（日本 1km / 海外 5km）、失敗時 OWM にフォールバック
 - 都市名は Google Geocoding の逆ジオコーディング（失敗時は OWM 名称）

@@ -7,10 +7,9 @@ const SPOTIFY_TOKEN = "https://accounts.spotify.com/api/token"
 
 /** プレイリスト取得・作成・更新に必要なスコープ（Spotify Web API） */
 export const SPOTIFY_SCOPES = [
-  "playlist-read-private", // ユーザーのプレイリスト一覧取得（既存 MoodTune 検索）
-  "playlist-modify-public", // 公開プレイリストの作成・更新
-  "playlist-modify-private", // 非公開プレイリストの作成・更新
-  "user-read-email", // ユーザー情報
+  "playlist-read-private",
+  "playlist-modify-public",
+  "playlist-modify-private",
 ].join(" ")
 
 /** PKCE: code verifier (43–128 chars, high-entropy). */
