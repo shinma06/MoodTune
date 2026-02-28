@@ -8,18 +8,11 @@ import {
   DEFAULT_SELECTED_GENRES,
   type Genre,
 } from "@/lib/constants"
+import { isValidGenreArray } from "@/lib/validators"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Check, Music, XCircle } from "lucide-react"
 import { useWeather } from "@/contexts/WeatherContext"
-
-/** localStorage から読み込んだ値が Genre[] として妥当かバリデーション。空配列は永続化として無効（読み込み時にデフォルトへ） */
-function isValidGenreArray(value: unknown): value is Genre[] {
-  if (!Array.isArray(value)) return false
-  if (value.length === 0) return false
-  if (value.length > MAX_SELECTED_GENRES) return false
-  return value.every((v) => typeof v === "string" && AVAILABLE_GENRES.includes(v as Genre))
-}
 
 interface GenreSelectorProps {
   flat?: boolean

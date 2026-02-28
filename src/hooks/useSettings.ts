@@ -8,25 +8,11 @@ import {
   DEFAULT_NOTE_EFFECT_ENABLED,
   DEFAULT_THEME_PREFERENCE,
   DEFAULT_TONEARM_VISIBLE,
-  MOOD_TUNING_WEATHER_DISPLAY_MODES,
   SETTINGS_STORAGE_KEYS,
-  THEME_PREFERENCES,
   type MoodTuningWeatherDisplayMode,
   type ThemePreference,
 } from "@/lib/constants"
-
-const isThemePreference = (value: unknown): value is ThemePreference => {
-  return typeof value === "string" && THEME_PREFERENCES.includes(value as ThemePreference)
-}
-
-const isMoodTuningWeatherDisplayMode = (value: unknown): value is MoodTuningWeatherDisplayMode => {
-  return (
-    typeof value === "string" &&
-    MOOD_TUNING_WEATHER_DISPLAY_MODES.includes(value as MoodTuningWeatherDisplayMode)
-  )
-}
-
-const isBoolean = (value: unknown): value is boolean => typeof value === "boolean"
+import { isThemePreference, isMoodTuningWeatherDisplayMode, isBoolean } from "@/lib/validators"
 
 export function useSettings() {
   const [themePreference, setThemePreference, isThemeInitialized] = useLocalStorage<ThemePreference>(
